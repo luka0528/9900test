@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  t3-dev:
+    container_name: f13a-banana
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    # volumes:
+    #   - ./:/app
+    #   - /app/node_modules
+    env_file:
+      - .env
+    command: sh -c "if [ -f prisma/schema.prisma ]; then npx prisma generate; fi && pnpm dev"
