@@ -1,9 +1,14 @@
 import "~/styles/globals.css";
 
-import { GeistSans } from "geist/font/sans";
+// import { GeistSans } from "geist/font/sans";
+import { Inter } from "next/font/google";
 import { type Metadata } from "next";
 
 import { TRPCReactProvider } from "~/trpc/react";
+
+const inter = Inter({
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -15,10 +20,9 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${GeistSans.variable}`}>
+    <html lang="en" className={`${inter.className}`}>
       <body>
         <TRPCReactProvider>
-          {/* TODO: Good idea to put your navigation bar here. Maybe sidebar too*/}
           {children}
         </TRPCReactProvider>
       </body>
