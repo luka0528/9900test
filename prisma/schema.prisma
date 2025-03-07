@@ -16,16 +16,118 @@ datasource db {
     directUrl = env("DIRECT_URL")
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
+// Analytics
+model ServiceRating {
+    id        String   @id @default(cuid())
+    serviceId String
+    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+    consumerId String
+    consumer   ServiceConsumer     @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+    starValue    Int      
+    content      String
+    createdAt DateTime @default(now())
+
+    comments ServiceComment[]
+}
+
+model ServiceComment {
+    id        String   @id @default(cuid())
+    ratingId String
+    rating   ServiceRating  @relation(fields: [ratingId], references: [id], onDelete: Cascade)
+    ownerId String
+    owner   ServiceOwner  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+    content   String
+    createdAt DateTime @default(now())
+}
+
+model ConsumerEvent {
+    id        String   @id @default(cuid())
+    consumerId String
+    consumer   ServiceConsumer  @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+    eventType String
+    createdAt DateTime @default(now())
+}
+
+enum ConsumerEventType {
+    VIEWED
+    // TODO: Add more events
+}
+
+// Service Management
+model Tag {
+    id        String   @id @default(cuid())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    value     String
+
+    services  Service[]
+}
+
+model Service {
+    id        String   @id @default(cuid())
     name      String
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
+    tags      Tag[]
+    ratings   ServiceRating[]
+    versions ServiceVersion[]
+    owners ServiceOwner[]
+    consumers ServiceConsumer[]
+}
 
-    @@index([name])
+model ServiceVersion {
+    id        String   @id @default(cuid())
+    serviceId String
+    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+    description String
+    version String
+    createdAt DateTime @default(now())
+}
+
+// Service Memberships
+model ServiceOwner {
+    id        String   @id @default(cuid())
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    serviceId String
+    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now())
+
+    ratings ServiceComment[]
+}
+
+model ServiceConsumer {
+    id        String   @id @default(cuid())
+    userId    String
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    serviceId String
+    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now())
+
+    ratings ServiceRating[]
+    events ConsumerEvent[]
+}
+
+// Notifications
+model Notification {
+    id        String   @id @default(cuid())
+    recipientId    String
+    recipient      User     @relation("UserNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+    senderId       String
+    sender         User     @relation("UserSentNotifications", fields: [senderId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now())
+    content   String
+    read      Boolean  @default(false)
+}
+
+enum NotificationType {
+    ALERT
+    NEW_SUBSCRIPTION
+    NEW_RATING
+    NEW_COMMENT
+    SERVICE_UPDATE
 }
 
 // Necessary for Next auth
@@ -64,7 +166,19 @@ model User {
     image         String?
     accounts      Account[]
     sessions      Session[]
-    posts         Post[]
+
+    role          UserRole  @default(USER)
+
+    subscriptions ServiceConsumer[]
+    ownerships    ServiceOwner[]
+
+    notifications Notification[] @relation("UserNotifications")
+    sentNotifications Notification[] @relation("UserSentNotifications")
+}
+
+enum UserRole {
+    USER
+    ADMIN
 }
 
 model VerificationToken {

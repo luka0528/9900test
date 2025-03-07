@@ -17,7 +17,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${GeistSans.variable}`}>
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          {/* TODO: Good idea to put your navigation bar here. Maybe sidebar too*/}
+          {children}
+        </TRPCReactProvider>
       </body>
     </html>
   );
