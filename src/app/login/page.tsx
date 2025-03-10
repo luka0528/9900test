@@ -23,8 +23,8 @@ import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 const formSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().email("Invalid email address"),
+  password: z.string(),
 });
 
 export default function SignIn() {
