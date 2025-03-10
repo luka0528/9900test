@@ -9,7 +9,6 @@ import { getProviderIcon, getProviderName } from "~/lib/icons";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -18,6 +17,7 @@ import {
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   email: z.string().email(),
@@ -27,6 +27,9 @@ const formSchema = z.object({
 export default function SignIn() {
   const [providers, setProviders] =
     useState<Awaited<ReturnType<typeof getProviders>>>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -44,8 +47,29 @@ export default function SignIn() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: values.email,
+        password: values.password,
+      });
+
+      if (result?.error) {
+        setAuthError("Invalid email or password");
+        form.setError("email", { message: " " });
+        form.setError("password", { message: " " });
+      } else {
+        router.push("/");
+      }
+    } catch (error) {
+      setAuthError("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -73,6 +97,11 @@ export default function SignIn() {
               onSubmit={form.handleSubmit(onSubmit)}
               className="flex w-80 flex-col gap-4"
             >
+              {authError && (
+                <div className="text-sm font-medium text-destructive">
+                  {authError}
+                </div>
+              )}
               <FormField
                 control={form.control}
                 name="email"
@@ -99,31 +128,41 @@ export default function SignIn() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full mt-2">
-                Login
+              <Button
+                type="submit"
+                className="mt-2 w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? "Logging in..." : "Login"}
               </Button>
             </form>
           </Form>
 
           <div className="flex w-80 items-center gap-2">
             <Separator className="flex-1" />
-            <span className="text-sm text-muted-foreground">Or continue with</span>
+            <span className="text-sm text-muted-foreground">
+              Or continue with
+            </span>
             <Separator className="flex-1" />
           </div>
 
           <div className="flex w-full flex-col items-center gap-4">
             {providers &&
-              Object.values(providers).map((provider) => (
-                <Button
-                  key={provider.id}
-                  variant="outline"
-                  className="w-80 text-xs"
-                  onClick={() => void signIn(provider.id, { callbackUrl: "/" })}
-                >
-                  {getProviderIcon(provider.id)}
-                  Login with {getProviderName(provider.id)}
-                </Button>
-              ))}
+              Object.values(providers)
+                .filter((provider) => provider.id !== "credentials")
+                .map((provider) => (
+                  <Button
+                    key={provider.id}
+                    variant="outline"
+                    className="w-80 text-xs"
+                    onClick={() =>
+                      void signIn(provider.id, { callbackUrl: "/" })
+                    }
+                  >
+                    {getProviderIcon(provider.id)}
+                    Login with {getProviderName(provider.id)}
+                  </Button>
+                ))}
           </div>
         </div>
       </div>
