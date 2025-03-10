@@ -5,6 +5,7 @@ import { getProviders, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { toast } from "sonner"
 import { getProviderIcon, getProviderName } from "~/lib/icons";
 import {
   Form,
@@ -27,7 +28,7 @@ const formSchema = z.object({
 export default function SignIn() {
   const [providers, setProviders] =
     useState<Awaited<ReturnType<typeof getProviders>>>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
+  // const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -49,7 +50,7 @@ export default function SignIn() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    setAuthError(null);
+    // setAuthError(null);
 
     try {
       const result = await signIn("credentials", {
@@ -59,14 +60,16 @@ export default function SignIn() {
       });
 
       if (result?.error) {
-        setAuthError("Invalid email or password");
+        // setAuthError("Invalid email or password");
         form.setError("email", { message: " " });
         form.setError("password", { message: " " });
+        toast.error("Invalid email or password");
       } else {
+        toast.success("Logged in successfully");
         router.push("/");
       }
     } catch (error) {
-      setAuthError("Something went wrong. Please try again.");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -87,9 +90,6 @@ export default function SignIn() {
             <h2 className="text-sm text-muted-foreground">
               Enter your email below to login to your account
             </h2>
-            <h2 className="text-sm text-muted-foreground">
-              Login with email coming soon!
-            </h2>
           </div>
 
           <Form {...form}>
@@ -97,11 +97,11 @@ export default function SignIn() {
               onSubmit={form.handleSubmit(onSubmit)}
               className="flex w-80 flex-col gap-4"
             >
-              {authError && (
+              {/* {authError && (
                 <div className="text-sm font-medium text-destructive">
                   {authError}
                 </div>
-              )}
+              )} */}
               <FormField
                 control={form.control}
                 name="email"
