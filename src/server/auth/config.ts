@@ -1,8 +1,10 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 import { db } from "~/server/db";
+import { compare } from "bcryptjs";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -33,6 +35,51 @@ declare module "next-auth" {
 export const authConfig = {
   providers: [
     DiscordProvider,
+    CredentialsProvider({
+      // The name to display on the sign-in form (e.g., "Sign in with...")
+      name: "Credentials",
+
+      // The credentials property is used to configure the sign-in form
+      credentials: {
+        email: {
+          label: "Email",
+          type: "email",
+          placeholder: "email@example.com",
+        },
+        password: {
+          label: "Password",
+          type: "password",
+          placeholder: "********",
+        },
+      },
+
+      // Authorize callback is used to verify the credentials
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        // Look up the user from the credentials supplied
+        const user = await db.user.findUnique({
+          where: { email: credentials?.email as string },
+        });
+
+        // If no user was found or the password doesn't match
+        const isValidPassword = user?.password
+          ? await compare(credentials.password as string, user.password)
+          : false;
+        if (!user || !isValidPassword) {
+          return null;
+        }
+
+        // User authenticated successfully
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        };
+      },
+    }),
     /**
      * ...add more providers here.
      *
@@ -43,15 +90,24 @@ export const authConfig = {
      * @see https://next-auth.js.org/providers/github
      */
   ],
+  session: {
+    strategy: "jwt",
+  },
   adapter: PrismaAdapter(db),
   callbacks: {
-    session: ({ session, user }) => ({
+    session: ({ session, token }) => ({
       ...session,
       user: {
         ...session.user,
-        id: user.id,
+        id: token.sub,
       },
     }),
+    jwt: ({ token, user }) => {
+      if (user) {
+        token.sub = user.id;
+      }
+      return token;
+    },
   },
   pages: {
     signIn: "/login",
