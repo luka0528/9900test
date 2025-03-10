@@ -5,7 +5,7 @@ import { getProviders, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { toast } from "sonner"
+import { toast } from "sonner";
 import { getProviderIcon, getProviderName } from "~/lib/icons";
 import {
   Form,
@@ -19,6 +19,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 
 const formSchema = z.object({
   email: z.string().email(),
@@ -28,8 +30,8 @@ const formSchema = z.object({
 export default function SignIn() {
   const [providers, setProviders] =
     useState<Awaited<ReturnType<typeof getProviders>>>(null);
-  // const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -50,7 +52,6 @@ export default function SignIn() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    // setAuthError(null);
 
     try {
       const result = await signIn("credentials", {
@@ -60,7 +61,6 @@ export default function SignIn() {
       });
 
       if (result?.error) {
-        // setAuthError("Invalid email or password");
         form.setError("email", { message: " " });
         form.setError("password", { message: " " });
         toast.error("Invalid email or password");
@@ -97,11 +97,6 @@ export default function SignIn() {
               onSubmit={form.handleSubmit(onSubmit)}
               className="flex w-80 flex-col gap-4"
             >
-              {/* {authError && (
-                <div className="text-sm font-medium text-destructive">
-                  {authError}
-                </div>
-              )} */}
               <FormField
                 control={form.control}
                 name="email"
@@ -118,15 +113,34 @@ export default function SignIn() {
               <FormField
                 control={form.control}
                 name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input placeholder="********" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  return (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="********"
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <Button
                 type="submit"
@@ -163,6 +177,20 @@ export default function SignIn() {
                     Login with {getProviderName(provider.id)}
                   </Button>
                 ))}
+          </div>
+
+          <div className="flex w-80 items-center justify-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Don&apos;t have an account?
+            </span>
+            <Link href="/sign-up">
+              <Button
+                variant="link"
+                className="px-0 text-indigo-600"
+              >
+                Sign up
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
