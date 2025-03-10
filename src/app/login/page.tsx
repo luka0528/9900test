@@ -5,11 +5,11 @@ import { getProviders, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { toast } from "sonner";
 import { getProviderIcon, getProviderName } from "~/lib/icons";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -18,15 +18,21 @@ import {
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 
 const formSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().email("Invalid email address"),
+  password: z.string(),
 });
 
 export default function SignIn() {
   const [providers, setProviders] =
     useState<Awaited<ReturnType<typeof getProviders>>>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -44,8 +50,29 @@ export default function SignIn() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: values.email,
+        password: values.password,
+      });
+
+      if (result?.error) {
+        form.setError("email", { message: " " });
+        form.setError("password", { message: " " });
+        toast.error("Invalid email or password");
+      } else {
+        toast.success("Logged in successfully");
+        router.push("/");
+      }
+    } catch (error) {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -62,9 +89,6 @@ export default function SignIn() {
             </h1>
             <h2 className="text-sm text-muted-foreground">
               Enter your email below to login to your account
-            </h2>
-            <h2 className="text-sm text-muted-foreground">
-              Login with email coming soon!
             </h2>
           </div>
 
@@ -89,41 +113,84 @@ export default function SignIn() {
               <FormField
                 control={form.control}
                 name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input placeholder="********" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  return (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="********"
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
-              <Button type="submit" className="w-full mt-2">
-                Login
+              <Button
+                type="submit"
+                className="mt-2 w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? "Logging in..." : "Login"}
               </Button>
             </form>
           </Form>
 
           <div className="flex w-80 items-center gap-2">
             <Separator className="flex-1" />
-            <span className="text-sm text-muted-foreground">Or continue with</span>
+            <span className="text-sm text-muted-foreground">
+              Or continue with
+            </span>
             <Separator className="flex-1" />
           </div>
 
           <div className="flex w-full flex-col items-center gap-4">
             {providers &&
-              Object.values(providers).map((provider) => (
-                <Button
-                  key={provider.id}
-                  variant="outline"
-                  className="w-80 text-xs"
-                  onClick={() => void signIn(provider.id, { callbackUrl: "/" })}
-                >
-                  {getProviderIcon(provider.id)}
-                  Login with {getProviderName(provider.id)}
-                </Button>
-              ))}
+              Object.values(providers)
+                .filter((provider) => provider.id !== "credentials")
+                .map((provider) => (
+                  <Button
+                    key={provider.id}
+                    variant="outline"
+                    className="w-80 text-xs"
+                    onClick={() =>
+                      void signIn(provider.id, { callbackUrl: "/" })
+                    }
+                  >
+                    {getProviderIcon(provider.id)}
+                    Login with {getProviderName(provider.id)}
+                  </Button>
+                ))}
+          </div>
+
+          <div className="flex w-80 items-center justify-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Don&apos;t have an account?
+            </span>
+            <Link href="/sign-up">
+              <Button
+                variant="link"
+                className="px-0 text-indigo-600"
+              >
+                Sign up
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
