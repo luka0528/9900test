@@ -69,7 +69,7 @@ export const authConfig = {
           ? await compare(credentials.password as string, user.password)
           : false;
         if (!user || !isValidPassword) {
-          return null;
+          throw new Error("INVALID_CREDENTIALS");
         }
 
         // User authenticated successfully
@@ -77,6 +77,7 @@ export const authConfig = {
           id: user.id,
           name: user.name,
           email: user.email,
+          emailVerified: user.emailVerified,
         };
       },
     }),

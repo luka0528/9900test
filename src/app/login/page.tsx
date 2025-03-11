@@ -52,6 +52,7 @@ export default function SignIn() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
+    localStorage.setItem("lastUsedEmail", values.email);
 
     try {
       const result = await signIn("credentials", {
@@ -60,16 +61,27 @@ export default function SignIn() {
         password: values.password,
       });
 
+      console.log("result", result);
       if (result?.error) {
+        toast.error("Invalid email or password");
         form.setError("email", { message: " " });
         form.setError("password", { message: " " });
-        toast.error("Invalid email or password");
       } else {
         toast.success("Logged in successfully");
         router.push("/");
       }
     } catch (error) {
-      toast.error("Something went wrong. Please try again.");
+      if (
+        error instanceof Error &&
+        error.message.includes("verify your email")
+      ) {
+        toast.error(error.message);
+        router.push(
+          `/verify-email?email=${encodeURIComponent(values.email)}`,
+        );
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
