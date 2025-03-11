@@ -39,8 +39,10 @@ export default function SignUp() {
 
   // Create a mutation for registering a user
   const { mutate: createUser, isPending } = api.user.register.useMutation({
-    onSuccess: () => {
-      void router.push("/login");
+    onSuccess: (data) => {
+      void router.push(
+        `/verify-email?email=${encodeURIComponent(data.email ?? "")}`,
+      );
     },
     onError: (e) => {
       toast.error(e.message);

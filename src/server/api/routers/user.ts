@@ -6,6 +6,10 @@ import {
   publicProcedure,
   protectedProcedure,
 } from "~/server/api/trpc";
+import { TRPCError } from "@trpc/server";
+import { createVerificationToken, verifyToken } from "~/lib/verification";
+import { sendVerificationEmail } from "~/lib/email";
+import { VerificationTokenType } from "@prisma/client";
 
 export const userRouter = createTRPCRouter({
   register: publicProcedure
@@ -13,7 +17,7 @@ export const userRouter = createTRPCRouter({
       z.object({
         name: z.string().min(1, "Name is required"),
         email: z.string().email("Invalid email address"),
-        password: z.string().min(6, "Password must be at least 6 characters"),
+        password: z.string().min(8, "Password must be at least 8 characters"),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -25,7 +29,10 @@ export const userRouter = createTRPCRouter({
       });
 
       if (existingUser) {
-        throw new Error("A user with this email already exists");
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "A user with this email already exists",
+        });
       }
 
       // Hash the password
@@ -40,11 +47,109 @@ export const userRouter = createTRPCRouter({
         },
       });
 
+      try {
+        // Create a verification token
+        const verificationToken = await createVerificationToken({
+          userId: user.id,
+          identifier: email,
+          type: VerificationTokenType.EMAIL,
+        });
+
+        // Send verification email
+        await sendVerificationEmail({
+          email,
+          token: verificationToken.token,
+          name,
+        });
+      } catch (error) {
+        console.error("Failed to send verification email:", error);
+        // Don't fail the registration if email sending fails
+      }
+
       return {
         id: user.id,
         name: user.name,
         email: user.email,
       };
+    }),
+
+  verifyEmail: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email("Invalid email address"),
+        token: z.string().min(6).max(6),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const { email, token } = input;
+
+      const result = await verifyToken({
+        token,
+        identifier: email,
+        type: VerificationTokenType.EMAIL,
+      });
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: result.error ?? "Invalid or expired verification code",
+        });
+      }
+
+      return { success: true };
+    }),
+
+  resendVerificationEmail: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email("Invalid email address"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { email } = input;
+
+      // Find the user
+      const user = await ctx.db.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      if (user.emailVerified) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Email is already verified",
+        });
+      }
+
+      try {
+        // Create a new verification token
+        const verificationToken = await createVerificationToken({
+          userId: user.id,
+          identifier: email,
+          type: VerificationTokenType.EMAIL,
+        });
+
+        // Send verification email
+        await sendVerificationEmail({
+          email,
+          token: verificationToken.token,
+          name: user.name,
+        });
+
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to resend verification email:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to send verification email",
+        });
+      }
     }),
 
   // Protected route example - get current user's profile
@@ -56,11 +161,15 @@ export const userRouter = createTRPCRouter({
         name: true,
         email: true,
         image: true,
+        emailVerified: true,
       },
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
     }
 
     return user;

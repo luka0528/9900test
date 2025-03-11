@@ -72,11 +72,16 @@ export const authConfig = {
           return null;
         }
 
+        if (!user.emailVerified) {
+          throw new Error("Please verify your email before signing in");
+        }
+
         // User authenticated successfully
         return {
           id: user.id,
           name: user.name,
           email: user.email,
+          emailVerified: user.emailVerified,
         };
       },
     }),
