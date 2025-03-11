@@ -61,10 +61,11 @@ export default function SignIn() {
         password: values.password,
       });
 
+      console.log("result", result);
       if (result?.error) {
+        toast.error("Invalid email or password");
         form.setError("email", { message: " " });
         form.setError("password", { message: " " });
-        toast.error("Invalid email or password");
       } else {
         toast.success("Logged in successfully");
         router.push("/");

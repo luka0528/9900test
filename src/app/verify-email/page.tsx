@@ -138,7 +138,7 @@ export default function VerifyEmailPage() {
       </div>
       <div className="text-center text-sm">
         <Link
-          href="/sign-in"
+          href="/login"
           className="text-muted-foreground hover:text-foreground"
         >
           Back to sign in
