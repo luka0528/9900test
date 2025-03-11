@@ -69,11 +69,7 @@ export const authConfig = {
           ? await compare(credentials.password as string, user.password)
           : false;
         if (!user || !isValidPassword) {
-          return null;
-        }
-
-        if (!user.emailVerified) {
-          throw new Error("Please verify your email before signing in");
+          throw new Error("INVALID_CREDENTIALS");
         }
 
         // User authenticated successfully
