@@ -3,8 +3,13 @@
 import { signIn, signOut, useSession } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuTrigger } from "~/components/ui/dropdown-menu";
-import { LogOut } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import { LogOut, User } from "lucide-react";
 
 export default function NavBar() {
   const { data: session } = useSession();
@@ -23,11 +28,23 @@ export default function NavBar() {
               <DropdownMenuTrigger asChild>
                 <Avatar className="transition-transform duration-300 hover:scale-110 hover:cursor-pointer">
                   <AvatarImage src={session?.user?.image ?? undefined} />
-                  <AvatarFallback>{session?.user?.name?.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>
+                    {session?.user?.name?.charAt(0)}
+                  </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={40} className="w-72">
-                <DropdownMenuItem className="cursor-pointer" onClick={() => signOut()}>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => (window.location.href = "/user")}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => signOut()}
+                >
                   <LogOut className="h-4 w-4" />
                   Logout
                 </DropdownMenuItem>
