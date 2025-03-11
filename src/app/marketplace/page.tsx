@@ -1,4 +1,6 @@
 import { MarketplaceSearch } from './MarketplaceSearch';
+import { MarketplaceSortSelector } from './MarketplaceSortSelector';
+
 
 export default function Marketplace() {
   const services = Array.from({ length: 50 }, (_, i) => ({
@@ -13,7 +15,7 @@ export default function Marketplace() {
         </div>
         <div className="flex flex-col grow h-full">
           <div className="flex min-h-20 justify-between items-center">
-            <div className="w-40 ml-8 h-8">Sort by Popularity</div>
+            <MarketplaceSortSelector />
             <MarketplaceSearch />
           </div>
           <div className="grid grid-cols-2 grow px-8 pb-8 gap-16 overflow-y-auto">
