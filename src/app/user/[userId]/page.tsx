@@ -37,7 +37,7 @@ export default function UserProfilePage() {
     const fetchUserInfo = async () => {
       try {
         console.log("Fetching user info...");
-        const response = await fetch(); // TODO: Where do we get data for user and how is it stored?
+        const response = await fetch(""); // TODO: Where do we get data for user and how is it stored?
         const data = await response.json();
         console.log("Fetched user info:", data);
         setUserInfo(data);
