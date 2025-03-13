@@ -2,7 +2,7 @@
 
 import { Separator } from "~/components/ui/separator";
 import { getProviders, signIn } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ import {
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
@@ -33,6 +33,10 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reset = searchParams.get("reset") === "true";
+  const verified = searchParams.get("verified") === "true";
+  const toastsShown = useRef({ verified: false, reset: false });
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -41,6 +45,20 @@ export default function SignIn() {
     };
     void fetchProviders();
   }, []);
+
+  useEffect(() => {
+    if (verified && !toastsShown.current.verified) {
+      toast.success("Email verified successfully");
+      toastsShown.current.verified = true;
+    }
+  }, [verified]);
+
+  useEffect(() => {
+    if (reset && !toastsShown.current.reset) {
+      toast.success("Password reset successfully");
+      toastsShown.current.reset = true;
+    }
+  }, [reset]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,9 +94,7 @@ export default function SignIn() {
         error.message.includes("verify your email")
       ) {
         toast.error(error.message);
-        router.push(
-          `/verify-email?email=${encodeURIComponent(values.email)}`,
-        );
+        router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
       } else {
         toast.error("Something went wrong. Please try again.");
       }
@@ -128,7 +144,17 @@ export default function SignIn() {
                 render={({ field }) => {
                   return (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Password</FormLabel>
+                        <Link href="/forgot-password">
+                          <Button
+                            variant="link"
+                            className="h-auto p-0 text-xs text-indigo-600"
+                          >
+                            Forgot your password?
+                          </Button>
+                        </Link>
+                      </div>
                       <FormControl>
                         <div className="relative">
                           <Input
@@ -196,10 +222,7 @@ export default function SignIn() {
               Don&apos;t have an account?
             </span>
             <Link href="/sign-up">
-              <Button
-                variant="link"
-                className="px-0 text-indigo-600"
-              >
+              <Button variant="link" className="px-0 text-indigo-600">
                 Sign up
               </Button>
             </Link>

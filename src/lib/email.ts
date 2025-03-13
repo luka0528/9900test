@@ -47,3 +47,48 @@ export const sendVerificationEmail = async ({
     throw error;
   }
 };
+
+// Function to send password reset email
+export const sendPasswordResetEmail = async ({
+  email,
+  token,
+  name,
+}: {
+  email: string;
+  token: string;
+  name?: string | null;
+}) => {
+  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Your T3 App';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+  
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `noreply@${process.env.RESEND_DOMAIN}`,
+      to: email,
+      subject: `Reset your password for ${appName}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1>Password Reset</h1>
+          <p>Hello ${name ?? 'there'},</p>
+          <p>We received a request to reset your password for ${appName}. Please use the verification code below to reset your password:</p>
+          <div style="background-color: #f4f4f4; padding: 12px; font-size: 24px; text-align: center; letter-spacing: 4px; font-weight: bold; margin: 20px 0;">
+            ${token}
+          </div>
+          <p>This code will expire in 60 minutes.</p>
+          <p>If you didn't request a password reset, you can safely ignore this email.</p>
+          <p>Thanks,<br>The ${appName} Team</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending password reset email:", error);
+      throw new Error(error.message);
+    }
+
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error("Failed to send password reset email:", error);
+    throw error;
+  }
+};
