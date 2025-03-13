@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { api } from "~/trpc/react";
+import debounce from "lodash.debounce";
+import ClipLoader from "react-spinners/ClipLoader";
 
 export default function UserProfilePage() {
+  // Get session data and status from next-auth
   const { data: session, status } = useSession();
+  // Get userId from URL parameters
   const { userId } = useParams();
 
   // State variables for managing user profile and form states
@@ -15,23 +19,41 @@ export default function UserProfilePage() {
   const [passwordsMatch, setPasswordsMatch] = useState(true);
   const [passwordValid, setPasswordValid] = useState(true);
   const [emailValid, setEmailValid] = useState(true);
-
   const [emailExists, setEmailExists] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+
+  // State for debounced email to reduce API calls
+  const [debouncedEmail, setDebouncedEmail] = useState(newEmail);
+
+  // Debounce function to delay email validation
+  const debouncedSetEmail = useCallback(
+    debounce((email) => setDebouncedEmail(email), 300),
+    [debounce],
+  );
+
+  // Update debounced email whenever newEmail changes
+  useEffect(() => {
+    debouncedSetEmail(newEmail);
+  }, [newEmail, debouncedSetEmail]);
+
+  // Query to check if the email exists in the database
   const { data: doesEmailExist, isFetching } =
     api.user.checkEmailExists.useQuery(
-      { email: newEmail },
-      { enabled: !!newEmail }, // Runs query only if `newEmail` is non-empty
+      { email: debouncedEmail },
+      { enabled: !!debouncedEmail }, // Runs query only if `debouncedEmail` is non-empty
     );
 
+  // Update emailExists state based on query result
   useEffect(() => {
     setEmailExists(doesEmailExist?.exists || false);
   }, [doesEmailExist]);
 
   // Fetch user profile data
-  const { data: userData } = api.user.getUserProfile.useQuery({
-    userId: userId as string,
-  });
+  const { data: userData } = api.user.getUserProfile.useQuery(
+    { userId: userId as string },
+    { enabled: !!userId },
+  );
 
   // State for user information
   const [userInfo, setUserInfo] = useState<{
@@ -88,6 +110,18 @@ export default function UserProfilePage() {
     return emailRegex.test(email);
   };
 
+  // Handle input changes for form fields
+  /**
+   * Handles input changes for user information form fields.
+   *
+   * @param e - The change event triggered by input elements (either HTMLInputElement or HTMLTextAreaElement).
+   *
+   * This function updates the user information state based on the input field's name and value.
+   * It also performs validation for passwords and email fields:
+   * - For password and confirmPassword fields, it checks if the passwords match and validates the password format.
+   * - For the email field, it sets the new email and validates the email format.
+   * Additionally, it updates the current password state if the currentPassword field is changed.
+   */
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
@@ -98,6 +132,7 @@ export default function UserProfilePage() {
         [name]: value,
       };
 
+      // Validate passwords and email
       if (name === "password" || name === "confirmPassword") {
         setPasswordsMatch(
           updatedUserInfo.password === updatedUserInfo.confirmPassword,
@@ -112,8 +147,32 @@ export default function UserProfilePage() {
 
       return updatedUserInfo;
     });
+
+    if (name === "currentPassword") {
+      setCurrentPassword(value);
+    }
   };
 
+  // Handle save action for updating user profile
+  /**
+   * Handles the save action for updating the user profile.
+   *
+   * This function performs several checks before proceeding with the update:
+   * - Ensures passwords match and are valid.
+   * - Ensures user information fields (name and email) are filled.
+   * - Ensures the email is valid and does not already exist.
+   *
+   * If all checks pass, it proceeds to update the user profile.
+   *
+   * If the user is changing their password, it first validates the current password.
+   * If the current password is valid, it then updates the profile.
+   *
+   * The profile update is performed using the `api.user.updateUserProfile.useMutation` mutation.
+   * On successful update, it resets the user information state and exits editing mode.
+   * On error, it alerts the user with the error message.
+   *
+   * @returns {void}
+   */
   const handleSave = () => {
     if (
       !passwordsMatch ||
@@ -126,26 +185,55 @@ export default function UserProfilePage() {
       return;
     }
 
-    const updatedUserInfo = { ...userInfo };
-    if (!updatedUserInfo.password) {
-      delete updatedUserInfo.password;
-      delete updatedUserInfo.confirmPassword;
+    const updateProfile = () => {
+      const { confirmPassword, ...updatedUserInfo } = userInfo;
+      if (!updatedUserInfo.password) {
+        delete updatedUserInfo.password;
+      }
+
+      // Update user profile
+      api.user.updateUserProfile.useMutation().mutate(
+        { ...updatedUserInfo },
+        {
+          onSuccess: () => {
+            setUserInfo({
+              name: userInfo.name,
+              email: userInfo.email,
+              bio: userInfo.bio,
+              image: userInfo.image,
+              password: "",
+              confirmPassword: "",
+            });
+            setIsEditing(false);
+            setIsChangingPassword(false);
+          },
+          onError: (error) => {
+            alert(`Failed to update profile: ${error.message}`);
+          },
+        },
+      );
+    };
+
+    if (isChangingPassword) {
+      // Validate current password before updating
+      api.user.validateCurrentPassword.useMutation().mutate(
+        { currentPassword },
+        {
+          onSuccess: (isValid) => {
+            if (!isValid) {
+              alert("Current password is incorrect");
+              return;
+            }
+            updateProfile();
+          },
+        },
+      );
+    } else {
+      updateProfile();
     }
-
-    api.user.updateUserProfile.useMutation().mutate({ ...updatedUserInfo });
-
-    setUserInfo({
-      name: userInfo.name,
-      email: userInfo.email,
-      bio: userInfo.bio,
-      image: userInfo.image,
-      password: "",
-      confirmPassword: "",
-    });
-    setIsEditing(false);
-    setIsChangingPassword(false);
   };
 
+  // Determine if the save button should be disabled
   const isSaveDisabled =
     !passwordsMatch ||
     !passwordValid ||
@@ -154,8 +242,14 @@ export default function UserProfilePage() {
     emailExists ||
     !emailValid;
 
+  // Show loading spinner while session is loading
   if (status == "loading") {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <ClipLoader size={50} color={"#123abc"} loading={true} />
+        <span className="ml-4 text-xl">Loading user profile...</span>
+      </div>
+    );
   }
 
   return (
@@ -232,6 +326,20 @@ export default function UserProfilePage() {
             {isChangingPassword && (
               <>
                 <div className="mb-4">
+                  <label className="block text-gray-700">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    name="currentPassword"
+                    placeholder="Enter current password"
+                    value={currentPassword}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full rounded border p-2"
+                  />
+                </div>
+                <div className="mb-4"></div>
+                <div className="mb-4">
                   <label className="block text-gray-700">New Password</label>
                   <input
                     type="password"
@@ -268,35 +376,36 @@ export default function UserProfilePage() {
             )}
           </>
         )}
-        <div className="flex justify-end"></div>
-        {userId === session?.user.id && (
-          <>
-            {isEditing ? (
-              <button
-                onClick={handleSave}
-                className={`mr-2 rounded px-4 py-2 text-white ${isSaveDisabled ? "bg-gray-400" : "bg-blue-500"}`}
-                disabled={isSaveDisabled}
-              >
-                Save
-              </button>
-            ) : (
-              <button
-                onClick={handleEditToggle}
-                className="mr-2 rounded bg-gray-500 px-4 py-2 text-white"
-              >
-                Edit
-              </button>
-            )}
-            {isEditing && (
-              <button
-                onClick={handleEditToggle}
-                className="rounded bg-red-500 px-4 py-2 text-white"
-              >
-                Cancel
-              </button>
-            )}
-          </>
-        )}
+        <div className="flex justify-end">
+          {userId === session?.user.id && (
+            <>
+              {isEditing ? (
+                <button
+                  onClick={handleSave}
+                  className={`mr-2 rounded px-4 py-2 text-white ${isSaveDisabled ? "bg-gray-400" : "bg-blue-500"}`}
+                  disabled={isSaveDisabled}
+                >
+                  Save
+                </button>
+              ) : (
+                <button
+                  onClick={handleEditToggle}
+                  className="mr-2 rounded bg-gray-500 px-4 py-2 text-white"
+                >
+                  Edit
+                </button>
+              )}
+              {isEditing && (
+                <button
+                  onClick={handleEditToggle}
+                  className="rounded bg-red-500 px-4 py-2 text-white"
+                >
+                  Cancel
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
