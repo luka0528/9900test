@@ -126,14 +126,14 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
       <div className="flex flex-col items-center gap-2">
-        {step === "verify" ? "Verify your identity" : "Set new password"}
-      </div>
-      <div>
+        <h1 className="text-2xl font-bold">{step === "verify" ? "Verify your identity" : "Set new password"}</h1>
+        <p className="text-sm text-muted-foreground">
         {step === "verify"
           ? `Enter the verification code sent to ${email}`
           : "Create a new password for your account"}
+        </p>
       </div>
 
       {step === "verify" ? (
@@ -147,7 +147,6 @@ export default function ResetPasswordPage() {
               name="token"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Verification Code</FormLabel>
                   <FormControl>
                     <InputOTP maxLength={6} {...field}>
                       <InputOTPGroup>
@@ -248,7 +247,7 @@ export default function ResetPasswordPage() {
       )}
       <div className="text-center text-sm">
         <Link
-          href="/sign-in"
+          href="/login"
           className="text-muted-foreground hover:text-foreground"
         >
           Back to sign in

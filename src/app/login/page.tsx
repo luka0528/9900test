@@ -144,17 +144,7 @@ export default function SignIn() {
                 render={({ field }) => {
                   return (
                     <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>Password</FormLabel>
-                        <Link href="/forgot-password">
-                          <Button
-                            variant="link"
-                            className="h-auto p-0 text-xs text-indigo-600"
-                          >
-                            Forgot your password?
-                          </Button>
-                        </Link>
-                      </div>
+                      <FormLabel>Password</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
@@ -176,6 +166,14 @@ export default function SignIn() {
                         </div>
                       </FormControl>
                       <FormMessage />
+                      <Link href="/forgot-password">
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-xs text-indigo-600"
+                        >
+                          Forgot your password?
+                        </Button>
+                      </Link>
                     </FormItem>
                   );
                 }}
