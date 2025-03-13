@@ -3,6 +3,12 @@
 import { Separator } from "~/components/ui/separator";
 import { getProviders, signIn } from "next-auth/react";
 import { useEffect, useState, useRef } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter, useSearchParams } from "next/navigation";
+
+// UI Components
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { toast } from "sonner";
@@ -15,10 +21,6 @@ import {
   FormLabel,
   FormMessage,
 } from "~/components/ui/form";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 

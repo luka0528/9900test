@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "~/trpc/react";
+import { useRouter } from "next/navigation";
 
 // UI Components
 import {
@@ -13,14 +13,12 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+
 
 // Form schema
 const forgotPasswordSchema = z.object({
@@ -31,7 +29,6 @@ type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const [success, setSuccess] = useState(false);
 
   // Initialize form
   const form = useForm<ForgotPasswordFormValues>({
@@ -46,22 +43,10 @@ export default function ForgotPasswordPage() {
     api.user.requestPasswordReset.useMutation({
       onSuccess: () => {
         router.push("/reset-password?email=" + form.getValues().email);
-        // setSuccess(true);
-        // toast.success(
-        //   "If an account exists with this email, we've sent you password reset instructions.",
-        // );
-        // // Clear the form
-        // form.reset();
       },
       onError: () => {
+        // Don't show actual error to prevent email enumeration attacks
         router.push("/reset-password?email=" + form.getValues().email);
-        // // Don't show actual error to prevent email enumeration attacks
-        // // Just show the same success message
-        // setSuccess(true);
-        // toast.success(
-        //   "If an account exists with this email, we've sent you password reset instructions.",
-        // );
-        // form.reset();
       },
     });
 
