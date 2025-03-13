@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { api } from "~/trpc/react";
-import debounce from "lodash.debounce";
 
 export default function UserProfilePage() {
   const { data: session, status } = useSession();
@@ -15,14 +14,15 @@ export default function UserProfilePage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordsMatch, setPasswordsMatch] = useState(true);
   const [passwordValid, setPasswordValid] = useState(true);
-  
-  
+  const [emailValid, setEmailValid] = useState(true);
+
   const [emailExists, setEmailExists] = useState(false);
   const [newEmail, setNewEmail] = useState("");
-  const { data: doesEmailExist, isFetching } = api.user.checkEmailExists.useQuery(
-    { email: newEmail },
-    { enabled: !!newEmail } // Runs query only if `newEmail` is non-empty
-  );
+  const { data: doesEmailExist, isFetching } =
+    api.user.checkEmailExists.useQuery(
+      { email: newEmail },
+      { enabled: !!newEmail }, // Runs query only if `newEmail` is non-empty
+    );
 
   useEffect(() => {
     setEmailExists(doesEmailExist?.exists || false);
@@ -82,6 +82,11 @@ export default function UserProfilePage() {
     return password.length >= minLength && specialCharRegex.test(password);
   };
 
+  // Validate email format
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -102,6 +107,7 @@ export default function UserProfilePage() {
 
       if (name === "email") {
         setNewEmail(value);
+        setEmailValid(validateEmail(value));
       }
 
       return updatedUserInfo;
@@ -114,7 +120,8 @@ export default function UserProfilePage() {
       !passwordValid ||
       !userInfo.name ||
       !userInfo.email ||
-      emailExists
+      emailExists ||
+      !emailValid
     ) {
       return;
     }
@@ -144,7 +151,8 @@ export default function UserProfilePage() {
     !passwordValid ||
     !userInfo.name ||
     !userInfo.email ||
-    emailExists;
+    emailExists ||
+    !emailValid;
 
   if (status == "loading") {
     return <div>Loading...</div>;
@@ -205,6 +213,12 @@ export default function UserProfilePage() {
           {emailExists && (
             <p className="mt-1 text-red-500">Email already exists</p>
           )}
+          {!emailValid && (
+            <p className="mt-1 text-red-500">Invalid email format</p>
+          )}
+          {isFetching && (
+            <p className="mt-1 text-blue-500">Checking email...</p>
+          )}
         </div>
         <div className="mb-4"></div>
         {isEditing && (
@@ -254,36 +268,35 @@ export default function UserProfilePage() {
             )}
           </>
         )}
-        <div className="flex justify-end">
-          {userId === session?.user.id && (
-            <>
-              {isEditing ? (
-                <button
-                  onClick={handleSave}
-                  className={`mr-2 rounded px-4 py-2 text-white ${isSaveDisabled ? "bg-gray-400" : "bg-blue-500"}`}
-                  disabled={isSaveDisabled}
-                >
-                  Save
-                </button>
-              ) : (
-                <button
-                  onClick={handleEditToggle}
-                  className="mr-2 rounded bg-gray-500 px-4 py-2 text-white"
-                >
-                  Edit
-                </button>
-              )}
-              {isEditing && (
-                <button
-                  onClick={handleEditToggle}
-                  className="rounded bg-red-500 px-4 py-2 text-white"
-                >
-                  Cancel
-                </button>
-              )}
-            </>
-          )}
-        </div>
+        <div className="flex justify-end"></div>
+        {userId === session?.user.id && (
+          <>
+            {isEditing ? (
+              <button
+                onClick={handleSave}
+                className={`mr-2 rounded px-4 py-2 text-white ${isSaveDisabled ? "bg-gray-400" : "bg-blue-500"}`}
+                disabled={isSaveDisabled}
+              >
+                Save
+              </button>
+            ) : (
+              <button
+                onClick={handleEditToggle}
+                className="mr-2 rounded bg-gray-500 px-4 py-2 text-white"
+              >
+                Edit
+              </button>
+            )}
+            {isEditing && (
+              <button
+                onClick={handleEditToggle}
+                className="rounded bg-red-500 px-4 py-2 text-white"
+              >
+                Cancel
+              </button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
