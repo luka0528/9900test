@@ -59,7 +59,6 @@ export const sendPasswordResetEmail = async ({
   name?: string | null;
 }) => {
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Your T3 App';
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
   
   try {
     const { data, error } = await resend.emails.send({
