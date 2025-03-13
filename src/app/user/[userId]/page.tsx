@@ -314,7 +314,20 @@ export default function UserProfilePage() {
             <p className="mt-1 text-blue-500">Checking email...</p>
           )}
         </div>
-        <div className="mb-4"></div>
+        <div className="mb-4">
+          <label className="block text-gray-700">Bio</label>
+          {isEditing ? (
+            <input
+              type="text"
+              name="bio"
+              value={userInfo.bio}
+              onChange={handleInputChange}
+              className="mt-1 w-full rounded border p-2"
+            />
+          ) : (
+            <p className="mt-1 w-full rounded border p-2">{userInfo.bio}</p>
+          )}
+        </div>
         {isEditing && (
           <>
             <button
