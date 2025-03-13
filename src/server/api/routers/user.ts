@@ -160,6 +160,7 @@ export const userRouter = createTRPCRouter({
         id: true,
         name: true,
         email: true,
+        bio: true,
         image: true,
         emailVerified: true,
       },
@@ -174,4 +175,94 @@ export const userRouter = createTRPCRouter({
 
     return user;
   }),
+
+  getUserProfile: protectedProcedure
+    .input(
+      z.object({
+        userId: z.string().min(1, "Invalid user ID"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { userId } = input;
+
+      const user = await ctx.db.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          bio: true,
+          image: true,
+          emailVerified: true,
+        },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      return user;
+    }),
+
+  updateUserProfile: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().optional(),
+        bio: z.string().optional(),
+        image: z.string().url().optional(),
+        password: z
+          .string()
+          .min(8, "Password must be at least 8 characters")
+          .optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { name, bio, image, password } = input;
+
+      const data: any = { name, bio, image };
+
+      if (password) {
+        data.password = await hash(password, 12);
+      }
+
+      const updatedUser = await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data,
+      });
+
+      if (!updatedUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      return {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        bio: updatedUser.bio,
+        image: updatedUser.image,
+        emailVerified: updatedUser.emailVerified,
+      };
+    }),
+
+  checkEmailExists: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email("Invalid email address"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { email } = input;
+
+      const existingUser = await ctx.db.user.findUnique({
+        where: { email },
+      });
+
+      return { exists: !!existingUser };
+    }),
 });
