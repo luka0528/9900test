@@ -1,106 +1,152 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useParams } from "next/navigation";
+import { api } from "~/trpc/react";
+import debounce from "lodash.debounce";
 
 export default function UserProfilePage() {
+  const { data: session, status } = useSession();
+  const { userId } = useParams();
+
+  // State variables for managing user profile and form states
   const [isEditing, setIsEditing] = useState(false);
-  const [userInfo, setUserInfo] = useState({
-    name: "Nothing Recieved",
-    email: "nothing@received.com",
-    bio: "Maneeee i aint receive shit",
-    profilePicture: "",
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordsMatch, setPasswordsMatch] = useState(true);
+  const [passwordValid, setPasswordValid] = useState(true);
+  
+  
+  const [emailExists, setEmailExists] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const { data: doesEmailExist, isFetching } = api.user.checkEmailExists.useQuery(
+    { email: newEmail },
+    { enabled: !!newEmail } // Runs query only if `newEmail` is non-empty
+  );
+
+  useEffect(() => {
+    setEmailExists(doesEmailExist?.exists || false);
+  }, [doesEmailExist]);
+
+  // Fetch user profile data
+  const { data: userData } = api.user.getUserProfile.useQuery({
+    userId: userId as string,
   });
 
-  const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // State for user information
+  const [userInfo, setUserInfo] = useState<{
+    name: string;
+    email: string;
+    bio: string;
+    image: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({
+    name: "",
+    email: "",
+    bio: "",
+    image: "",
+    password: "",
+    confirmPassword: "",
+  });
 
+  // Update userInfo state when userData changes
   useEffect(() => {
-    const id = window.location.pathname.split("/").pop() || null;
-    setUserId(id);
-  }, []);
-
-  // Check if the session belongs to the user
-  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
-
-  const { data: session } = useSession();
-
-  useEffect(() => {
-    if (session) {
-      setSessionUserId(session.user.id);
+    if (userData) {
+      setUserInfo({
+        name: userData.name || "",
+        email: userData.email || "",
+        bio: userData.bio || "",
+        image: userData.image || "",
+        password: "",
+        confirmPassword: "",
+      });
     }
-    setLoading(false);
-  }, [session]);
+  }, [userData]);
 
-  useEffect(() => {
-    // Fetch user info logic here
-    const fetchUserInfo = async () => {
-      try {
-        console.log("Fetching user info...");
-        const response = await fetch(""); // TODO: Where do we get data for user and how is it stored?
-        const data = await response.json();
-        console.log("Fetched user info:", data);
-        setUserInfo(data);
-      } catch (error) {
-        console.error("Error fetching user info:", error);
-      }
-    };
-
-    fetchUserInfo();
-  }, [userId]);
-
+  // Toggle edit mode
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
+    setIsChangingPassword(false);
   };
 
-  const handleInputChange = (e: { target: { name: any; value: any } }) => {
+  // Toggle change password mode
+  const handleChangePasswordToggle = () => {
+    setIsChangingPassword(!isChangingPassword);
+  };
+
+  // Validate password strength
+  const validatePassword = (password: string) => {
+    const minLength = 8;
+    const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
+    return password.length >= minLength && specialCharRegex.test(password);
+  };
+
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
-    setUserInfo({
-      ...userInfo,
-      [name]: value,
+    setUserInfo((prevUserInfo) => {
+      const updatedUserInfo = {
+        ...prevUserInfo,
+        [name]: value,
+      };
+
+      if (name === "password" || name === "confirmPassword") {
+        setPasswordsMatch(
+          updatedUserInfo.password === updatedUserInfo.confirmPassword,
+        );
+        setPasswordValid(validatePassword(updatedUserInfo.password || ""));
+      }
+
+      if (name === "email") {
+        setNewEmail(value);
+      }
+
+      return updatedUserInfo;
     });
   };
 
-  const handleProfilePictureChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUserInfo({
-          ...userInfo,
-          profilePicture: reader.result as string,
-        });
-      };
-      reader.readAsDataURL(file);
+  const handleSave = () => {
+    if (
+      !passwordsMatch ||
+      !passwordValid ||
+      !userInfo.name ||
+      !userInfo.email ||
+      emailExists
+    ) {
+      return;
     }
+
+    const updatedUserInfo = { ...userInfo };
+    if (!updatedUserInfo.password) {
+      delete updatedUserInfo.password;
+      delete updatedUserInfo.confirmPassword;
+    }
+
+    api.user.updateUserProfile.useMutation().mutate({ ...updatedUserInfo });
+
+    setUserInfo({
+      name: userInfo.name,
+      email: userInfo.email,
+      bio: userInfo.bio,
+      image: userInfo.image,
+      password: "",
+      confirmPassword: "",
+    });
+    setIsEditing(false);
+    setIsChangingPassword(false);
   };
 
-  const handleSave = async () => {
-    try {
-      const response = await fetch(``, {
-        // TODO: Where do we send the data to?
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userInfo),
-      });
+  const isSaveDisabled =
+    !passwordsMatch ||
+    !passwordValid ||
+    !userInfo.name ||
+    !userInfo.email ||
+    emailExists;
 
-      if (!response.ok) {
-        throw new Error("Failed to save user info");
-      }
-
-      const data = await response.json();
-      setUserInfo(data);
-      setIsEditing(false);
-    } catch (error) {
-      console.error("Error saving user info:", error);
-    }
-  };
-
-  if (loading) {
+  if (status == "loading") {
     return <div>Loading...</div>;
   }
 
@@ -114,15 +160,19 @@ export default function UserProfilePage() {
             <input
               type="file"
               accept="image/*"
-              onChange={handleProfilePictureChange}
+              onChange={() => {
+                return null;
+              }}
               className="mt-1 w-full rounded border p-2"
             />
-          ) : (
+          ) : userInfo.image ? (
             <img
-              src={userInfo.profilePicture}
+              src={userInfo.image}
               alt="Err: Picture Not Found"
               className="mt-1 h-32 w-32 rounded-full border"
             />
+          ) : (
+            <p className="mt-1 h-32 w-32 rounded-full border">No Image</p>
           )}
         </div>
         <div className="mb-4">
@@ -152,27 +202,66 @@ export default function UserProfilePage() {
           ) : (
             <p className="mt-1 w-full rounded border p-2">{userInfo.email}</p>
           )}
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700">Bio</label>
-          {isEditing ? (
-            <textarea
-              name="bio"
-              value={userInfo.bio}
-              onChange={handleInputChange}
-              className="mt-1 w-full rounded border p-2"
-            />
-          ) : (
-            <p className="mt-1 w-full rounded border p-2">{userInfo.bio}</p>
+          {emailExists && (
+            <p className="mt-1 text-red-500">Email already exists</p>
           )}
         </div>
+        <div className="mb-4"></div>
+        {isEditing && (
+          <>
+            <button
+              onClick={handleChangePasswordToggle}
+              className="mb-4 rounded bg-blue-500 px-4 py-2 text-white"
+            >
+              Change Password
+            </button>
+            {isChangingPassword && (
+              <>
+                <div className="mb-4">
+                  <label className="block text-gray-700">New Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="Enter new password"
+                    value={userInfo.password}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full rounded border p-2"
+                  />
+                  {!passwordValid && (
+                    <p className="mt-1 text-red-500">
+                      Password must be at least 8 characters long and contain at
+                      least one special character.
+                    </p>
+                  )}
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    placeholder="Confirm new password"
+                    value={userInfo.confirmPassword}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full rounded border p-2"
+                  />
+                  {!passwordsMatch && (
+                    <p className="mt-1 text-red-500">Passwords don't match</p>
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        )}
         <div className="flex justify-end">
-          {sessionUserId === userId && (
+          {userId === session?.user.id && (
             <>
               {isEditing ? (
                 <button
                   onClick={handleSave}
-                  className="mr-2 rounded bg-blue-500 px-4 py-2 text-white"
+                  className={`mr-2 rounded px-4 py-2 text-white ${isSaveDisabled ? "bg-gray-400" : "bg-blue-500"}`}
+                  disabled={isSaveDisabled}
                 >
                   Save
                 </button>
