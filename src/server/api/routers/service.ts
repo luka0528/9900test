@@ -61,5 +61,7 @@ export const serviceRouter = createTRPCRouter({
       });
 
       // TODO for future ticket: finally, notify all subscribers that this service is scheduled to be deleted
+
+      return { success: true };
     }),
 });
