@@ -70,57 +70,51 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
-      <h1 className="text-2xl font-bold">Reset your password</h1>
-      <p className="text-sm text-muted-foreground">
-        Enter your email address and we&apos;ll send you a password reset link
-      </p>
-      {success ? (
-        <div className="space-y-6">
-          <div className="text-center">
-            <Button asChild variant="outline" className="mt-2">
-              <Link href="/sign-in">Return to sign in</Link>
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="name@example.com"
-                      type="email"
-                      autoComplete="email"
-                      disabled={isRequestingPasswordReset}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+      <div className="flex flex-col items-center gap-2">
+        <h1 className="text-2xl font-bold">Reset your password</h1>
+        <p className="text-sm text-muted-foreground">
+          Enter your email address and we&apos;ll send you a code to reset your password
+        </p>
+      </div>
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex w-80 flex-col gap-4"
+        >
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder="name@example.com"
+                    type="email"
+                    autoComplete="email"
+                    disabled={isRequestingPasswordReset}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isRequestingPasswordReset}
-            >
-              {isRequestingPasswordReset && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {isRequestingPasswordReset
-                ? "Sending instructions..."
-                : "Send reset instructions"}
-            </Button>
-          </form>
-        </Form>
-      )}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isRequestingPasswordReset}
+          >
+            {isRequestingPasswordReset && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            {isRequestingPasswordReset
+              ? "Sending reset code..."
+              : "Send reset code"}
+          </Button>
+        </form>
+      </Form>
       <div className="text-center text-sm">
         <Link
           href="/sign-in"

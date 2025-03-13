@@ -48,14 +48,14 @@ export default function SignIn() {
 
   useEffect(() => {
     if (verified && !toastsShown.current.verified) {
-      toast.success("Email verified successfully");
+      toast.success("Email verified successfully, you can now login");
       toastsShown.current.verified = true;
     }
   }, [verified]);
 
   useEffect(() => {
     if (reset && !toastsShown.current.reset) {
-      toast.success("Password reset successfully");
+      toast.success("Password reset successfully, you can now login");
       toastsShown.current.reset = true;
     }
   }, [reset]);
