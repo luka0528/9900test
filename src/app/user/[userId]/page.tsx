@@ -13,6 +13,12 @@ export default function UserProfilePage() {
   // Get userId from URL parameters
   const { userId } = useParams();
 
+  // Fetch user profile data
+  const { data: userData } = api.user.getUserProfile.useQuery(
+    { userId: userId as string },
+    { enabled: !!userId },
+  );
+
   // State variables for managing user profile and form states
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -22,8 +28,6 @@ export default function UserProfilePage() {
   const [emailExists, setEmailExists] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
-
-  // State for debounced email to reduce API calls
   const [debouncedEmail, setDebouncedEmail] = useState(newEmail);
 
   // Debounce function to delay email validation
@@ -41,19 +45,13 @@ export default function UserProfilePage() {
   const { data: doesEmailExist, isFetching } =
     api.user.checkEmailExists.useQuery(
       { email: debouncedEmail },
-      { enabled: !!debouncedEmail }, // Runs query only if `debouncedEmail` is non-empty
+      { enabled: !!debouncedEmail && debouncedEmail !== userData?.email }, // Runs query only if `debouncedEmail` is non-empty and not equal to the current email
     );
 
   // Update emailExists state based on query result
   useEffect(() => {
     setEmailExists(doesEmailExist?.exists || false);
   }, [doesEmailExist]);
-
-  // Fetch user profile data
-  const { data: userData } = api.user.getUserProfile.useQuery(
-    { userId: userId as string },
-    { enabled: !!userId },
-  );
 
   // State for user information
   const [userInfo, setUserInfo] = useState<{
@@ -90,6 +88,20 @@ export default function UserProfilePage() {
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
     setIsChangingPassword(false);
+    setUserInfo({
+      name: userData?.name || "",
+      email: userData?.email || "",
+      bio: userData?.bio || "",
+      image: userData?.image || "",
+      password: "",
+      confirmPassword: "",
+    });
+    setPasswordsMatch(true);
+    setPasswordValid(true);
+    setEmailValid(true);
+    setEmailExists(false);
+    setNewEmail(userData?.email || "");
+    setCurrentPassword("");
   };
 
   // Toggle change password mode
@@ -173,61 +185,61 @@ export default function UserProfilePage() {
    *
    * @returns {void}
    */
+
+  const updateUserProfileMutation = api.user.updateUserProfile.useMutation({
+    onSuccess: () => {
+      setUserInfo({
+        name: userInfo.name,
+        email: userInfo.email,
+        bio: userInfo.bio,
+        image: userInfo.image,
+        password: "",
+        confirmPassword: "",
+      });
+      setIsEditing(false);
+      setIsChangingPassword(false);
+    },
+    onError: (error) => {
+      alert(`Failed to update profile: ${error.message}`);
+    },
+  });
+
+  const validatePasswordMutation = api.user.validateCurrentPassword.useMutation(
+    {
+      onSuccess: (isValid) => {
+        if (!isValid) {
+          alert("Current password is incorrect");
+          return;
+        }
+        updateProfile();
+      },
+    },
+  );
+
+  const updateProfile = () => {
+    const { confirmPassword, ...updatedUserInfo } = userInfo;
+    if (!updatedUserInfo.password) {
+      delete updatedUserInfo.password;
+    }
+
+    // Use the mutation function
+    updateUserProfileMutation.mutate(updatedUserInfo);
+  };
+
   const handleSave = () => {
     if (
       !passwordsMatch ||
       !passwordValid ||
       !userInfo.name ||
       !userInfo.email ||
-      emailExists ||
-      !emailValid
+      emailExists
     ) {
       return;
     }
 
-    const updateProfile = () => {
-      const { confirmPassword, ...updatedUserInfo } = userInfo;
-      if (!updatedUserInfo.password) {
-        delete updatedUserInfo.password;
-      }
-
-      // Update user profile
-      api.user.updateUserProfile.useMutation().mutate(
-        { ...updatedUserInfo },
-        {
-          onSuccess: () => {
-            setUserInfo({
-              name: userInfo.name,
-              email: userInfo.email,
-              bio: userInfo.bio,
-              image: userInfo.image,
-              password: "",
-              confirmPassword: "",
-            });
-            setIsEditing(false);
-            setIsChangingPassword(false);
-          },
-          onError: (error) => {
-            alert(`Failed to update profile: ${error.message}`);
-          },
-        },
-      );
-    };
-
     if (isChangingPassword) {
       // Validate current password before updating
-      api.user.validateCurrentPassword.useMutation().mutate(
-        { currentPassword },
-        {
-          onSuccess: (isValid) => {
-            if (!isValid) {
-              alert("Current password is incorrect");
-              return;
-            }
-            updateProfile();
-          },
-        },
-      );
+      validatePasswordMutation.mutate({ currentPassword });
     } else {
       updateProfile();
     }
