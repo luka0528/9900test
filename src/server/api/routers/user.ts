@@ -1,6 +1,6 @@
 // src/server/api/routers/user.ts
 import { z } from "zod";
-import { hash } from "bcryptjs";
+import bcrypt, { hash } from "bcryptjs";
 import {
   createTRPCRouter,
   publicProcedure,
@@ -264,5 +264,48 @@ export const userRouter = createTRPCRouter({
       });
 
       return { exists: !!existingUser };
+    }),
+
+  validateCurrentPassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z
+          .string()
+          .min(8, "Password must be at least 8 characters"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { currentPassword } = input;
+
+      // Find the user
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+
+      // Validate the current password
+      if (!user.password) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "User password is missing",
+        });
+      }
+
+      const isValid = await bcrypt.compare(currentPassword, user.password);
+
+      if (!isValid) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Current password is incorrect",
+        });
+      }
+
+      return { success: true };
     }),
 });
