@@ -64,6 +64,33 @@ const sidebarStyles = {
     active: "bg-slate-200", // Active state matches hover for consistency
 };
 
+/**
+ * SideBar component renders a sidebar with a list of items.
+ * Each item can be clicked to navigate to a different route.
+ *
+ * @param {object} props - The properties object.
+ * @param {string} [props.className] - Additional class names to apply to the sidebar.
+ * @param {Array} [props.items=defaultSidebarItems] - The list of items to display in the sidebar.
+ * @param {string} [props.baseUrl=""] - The base URL to prepend to each item's href.
+ *
+ * @returns {JSX.Element} The rendered sidebar component.
+ *
+ * @example
+ * // Example usage:
+ * import { SideBar } from './SideBar';
+ * 
+ * const items = [
+ *   { name: 'Home', href: '/home', icon: <HomeIcon /> },
+ *   { name: 'Profile', href: '/profile', icon: <ProfileIcon /> },
+ *   // Add more items as needed
+ * ];
+ * 
+ * function App() {
+ *   return (
+ *     <SideBar className="custom-class" items={items} baseUrl="/app" />
+ *   );
+ * }
+ */
 export function SideBar({ className, items = defaultSidebarItems, baseUrl = "" }: SidebarProps & { baseUrl?: string }) {
     const router = useRouter();
     const pathname = usePathname();
