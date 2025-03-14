@@ -18,6 +18,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 
 // Form schema
@@ -55,7 +56,12 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="flex min-h-screen flex-col items-center justify-center gap-4 p-4"
+    >
       <div className="flex flex-col items-center gap-2">
         <h1 className="text-2xl font-bold">Reset your password</h1>
         <p className="text-sm text-muted-foreground">
@@ -108,6 +114,6 @@ export default function ForgotPasswordPage() {
           Back to sign in
         </Link>
       </div>
-    </div>
+    </motion.div>
   );
 }

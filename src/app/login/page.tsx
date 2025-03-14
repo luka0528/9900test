@@ -23,6 +23,7 @@ import {
 } from "~/components/ui/form";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -111,8 +112,12 @@ export default function SignIn() {
         <div className="text-4xl font-bold">
           <h1>LOGO</h1>
         </div>
-
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-1 flex-col items-center justify-center gap-4 px-16"
+        >
           <div className="flex flex-col items-center gap-2">
             <h1 className="font-lustria text-2xl font-bold text-foreground">
               Log in to your account
@@ -227,7 +232,7 @@ export default function SignIn() {
               </Button>
             </Link>
           </div>
-        </div>
+        </motion.div>
       </div>
       <div className="hidden w-1/2 flex-col items-center justify-center gap-12 bg-gradient-to-b from-[#b2b6b6] to-[#6a6867] px-4 py-16 lg:flex"></div>
     </div>

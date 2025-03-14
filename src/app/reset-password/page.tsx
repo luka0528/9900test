@@ -27,6 +27,7 @@ import {
 } from "~/components/ui/input-otp";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 // Form schemas
 const verifyTokenSchema = z.object({
@@ -126,13 +127,20 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="flex min-h-screen flex-col items-center justify-center gap-4 p-4"
+    >
       <div className="flex flex-col items-center gap-2">
-        <h1 className="text-2xl font-bold">{step === "verify" ? "Verify your identity" : "Set new password"}</h1>
+        <h1 className="text-2xl font-bold">
+          {step === "verify" ? "Verify your identity" : "Set new password"}
+        </h1>
         <p className="text-sm text-muted-foreground">
-        {step === "verify"
-          ? `Enter the verification code sent to ${email}`
-          : "Create a new password for your account"}
+          {step === "verify"
+            ? `Enter the verification code sent to ${email}`
+            : "Create a new password for your account"}
         </p>
       </div>
 
@@ -191,7 +199,7 @@ export default function ResetPasswordPage() {
         <Form {...resetForm}>
           <form
             onSubmit={resetForm.handleSubmit(onResetSubmit)}
-            className="space-y-4"
+            className="space-y-4 w-80"
             key="reset-password-form"
           >
             <FormField
@@ -205,7 +213,7 @@ export default function ResetPasswordPage() {
                       {...field}
                       type="password"
                       autoComplete="new-password"
-                      placeholder="Enter your new password"
+                      placeholder="********"
                     />
                   </FormControl>
                   <FormMessage />
@@ -224,7 +232,7 @@ export default function ResetPasswordPage() {
                       {...field}
                       type="password"
                       autoComplete="new-password"
-                      placeholder="Confirm your new password"
+                      placeholder="********"
                     />
                   </FormControl>
                   <FormMessage />
@@ -253,6 +261,6 @@ export default function ResetPasswordPage() {
           Back to sign in
         </Link>
       </div>
-    </div>
+    </motion.div>
   );
 }
