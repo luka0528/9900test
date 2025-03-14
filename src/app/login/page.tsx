@@ -2,7 +2,13 @@
 
 import { Separator } from "~/components/ui/separator";
 import { getProviders, signIn } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter, useSearchParams } from "next/navigation";
+
+// UI Components
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { toast } from "sonner";
@@ -15,12 +21,9 @@ import {
   FormLabel,
   FormMessage,
 } from "~/components/ui/form";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -33,6 +36,10 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reset = searchParams.get("reset") === "true";
+  const verified = searchParams.get("verified") === "true";
+  const toastsShown = useRef({ verified: false, reset: false });
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -41,6 +48,20 @@ export default function SignIn() {
     };
     void fetchProviders();
   }, []);
+
+  useEffect(() => {
+    if (verified && !toastsShown.current.verified) {
+      toast.success("Email verified successfully, you can now login");
+      toastsShown.current.verified = true;
+    }
+  }, [verified]);
+
+  useEffect(() => {
+    if (reset && !toastsShown.current.reset) {
+      toast.success("Password reset successfully, you can now login");
+      toastsShown.current.reset = true;
+    }
+  }, [reset]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,9 +97,7 @@ export default function SignIn() {
         error.message.includes("verify your email")
       ) {
         toast.error(error.message);
-        router.push(
-          `/verify-email?email=${encodeURIComponent(values.email)}`,
-        );
+        router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
       } else {
         toast.error("Something went wrong. Please try again.");
       }
@@ -93,8 +112,12 @@ export default function SignIn() {
         <div className="text-4xl font-bold">
           <h1>LOGO</h1>
         </div>
-
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-1 flex-col items-center justify-center gap-4 px-16"
+        >
           <div className="flex flex-col items-center gap-2">
             <h1 className="font-lustria text-2xl font-bold text-foreground">
               Log in to your account
@@ -150,6 +173,14 @@ export default function SignIn() {
                         </div>
                       </FormControl>
                       <FormMessage />
+                      <Link href="/forgot-password">
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-xs text-indigo-600"
+                        >
+                          Forgot your password?
+                        </Button>
+                      </Link>
                     </FormItem>
                   );
                 }}
@@ -196,15 +227,12 @@ export default function SignIn() {
               Don&apos;t have an account?
             </span>
             <Link href="/sign-up">
-              <Button
-                variant="link"
-                className="px-0 text-indigo-600"
-              >
+              <Button variant="link" className="px-0 text-indigo-600">
                 Sign up
               </Button>
             </Link>
           </div>
-        </div>
+        </motion.div>
       </div>
       <div className="hidden w-1/2 flex-col items-center justify-center gap-12 bg-gradient-to-b from-[#b2b6b6] to-[#6a6867] px-4 py-16 lg:flex"></div>
     </div>
