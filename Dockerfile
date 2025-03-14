@@ -1,30 +1,34 @@
-FROM node:18-alpine
+# Use a Debian-based Node.js image for better cross-platform compatibility
+FROM node:18-slim
 
+# Set the working directory
 WORKDIR /app
 
-# Install OpenSSL and other required dependencies
-RUN apk add --no-cache openssl
+# Install OpenSSL and other dependencies Prisma might need
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# Enable Corepack for package manager version management
-RUN corepack enable
+# Copy package manager files first (to leverage Docker caching)
+COPY package.json pnpm-lock.yaml ./
 
-# Copy package files first for better caching
-COPY package.json pnpm-lock.yaml* ./
+# Copy Prisma schema before installing dependencies
+COPY prisma ./prisma
 
-# Install dependencies without running Prisma postinstall scripts yet
-RUN corepack pnpm install --ignore-scripts
+# Install dependencies using pnpm
+RUN npm install -g pnpm && pnpm install
 
-# Copy prisma directory separately to fix schema location issue
-COPY prisma ./prisma/
-
-# Copy all other app files
+# Copy the rest of the app
 COPY . .
 
-# Now generate Prisma client
-RUN if [ -f prisma/schema.prisma ]; then npx prisma generate; fi
+# Generate Prisma client explicitly with the updated schema
+RUN pnpm prisma generate
 
-# Expose the development server port
+# Expose the development port (if needed)
 EXPOSE 3000
 
-# Run development server
+# Run the development server
 CMD ["pnpm", "dev"]
+
