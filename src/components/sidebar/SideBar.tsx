@@ -1,6 +1,8 @@
 "use client";
 
 import React, { ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import {
@@ -9,14 +11,12 @@ import {
     ShoppingBagIcon,
     BookmarkIcon,
     SettingsIcon,
-    LucideIcon,
 } from "lucide-react";
 
 type SidebarProps = {
     className?: string;
     items?: SidebarItem[]; // Allow custom items to be passed in
 };
-
 
 // Update the SidebarItem type to accept LucideIcon component
 export type SidebarItem = {
@@ -55,40 +55,44 @@ const defaultSidebarItems: SidebarItem[] = [
     },
 ];
 
-export function SideBar({ className, items = defaultSidebarItems }: SidebarProps) {
-    const currentPath = window.location.pathname;
 
-    // Function to construct the complete URL by appending item href to current path
-    const getFullUrl = (itemHref: string) => {
-        if (itemHref === "/") return currentPath; // If href is root, just use current path
-        return `${currentPath.replace(/\/$/, '')}${itemHref}`; // Remove trailing slash if exists
-    };
 
+// Styling constants for the sidebar
+const sidebarStyles = {
+    background: "bg-slate-100", // Light slate gray background
+    hover: "hover:bg-slate-200", // Slightly darker shade for hover states
+    active: "bg-slate-200", // Active state matches hover for consistency
+};
+
+export function SideBar({ className, items = defaultSidebarItems, baseUrl = "" }: SidebarProps & { baseUrl?: string }) {
+    const router = useRouter();
+    const pathname = usePathname();
     return (
         <aside
             className={cn(
-                "flex h-screen w-64 flex-col border-r bg-background px-3 py-4",
+                "flex h-screen w-64 flex-col border-r px-3 py-4",
+                sidebarStyles.background,
                 className
             )}
         >
             <div className="space-y-1">
                 {items.map((item) => {
-                    const fullUrl = getFullUrl(item.href);
+                    const isActive = pathname === `${baseUrl}${item.href}`;
                     return (
                         <Button
                             key={item.name}
-                            variant={currentPath === item.href ? "secondary" : "ghost"}
+                            variant="ghost"
                             size="sm"
                             className={cn(
                                 "w-full justify-start gap-3 text-sm font-medium",
-                                currentPath === item.href
-                                    ? "bg-muted"
-                                    : "hover:bg-muted hover:text-foreground"
+                                isActive
+                                    ? sidebarStyles.active
+                                    : sidebarStyles.hover
                             )}
                             asChild
                         >
-                            <div 
-                                onClick={() => window.location.href = item.href} 
+                            <div
+                                onClick={() => router.push(`${baseUrl}${item.href}`)}
                                 className="flex items-center w-full cursor-pointer"
                             >
                                 <span className="mr-3">{item.icon}</span>
