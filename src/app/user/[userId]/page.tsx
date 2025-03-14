@@ -14,7 +14,7 @@ export default function UserProfilePage() {
   const { userId } = useParams();
 
   // Fetch user profile data
-  const { data: userData } = api.user.getUserProfile.useQuery(
+  const { data: userData, isLoading: isLoadingUserProfile } = api.user.getUserProfile.useQuery(
     { userId: userId as string },
     { enabled: !!userId },
   );
@@ -255,7 +255,7 @@ export default function UserProfilePage() {
     !emailValid;
 
   // Show loading spinner while session is loading
-  if (status == "loading") {
+  if (status == "loading" || isLoadingUserProfile) {
     return (
       <div className="flex h-screen items-center justify-center">
         <ClipLoader size={50} color={"#123abc"} loading={true} />
