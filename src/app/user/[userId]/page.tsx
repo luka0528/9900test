@@ -269,7 +269,6 @@ export default function UserProfilePage() {
       <div className="rounded-lg bg-white p-6 shadow-md">
         <h1 className="mb-4 text-2xl font-bold">User Profile Page</h1>
         <div className="mb-4">
-          <label className="block text-gray-700">Profile Picture</label>
           {isEditing ? (
             <input
               type="file"
