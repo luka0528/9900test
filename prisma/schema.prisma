@@ -165,6 +165,7 @@ model User {
     emailVerified DateTime?
     password      String?
     image         String?
+    bio           String?
     accounts      Account[]
     sessions      Session[]
     verificationTokens VerificationToken[]
@@ -183,6 +184,7 @@ enum UserRole {
 }
 
 model VerificationToken {
+    id         String   @id @default(cuid())
     identifier String
     token      String   @unique
     expires    DateTime
