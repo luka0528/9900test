@@ -56,10 +56,9 @@ enum ConsumerEventType {
 // Service Management
 model Tag {
     id        String   @id @default(cuid())
-    name      String
+    name      String   @unique
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-    value     String
 
     services  Service[]
 }
