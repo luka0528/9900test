@@ -1,4 +1,4 @@
-import { Service } from "@prisma/client";
+import type { Service } from "@prisma/client";
 import { z } from "zod";
 
 import {
@@ -41,8 +41,8 @@ export const serviceRouter = createTRPCRouter({
           cursor: z.number().nullish(),
         })
       )
-      .query(async ({ ctx, input }) => {
-        const cursor = input.cursor || 0;
+      .query(async ({ input }) => {
+        const cursor = input.cursor ?? 0;
         const limit = 12;
 
         // Generates fake services as mock data.

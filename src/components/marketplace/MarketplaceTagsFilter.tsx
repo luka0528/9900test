@@ -29,7 +29,7 @@ export const MarketplaceTagsFilter = ({ opened }: MarketplaceTagsFilterProps) =>
             ...query,
             filters: {
                 ...query.filters,
-                tags
+                tags,
             }
         });
 

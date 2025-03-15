@@ -1,5 +1,5 @@
 import React from "react";
-import { MarketplaceQuery } from "~/app/marketplace/page";
+import type { MarketplaceQuery } from "~/app/marketplace/page";
 
 const MARKETPLACE_MAX_PRICE = 20;
 const MARKETPLACE_START_YEAR = 2020;
@@ -17,10 +17,17 @@ export const MarketplaceDefaultQuery: MarketplaceQuery = {
     },
 }
     
-export const MarketplaceContext = React.createContext({
+type MarketplaceContextType = {
+    query: MarketplaceQuery;
+    isToQuery: boolean;
+    setQuery: (query: MarketplaceQuery) => void;
+    setIsToQuery: (isToQuery: boolean) => void;
+};
+
+export const MarketplaceContext = React.createContext<MarketplaceContextType>({
     query: MarketplaceDefaultQuery,
     isToQuery: false,
-    setQuery: (_query: MarketplaceQuery) => {},
-    setIsToQuery: (_isToQuery: boolean) => {},
+    setQuery: (_: MarketplaceQuery) => undefined,
+    setIsToQuery: (_: boolean) => undefined,
 });
 

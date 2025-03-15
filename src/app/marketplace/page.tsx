@@ -4,10 +4,12 @@ import React from 'react';
 
 import { MarketplaceContext, MarketplaceDefaultQuery } from '~/components/marketplace/MarketplaceContext';
 import { MarketplaceSearch } from '~/components/marketplace/MarketplaceSearch';
-import { MarketplaceSortSelector, MarketplaceSortType } from '~/components/marketplace/MarketplaceSortSelector';
+import { MarketplaceSortSelector } from '~/components/marketplace/MarketplaceSortSelector';
 import { MarketplaceServices } from '~/components/marketplace/MarketplaceServices';
-import { MarketplaceSideBar, MarketplaceFilterType } from '~/components/marketplace/MarketplaceSidebar';
+import { MarketplaceSideBar } from '~/components/marketplace/MarketplaceSidebar';
 
+import type { MarketplaceSortType } from '~/components/marketplace/MarketplaceSortSelector';
+import type { MarketplaceFilterType } from '~/components/marketplace/MarketplaceSidebar';
 
 export interface MarketplaceQuery {
   search: string;

@@ -102,7 +102,7 @@ export const MarketplaceServices = () => {
 
     React.useEffect(() => {
         if (inView) {
-          fetchNextPage();
+          void fetchNextPage()
         }
     }, [fetchNextPage, inView]);
 
@@ -118,7 +118,7 @@ export const MarketplaceServices = () => {
                     {data.pages.map((page) => (
                         <div className="grid grid-cols-1 md:grid-cols-2 grow px-8 pb-8 gap-8" key={page.nextCursor}>
                             {page.services.map((service, index) => (
-                                <MarketplaceService key={service.id} service={packages[index % packages.length] || undefined}  />
+                                <MarketplaceService key={service.id} service={packages[index % packages.length] ?? undefined}  />
                             ))}
                         </div>
                     ))}

@@ -1,5 +1,3 @@
-import { Service } from "@prisma/client";
-
 import { Badge } from "~/components/ui/badge"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip"
@@ -23,7 +21,7 @@ interface MarketplaceServiceProps {
     }
 }
 export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
-    const { name, description, version, stats, creator, lastUpdated, price, keywords } = service || {
+    const { name, description, version, stats, creator, lastUpdated, price, keywords } = service ?? {
         name: "react",
         description: "React is a JavaScript library for building user interfaces.",
         version: "18.2.0",

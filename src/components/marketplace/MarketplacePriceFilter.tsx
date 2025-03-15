@@ -10,8 +10,8 @@ export const MarketplacePriceFilter: React.FC = () => {
   const [priceRange, setPriceRange] = React.useState<[number, number]>([0, 12]);
 
   const handleRangeChange = (r: number[]) => {
-    const r1 = r[0] || 0
-    const r2 = r[1] || 0
+    const r1 = r[0] ?? 0
+    const r2 = r[1] ?? 0
     setPriceRange([r1, r2])
   }
 
