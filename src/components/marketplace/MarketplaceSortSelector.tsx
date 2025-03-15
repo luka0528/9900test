@@ -19,8 +19,8 @@ export const MarketplaceSortSelector = () => {
     const [sort, setSort] = React.useState<MarketplaceSortType>("Popularity");
 
     React.useEffect(() => {
-        // TODO: Update the MarketplaceContext.
-
+        setQuery({ ...query, sort });
+        setIsToQuery(true);
     }, [sort]);
 
     return (

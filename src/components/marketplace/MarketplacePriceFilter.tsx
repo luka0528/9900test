@@ -3,8 +3,10 @@
 import React from "react";
 import { Button } from "~/components/ui/button";
 import { DualSlider } from "~/components/ui/dual-slider";
+import { MarketplaceContext } from "./MarketplaceContext";
 
 export const MarketplacePriceFilter: React.FC = () => {
+  const { query, setQuery, setIsToQuery } = React.useContext(MarketplaceContext);
   const [priceRange, setPriceRange] = React.useState<[number, number]>([0, 12]);
 
   const handleRangeChange = (r: number[]) => {
@@ -12,6 +14,20 @@ export const MarketplacePriceFilter: React.FC = () => {
     const r2 = r[1] || 0
     setPriceRange([r1, r2])
   }
+
+  const handleApplyFilter = () => {
+      setIsToQuery(true);
+  }
+  
+  React.useEffect(() => {
+      setQuery({
+          ...query,
+          filters: {
+              ...query.filters,
+              price: priceRange
+          }
+      })
+  }, [priceRange])
   
   return (
       <div>
@@ -37,7 +53,14 @@ export const MarketplacePriceFilter: React.FC = () => {
             <DualSlider max={20} defaultValue={priceRange} value={priceRange} onValueChange={r => handleRangeChange(r)} />
         </div>
         <div className="flex justify-end">
-          <Button size="sm" variant="outline" className="w-full text-sm">Go</Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="w-full text-sm"
+            onClick={() => handleApplyFilter()}
+          >
+            Go
+          </Button>
         </div>
       </div>
   );

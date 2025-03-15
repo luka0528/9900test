@@ -3,6 +3,7 @@
 import React from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Button } from "~/components/ui/button";
+import { MarketplaceContext } from "./MarketplaceContext";
 
 // The set of dates to filter by
 const startYear = 2020;
@@ -13,6 +14,7 @@ const dates = Array.from({ length: numberOfYears }, (_, index) => ({
 }));
 
 export const MarketplaceDateFilter = () => {
+    const { query, setQuery, setIsToQuery } = React.useContext(MarketplaceContext);
     const [selectedDates, setSelectedDates] = React.useState<Map<number, boolean>>(new Map());
     const toggleDate = (index: number) => {
         setSelectedDates((prev) => {
@@ -21,9 +23,22 @@ export const MarketplaceDateFilter = () => {
         })
     }
 
+    const handleApplyFilter = () => {
+        setIsToQuery(true);
+    }
+
     React.useEffect(() => {
-        // TODO: Add to MarketplaceContext
-        console.log(selectedDates)
+        const yearsInc = Array.from(selectedDates.entries())
+            .filter(([_, v]) => v)
+            .map(([k, _]) => k)
+
+        setQuery({
+            ...query,
+            filters: {
+                ...query.filters,
+                dates: yearsInc
+            }
+        })
     }, [selectedDates])
     
     return (
@@ -45,7 +60,14 @@ export const MarketplaceDateFilter = () => {
                 ))}
             </div>
             <div className="flex mt-4 justify-end">
-                <Button size="sm" variant="outline" className="w-full text-sm">Go</Button>
+                <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full text-sm"
+                    onClick={() => handleApplyFilter()}
+                >
+                        Go
+                </Button>
             </div>
         </div>
     )

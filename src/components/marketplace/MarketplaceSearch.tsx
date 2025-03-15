@@ -5,16 +5,17 @@ import { Search } from 'lucide-react';
 
 import { Input } from "~/components/ui/input"
 import { useDebounce } from "~/lib/hooks/useDebounce"
+import { MarketplaceContext } from "./MarketplaceContext";
 
 export const MarketplaceSearch = () => {
-    const [query, setQuery] = React.useState("");
-    const debouncedQuery = useDebounce(query, 1000);
+    const { query, setQuery, setIsToQuery } = React.useContext(MarketplaceContext);
+    const [search, setSearch] = React.useState("");
+    const debounceSearch = useDebounce(search, 1000);
 
     React.useEffect(() => {
-        if (debouncedQuery) {
-            // TODO: Update the MarketplaceContext.
-        }
-    }, [debouncedQuery]);
+        setQuery({ ...query, search: debounceSearch });
+        setIsToQuery(true);
+    }, [debounceSearch]);
 
     // Placing the Search icon within the input https://github.com/shadcn-ui/ui/discussions/1552
     return (
@@ -23,8 +24,8 @@ export const MarketplaceSearch = () => {
             <Input 
                 className="w-full pl-10"
                 placeholder="Search..." 
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
             />
         </div>
     );

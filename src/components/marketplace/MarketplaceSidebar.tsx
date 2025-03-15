@@ -17,12 +17,12 @@ export interface MarketplaceFilterType {
 
 export const MarketplaceSideBar = () => {
     return (
-        <div className="min-w-48 lg:min-w-60 h-full border-r max-w-60">
+        <div className="min-w-48 lg:min-w-60 h-full border-r max-w-60 overflow-y-auto">
             <Accordion type="multiple" className="w-full p-4">
                 <AccordionItem value="item-1">
                     <AccordionTrigger>Tags</AccordionTrigger>
                     <AccordionContent >
-                        <MarketplaceTagsFilter />
+                        <MarketplaceTagsFilter opened={true} />
                     </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-2">
