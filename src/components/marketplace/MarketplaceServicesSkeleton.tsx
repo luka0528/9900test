@@ -2,7 +2,6 @@
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { Card, CardContent, CardFooter, CardHeader } from "~/components/ui/card"
-import { TooltipProvider } from "~/components/ui/tooltip"
 import { Download, Package, Calendar, Users} from "lucide-react"
 
 export const MarketplaceServicesSkeleton = () => {

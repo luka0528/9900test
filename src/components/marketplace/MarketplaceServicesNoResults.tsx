@@ -6,7 +6,7 @@ export const MarketplaceServicesNoResults = () => {
             <Search className="w-20 h-20 text-gray-500 mb-8" />
             <h2 className="text-3xl font-semibold text-gray-700 mb-6">No Results Found</h2>
             <p className="text-gray-500 max-w-md text-lg mb-8">
-                We couldn't find any services matching your search criteria.
+                We couldn&apos;t find any services matching your search criteria.
             </p>
         </div>
     )

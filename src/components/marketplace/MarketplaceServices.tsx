@@ -83,7 +83,6 @@ export const MarketplaceServices = () => {
     const { 
         status,
         data,
-        error,
         fetchNextPage,
     } = api.service.getInfiniteServices.useInfiniteQuery(
         {
