@@ -21,7 +21,7 @@ export const MarketplaceServices = () => {
           creator: { name: "Meta Open Source", url: "https://github.com/facebook" },
           lastUpdated: "2023-10-15",
           license: "MIT",
-          price: 0,
+          price: 0.0,
           keywords: ["react", "javascript", "library", "ui"],
         },
         {
@@ -35,7 +35,7 @@ export const MarketplaceServices = () => {
           creator: { name: "Vercel", url: "https://github.com/vercel" },
           lastUpdated: "2023-11-20",
           license: "MIT",
-          price: 15,
+          price: 15.99,
           keywords: ["react", "nextjs", "framework", "ssr"],
         },
         {
@@ -49,7 +49,7 @@ export const MarketplaceServices = () => {
           creator: { name: "Adam Wathan", url: "https://github.com/adamwathan" },
           lastUpdated: "2023-11-10",
           license: "MIT",
-          price: 10,
+          price: 10.00,
           keywords: ["css", "tailwind", "utility", "responsive"],
         },
         {
@@ -63,7 +63,7 @@ export const MarketplaceServices = () => {
           creator: { name: "shadcn", url: "https://github.com/shadcn" },
           lastUpdated: "2023-11-25",
           license: "MIT",
-          price: 8,
+          price: 8.00,
           keywords: ["ui", "components", "radix", "tailwind"],
         },
     ];
@@ -102,9 +102,9 @@ export const MarketplaceServices = () => {
             ) : (
                 <>
                     {data.pages.map((page) => (
-                        <div className="grid grid-cols-2 grow px-8 pb-8 gap-8" key={page.nextCursor}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 grow px-8 pb-8 gap-8" key={page.nextCursor}>
                             {page.services.map((service, index) => (
-                                <MarketplaceService key={service.id} service={packages[1] || undefined}  />
+                                <MarketplaceService key={service.id} service={packages[index % packages.length] || undefined}  />
                             ))}
                         </div>
                     ))}

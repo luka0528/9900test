@@ -3,7 +3,7 @@ import { Service } from "@prisma/client";
 import { Badge } from "~/components/ui/badge"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip"
-import { Download, Github, Package, Calendar, Users, Scale, Clock, Heart } from "lucide-react"
+import { Download, Package, Calendar, Users} from "lucide-react"
 import { Button } from "~/components/ui/button";
 
 interface MarketplaceServiceProps {
@@ -33,7 +33,7 @@ export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
         },
         creator: { name: "Meta Open Source", url: "https://github.com/facebook" },
         lastUpdated: "2023-10-15",
-        price : 0,
+        price: 0.00,
         keywords: ["react", "javascript", "library", "ui"],
     }
     return (
@@ -90,16 +90,13 @@ export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                {price && (
                     <Button
                         variant="outline"
                         size="sm"
-                        className="border-blue-500 text-sm font-medium hover:bg-blue-50 hover:text-blue-600"
+                        className="border-blue-500 min-w-20 text-sm font-medium hover:bg-blue-50 hover:text-blue-600"
                     >
-                        <Heart className="mr-1.5 h-4 w-4" />
-                        {"$" + price + " / mo"}
+                        {Number(price) === 0 ? "Free" : "$" + price.toFixed(2)}
                     </Button>
-                )}
               </div>
             </CardFooter>
           </Card>
