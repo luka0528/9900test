@@ -12,7 +12,9 @@ import {
 } from "~/components/ui/select"
 import { MarketplaceContext } from "./MarketplaceContext";
 
-export type MarketplaceSortType = "Popularity" | "Name" | "Date-Added" | "Last-Updated";
+export type MarketplaceSortType = 
+    "Popularity" | "Name-Asc" | "Name-Desc" | "Price-Asc" | 
+    "Price-Desc" | "New-to-Old" | "Old-to-New" | "Last-Updated";
 
 export const MarketplaceSortSelector = () => {
     const { query, setQuery, setIsToQuery } = React.useContext(MarketplaceContext);
@@ -33,8 +35,11 @@ export const MarketplaceSortSelector = () => {
             <SelectContent>
                 <SelectGroup>
                     <SelectItem value="Popularity">Popularity</SelectItem>
-                    <SelectItem value="Name">Name (A-Z)</SelectItem>
-                    <SelectItem value="Date-Added">Date Added</SelectItem>
+                    <SelectItem value="Name-Asc">Name (A-Z)</SelectItem>
+                    <SelectItem value="Name-Desc">Name (Z-A)</SelectItem>
+                    <SelectItem value="Price-Asc">Price (Low-High)</SelectItem>
+                    <SelectItem value="Price-Desc">Price (High-Low)</SelectItem>
+                    <SelectItem value="New-to-Old">Date Added</SelectItem>
                     <SelectItem value="Last-Updated">Last Updated</SelectItem>
                 </SelectGroup>
             </SelectContent>
