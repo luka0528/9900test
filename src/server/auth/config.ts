@@ -1,6 +1,8 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
+import GoogleProvider from "next-auth/providers/google";
+import GithubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 
 import { db } from "~/server/db";
@@ -35,6 +37,8 @@ declare module "next-auth" {
 export const authConfig = {
   providers: [
     DiscordProvider,
+    GoogleProvider,
+    GithubProvider,
     CredentialsProvider({
       // The name to display on the sign-in form (e.g., "Sign in with...")
       name: "Credentials",
@@ -69,7 +73,7 @@ export const authConfig = {
           ? await compare(credentials.password as string, user.password)
           : false;
         if (!user || !isValidPassword) {
-          return null;
+          throw new Error("INVALID_CREDENTIALS");
         }
 
         // User authenticated successfully
@@ -77,6 +81,7 @@ export const authConfig = {
           id: user.id,
           name: user.name,
           email: user.email,
+          emailVerified: user.emailVerified,
         };
       },
     }),
