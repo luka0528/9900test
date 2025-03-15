@@ -3,7 +3,7 @@
 
 generator client {
     provider = "prisma-client-js"
-    binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+    binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -56,10 +56,9 @@ enum ConsumerEventType {
 // Service Management
 model Tag {
     id        String   @id @default(cuid())
-    name      String
+    name      String   @unique
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-    value     String
 
     services  Service[]
 }
@@ -165,6 +164,7 @@ model User {
     emailVerified DateTime?
     password      String?
     image         String?
+    bio           String?
     accounts      Account[]
     sessions      Session[]
     verificationTokens VerificationToken[]
@@ -183,6 +183,7 @@ enum UserRole {
 }
 
 model VerificationToken {
+    id         String   @id @default(cuid())
     identifier String
     token      String   @unique
     expires    DateTime

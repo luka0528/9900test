@@ -28,6 +28,17 @@ export const AzureIcon = () => {
   );
 };
 
+export const GithubIcon = () => {
+  return (
+    <Image
+      src="/logos/github-icon.svg"
+      alt="GitHub"
+      width={20}
+      height={20}
+    />
+  );
+};
+
 export function getProviderIcon(provider: string) {
   switch (provider) {
     case "discord":
@@ -36,6 +47,8 @@ export function getProviderIcon(provider: string) {
       return <GoogleIcon />;
     case "azure-ad":
       return <AzureIcon />;
+    case "github":
+      return <GithubIcon />;
     default:
       return null;
   }
@@ -49,6 +62,8 @@ export function getProviderName(provider: string) {
       return "Google";
     case "azure-ad":
       return "Microsoft";
+    case "github":
+      return "GitHub";
     default:
       return null;
   }
