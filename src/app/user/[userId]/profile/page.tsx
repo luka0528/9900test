@@ -9,6 +9,18 @@ import ClipLoader from "react-spinners/ClipLoader";
 
 export default function UserProfilePage() {
 
+  // State variables for managing user profile and form states
+  const [isEditing, setIsEditing] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordsMatch, setPasswordsMatch] = useState(true);
+  const [passwordValid, setPasswordValid] = useState(true);
+  const [emailValid, setEmailValid] = useState(true);
+  const [emailExists, setEmailExists] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [debouncedEmail, setDebouncedEmail] = useState(newEmail);
+
+
   // Get session data and status from next-auth
   const { data: session, status } = useSession();
   // Redirect to login if not authenticated
@@ -26,22 +38,50 @@ export default function UserProfilePage() {
     { enabled: !!userId },
   );
 
-  // State variables for managing user profile and form states
-  const [isEditing, setIsEditing] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [passwordsMatch, setPasswordsMatch] = useState(true);
-  const [passwordValid, setPasswordValid] = useState(true);
-  const [emailValid, setEmailValid] = useState(true);
-  const [emailExists, setEmailExists] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [debouncedEmail, setDebouncedEmail] = useState(newEmail);
-
   // Debounce function to delay email validation
   const debouncedSetEmail = useCallback(
     debounce((email) => setDebouncedEmail(email), 300),
     [debounce],
   );
+
+  // Toggle edit mode
+  const handleEditToggle = () => {
+    setIsEditing(!isEditing);
+    setIsChangingPassword(false);
+    setUserInfo({
+      name: userData?.name || "",
+      email: userData?.email || "",
+      bio: userData?.bio || "",
+      image: userData?.image || "",
+      password: "",
+      confirmPassword: "",
+    });
+    setPasswordsMatch(true);
+    setPasswordValid(true);
+    setEmailValid(true);
+    setEmailExists(false);
+    setNewEmail(userData?.email || "");
+    setCurrentPassword("");
+  };
+
+  // Toggle change password mode
+  const handleChangePasswordToggle = () => {
+    setIsChangingPassword(!isChangingPassword);
+  };
+
+  // Validate password strength
+  const validatePassword = (password: string) => {
+    const minLength = 8;
+    const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
+    return password.length >= minLength && specialCharRegex.test(password);
+  };
+
+  // Validate email format
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
 
   // Update debounced email whenever newEmail changes
   useEffect(() => {
@@ -90,44 +130,6 @@ export default function UserProfilePage() {
       });
     }
   }, [userData]);
-
-  // Toggle edit mode
-  const handleEditToggle = () => {
-    setIsEditing(!isEditing);
-    setIsChangingPassword(false);
-    setUserInfo({
-      name: userData?.name || "",
-      email: userData?.email || "",
-      bio: userData?.bio || "",
-      image: userData?.image || "",
-      password: "",
-      confirmPassword: "",
-    });
-    setPasswordsMatch(true);
-    setPasswordValid(true);
-    setEmailValid(true);
-    setEmailExists(false);
-    setNewEmail(userData?.email || "");
-    setCurrentPassword("");
-  };
-
-  // Toggle change password mode
-  const handleChangePasswordToggle = () => {
-    setIsChangingPassword(!isChangingPassword);
-  };
-
-  // Validate password strength
-  const validatePassword = (password: string) => {
-    const minLength = 8;
-    const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
-    return password.length >= minLength && specialCharRegex.test(password);
-  };
-
-  // Validate email format
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
 
   // Handle input changes for form fields
   /**
