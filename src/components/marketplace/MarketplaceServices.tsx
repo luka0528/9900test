@@ -6,6 +6,7 @@ import { useInView } from "react-intersection-observer";
 
 import { MarketplaceService } from "./MarketplaceService";
 import { MarketplaceContext } from "./MarketplaceContext";
+import { MarketplaceServicesSkeleton } from "./MarketplaceServicesSkeleton";
 
 // Mock data for the Marketplace -- cannot use the data from the API
 // as the schema is very limited.
@@ -110,7 +111,7 @@ export const MarketplaceServices = () => {
         <div className="h-screen overflow-y-auto">
             {/* TODO: Nicer skeleton page for no results & loading */}
             {status === 'pending' ? (
-                <p>Loading...</p>
+                <MarketplaceServicesSkeleton />
             ) : status === 'error' ? (
                 <span>Error: {error.message}</span>
             ) : (
