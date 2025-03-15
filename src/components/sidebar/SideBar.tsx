@@ -56,11 +56,11 @@ interface SidebarProps {
  * />
  * ```
  */
-export function SideBar({ sideBarItems = [], breadCrumbItems=[], label = "Sidebar", baseUrl = "",  }: SidebarProps & BreadCrumbProps & { label?: string } & { baseUrl?: string }) {
+export function SideBar({ sideBarItems = [], breadCrumbItems=[], baseUrl = "",  }: SidebarProps & BreadCrumbProps &  { baseUrl?: string }) {
     // Get the current pathname
     const pathname = usePathname();
     return (
-        <Sidebar collapsible="none" className="h-full min-h-screen">
+        <Sidebar collapsible="none" className={`h-full min-h-screen border-r-[2px] border-gray-200`}>
             <SidebarContent className="flex-1">
                 <SidebarGroup>
                     <div className="mb-4"><BreadCrumb breadCrumbItems={breadCrumbItems} /></div>

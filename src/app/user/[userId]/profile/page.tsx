@@ -8,7 +8,6 @@ import debounce from "lodash.debounce";
 import ClipLoader from "react-spinners/ClipLoader";
 
 export default function UserProfilePage() {
-
   // State variables for managing user profile and form states
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -19,7 +18,6 @@ export default function UserProfilePage() {
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [debouncedEmail, setDebouncedEmail] = useState(newEmail);
-
 
   // Get session data and status from next-auth
   const { data: session, status } = useSession();
@@ -82,7 +80,6 @@ export default function UserProfilePage() {
     return emailRegex.test(email);
   };
 
-
   // Update debounced email whenever newEmail changes
   useEffect(() => {
     debouncedSetEmail(newEmail);
@@ -132,17 +129,6 @@ export default function UserProfilePage() {
   }, [userData]);
 
   // Handle input changes for form fields
-  /**
-   * Handles input changes for user information form fields.
-   *
-   * @param e - The change event triggered by input elements (either HTMLInputElement or HTMLTextAreaElement).
-   *
-   * This function updates the user information state based on the input field's name and value.
-   * It also performs validation for passwords and email fields:
-   * - For password and confirmPassword fields, it checks if the passwords match and validates the password format.
-   * - For the email field, it sets the new email and validates the email format.
-   * Additionally, it updates the current password state if the currentPassword field is changed.
-   */
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
@@ -175,26 +161,6 @@ export default function UserProfilePage() {
   };
 
   // Handle save action for updating user profile
-  /**
-   * Handles the save action for updating the user profile.
-   *
-   * This function performs several checks before proceeding with the update:
-   * - Ensures passwords match and are valid.
-   * - Ensures user information fields (name and email) are filled.
-   * - Ensures the email is valid and does not already exist.
-   *
-   * If all checks pass, it proceeds to update the user profile.
-   *
-   * If the user is changing their password, it first validates the current password.
-   * If the current password is valid, it then updates the profile.
-   *
-   * The profile update is performed using the `api.user.updateUserProfile.useMutation` mutation.
-   * On successful update, it resets the user information state and exits editing mode.
-   * On error, it alerts the user with the error message.
-   *
-   * @returns {void}
-   */
-
   const updateUserProfileMutation = api.user.updateUserProfile.useMutation({
     onSuccess: () => {
       setUserInfo({
@@ -274,170 +240,177 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="rounded-lg bg-white p-6 shadow-md">
-        <h1 className="mb-4 text-2xl font-bold">Profile</h1>
-        <div className="mb-4">
-          {isEditing ? (
+    <div className="flex flex-1 flex-col min-h-screen h-full space-y-8 p-0 bg-gray-100">
+      <div className="w-full bg-white shadow-lg rounded-lg p-6 flex flex-col h-full">
+        {/* Profile Header */}
+        <h1 className="text-2xl font-semibold mb-2">Profile</h1>
+        <p className="text-gray-500">This is how others will see you on the site.</p>
+        
+        <div className="border-b my-4"></div>
+  
+        {/* Profile Image */}
+        <div className="flex items-center gap-6">
+          {userInfo.image ? (
+            <img
+              src={userInfo.image}
+              alt="Profile"
+              className="h-20 w-20 rounded-full border"
+            />
+          ) : (
+            <div className="h-20 w-20 rounded-full border flex items-center justify-center bg-gray-200 text-gray-500">
+              No Image
+            </div>
+          )}
+          {isEditing && (
             <input
               type="file"
               accept="image/*"
-              onChange={() => {
-                return null;
-              }}
-              className="mt-1 w-full rounded border p-2"
+              onChange={() => null}
+              className="text-sm"
             />
-          ) : userInfo.image ? (
-            <img
-              src={userInfo.image}
-              alt="Err: Picture Not Found"
-              className="mt-1 h-32 w-32 rounded-full border"
-            />
-          ) : (
-            <p className="mt-1 h-32 w-32 rounded-full border">No Image</p>
           )}
         </div>
-        <div className="mb-4">
-          <label className="block text-gray-700">Name</label>
-          {isEditing ? (
-            <input
-              type="text"
-              name="name"
-              value={userInfo.name}
-              onChange={handleInputChange}
-              className="mt-1 w-full rounded border p-2"
-            />
-          ) : (
-            <p className="mt-1 w-full rounded border p-2">{userInfo.name}</p>
-          )}
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700">Email</label>
-          {isEditing ? (
-            <input
-              type="email"
-              name="email"
-              value={userInfo.email}
-              onChange={handleInputChange}
-              className="mt-1 w-full rounded border p-2"
-            />
-          ) : (
-            <p className="mt-1 w-full rounded border p-2">{userInfo.email}</p>
-          )}
-          {emailExists && (
-            <p className="mt-1 text-red-500">Email already exists</p>
-          )}
-          {!emailValid && (
-            <p className="mt-1 text-red-500">Invalid email format</p>
-          )}
-          {isFetching && (
-            <p className="mt-1 text-blue-500">Checking email...</p>
-          )}
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700">Bio</label>
-          {isEditing ? (
-            <input
-              type="text"
-              name="bio"
-              value={userInfo.bio}
-              onChange={handleInputChange}
-              className="mt-1 w-full rounded border p-2"
-            />
-          ) : (
-            <p className="mt-1 w-full rounded border p-2">{userInfo.bio}</p>
-          )}
-        </div>
-        {isEditing && (
-          <>
-            <button
-              onClick={handleChangePasswordToggle}
-              className="mb-4 rounded bg-blue-500 px-4 py-2 text-white"
-            >
-              Change Password
-            </button>
-            {isChangingPassword && (
-              <>
-                <div className="mb-4">
-                  <label className="block text-gray-700">
-                    Current Password
-                  </label>
-                  <input
-                    type="password"
-                    name="currentPassword"
-                    placeholder="Enter current password"
-                    value={currentPassword}
-                    onChange={handleInputChange}
-                    className="mt-1 w-full rounded border p-2"
-                  />
-                </div>
-                <div className="mb-4"></div>
-                <div className="mb-4">
-                  <label className="block text-gray-700">New Password</label>
-                  <input
-                    type="password"
-                    name="password"
-                    placeholder="Enter new password"
-                    value={userInfo.password}
-                    onChange={handleInputChange}
-                    className="mt-1 w-full rounded border p-2"
-                  />
-                  {!passwordValid && (
-                    <p className="mt-1 text-red-500">
-                      Password must be at least 8 characters long and contain at
-                      least one special character.
-                    </p>
-                  )}
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700">
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    placeholder="Confirm new password"
-                    value={userInfo.confirmPassword}
-                    onChange={handleInputChange}
-                    className="mt-1 w-full rounded border p-2"
-                  />
-                  {!passwordsMatch && (
-                    <p className="mt-1 text-red-500">Passwords don't match</p>
-                  )}
-                </div>
-              </>
+  
+        {/* Profile Form */}
+        <div className="space-y-6 mt-4 flex-1">
+          {/* Name */}
+          <div>
+            <label className="text-sm font-medium text-gray-700">Name</label>
+            {isEditing ? (
+              <input
+                type="text"
+                name="name"
+                value={userInfo.name}
+                onChange={handleInputChange}
+                className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2"
+              />
+            ) : (
+              <p className="block w-full max-w-2xl rounded border p-2 bg-gray-50">{userInfo.name}</p>
             )}
-          </>
-        )}
-        <div className="flex justify-end">
-          {userId === session?.user.id && (
+          </div>
+  
+          {/* Email */}
+          <div>
+            <label className="text-sm font-medium text-gray-700">Email</label>
+            {isEditing ? (
+              <input
+                type="email"
+                name="email"
+                value={userInfo.email}
+                onChange={handleInputChange}
+                className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2"
+              />
+            ) : (
+              <p className="block w-full max-w-2xl rounded border p-2 bg-gray-50">{userInfo.email}</p>
+            )}
+            {emailExists && <p className="text-red-500 text-sm">Email already exists</p>}
+            {!emailValid && <p className="text-red-500 text-sm">Invalid email format</p>}
+          </div>
+  
+          {/* Bio */}
+          <div>
+            <label className="text-sm font-medium text-gray-700">Bio</label>
+            {isEditing ? (
+              <textarea
+                name="bio"
+                value={userInfo.bio}
+                onChange={handleInputChange}
+                className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2 min-h-[8rem]"
+              />
+            ) : (
+              <p className="block w-full max-w-2xl rounded border p-2 bg-gray-50 min-h-[8rem]">{userInfo.bio}</p>
+            )}
+          </div>
+  
+          {isEditing && (
             <>
-              {isEditing ? (
+                <div className="border-b my-4 w-1/2"></div>
+                {/* Change Password */}
                 <button
-                  onClick={handleSave}
-                  className={`mr-2 rounded px-4 py-2 text-white ${isSaveDisabled ? "bg-gray-400" : "bg-blue-500"}`}
-                  disabled={isSaveDisabled}
+                onClick={handleChangePasswordToggle}
+                className="rounded bg-red-400 px-4 py-2 text-white text-sm hover:bg-red-500 transition-all"
                 >
-                  Save
+                Change Password
                 </button>
-              ) : (
-                <button
-                  onClick={handleEditToggle}
-                  className="mr-2 rounded bg-gray-500 px-4 py-2 text-white"
-                >
-                  Edit
-                </button>
-              )}
-              {isEditing && (
-                <button
-                  onClick={handleEditToggle}
-                  className="rounded bg-red-500 px-4 py-2 text-white"
-                >
-                  Cancel
-                </button>
+  
+              {isChangingPassword && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Current Password</label>
+                    <input
+                      type="password"
+                      name="currentPassword"
+                      placeholder="Enter current password"
+                      value={currentPassword}
+                      onChange={handleInputChange}
+                      className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">New Password</label>
+                    <input
+                      type="password"
+                      name="password"
+                      placeholder="Enter new password"
+                      value={userInfo.password}
+                      onChange={handleInputChange}
+                      className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2"
+                    />
+                    {!passwordValid && (
+                      <p className="text-red-500 text-sm">
+                        Password must be at least 8 characters and contain a special character.
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Confirm New Password</label>
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      placeholder="Confirm new password"
+                      value={userInfo.confirmPassword}
+                      onChange={handleInputChange}
+                      className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2"
+                    />
+                    {!passwordsMatch && <p className="text-red-500 text-sm">Passwords don’t match</p>}
+                  </div>
+                </>
               )}
             </>
           )}
+  
+          {/* Buttons */}
+          <div className="border-t pt-4 flex gap-4 w-1/2">
+            {isEditing ? (
+              <>
+                <button
+                  onClick={handleSave}
+                  className={`rounded-md px-4 py-2 text-sm w-32 transition-all ${
+                    isSaveDisabled
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-black text-white hover:bg-gray-900"
+                  }`}
+                  disabled={isSaveDisabled}
+                >
+                  Update Profile
+                </button>
+
+                <button
+                  onClick={handleEditToggle}
+                  className="rounded-md bg-gray-100 px-4 py-2 text-sm w-32 text-gray-700 hover:bg-gray-200 transition-all"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleEditToggle}
+                className="rounded-md bg-gray-900 px-4 py-2 text-white text-sm w-32 transition-all hover:bg-black"
+              >
+                Edit Profile
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
