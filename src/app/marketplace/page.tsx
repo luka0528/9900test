@@ -1,7 +1,7 @@
-import { MarketplaceSearch } from './MarketplaceSearch';
-import { MarketplaceSortSelector } from './MarketplaceSortSelector';
-import { MarketplaceServices } from './MarketplaceServices';
-import { MarketplaceSideBar } from './MarketplaceSidebar';
+import { MarketplaceSearch } from '~/components/marketplace/MarketplaceSearch';
+import { MarketplaceSortSelector } from '~/components/marketplace/MarketplaceSortSelector';
+import { MarketplaceServices } from '~/components/marketplace/MarketplaceServices';
+import { MarketplaceSideBar } from '~/components/marketplace/MarketplaceSidebar';
 
 export default function Marketplace() {
   return (
