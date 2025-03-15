@@ -7,6 +7,7 @@ import { useInView } from "react-intersection-observer";
 import { MarketplaceService } from "./MarketplaceService";
 import { MarketplaceContext } from "./MarketplaceContext";
 import { MarketplaceServicesSkeleton } from "./MarketplaceServicesSkeleton";
+import { MarketplaceServicesNoResults } from "./MarketplaceServicesNoResults";
 
 // Mock data for the Marketplace -- cannot use the data from the API
 // as the schema is very limited.
@@ -109,23 +110,29 @@ export const MarketplaceServices = () => {
 
     return (
         <div className="h-screen overflow-y-auto">
-            {/* TODO: Nicer skeleton page for no results & loading */}
-            {status === 'pending' ? (
+            {status === 'pending' || status === 'error' ? (
                 <MarketplaceServicesSkeleton />
-            ) : status === 'error' ? (
-                <span>Error: {error.message}</span>
             ) : (
                 <>
                     {data.pages.map((page) => (
-                        <div className="grid grid-cols-1 md:grid-cols-2 grow px-8 pb-8 gap-8" key={page.nextCursor}>
-                            {page.services.map((service, index) => (
-                                <MarketplaceService key={service.id} service={packages[index % packages.length] ?? undefined}  />
-                            ))}
+                        <div key={page.nextCursor}>
+                          {page.services.length === 0 ? (
+                            <MarketplaceServicesNoResults />
+                          ) : (
+                            <div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 grow px-8 pb-8 gap-8">
+                                {page.services.map((service, index) => (
+                                  <MarketplaceService key={service.id} service={packages[index % packages.length] ?? undefined} />
+                                ))}
+                              </div>
+                              <button
+                                ref={ref}
+                              />
+                            </div>
+                          )}
                         </div>
                     ))}
-                    <button
-                        ref={ref}
-                    />
+                    
                 </>
             )}
         </div>
