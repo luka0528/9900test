@@ -10,20 +10,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
+import { MarketplaceContext } from "./MarketplaceContext";
 
-type SortType = "Popularity" | "Name" | "Date-Added" | "Last-Updated";
+export type MarketplaceSortType = "Popularity" | "Name" | "Date-Added" | "Last-Updated";
 
 export const MarketplaceSortSelector = () => {
-    const [sort, setSort] = React.useState<SortType>("Popularity");
+    const { query, setQuery, setIsToQuery } = React.useContext(MarketplaceContext);
+    const [sort, setSort] = React.useState<MarketplaceSortType>("Popularity");
 
     React.useEffect(() => {
         // TODO: Update the MarketplaceContext.
+
     }, [sort]);
 
     return (
         <div className="flex w-64 h-8 gap-2 ml-8">
             <div className="flex h-8 items-center">Sort by</div>
-            <Select value={sort} onValueChange={v => setSort(v as SortType)}>
+            <Select value={sort} onValueChange={v => setSort(v as MarketplaceSortType)}>
             <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select a fruit" />
             </SelectTrigger>

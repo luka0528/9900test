@@ -9,6 +9,12 @@ import { MarketplaceTagsFilter } from "./MarketplaceTagsFilter";
 import { MarketplacePriceFilter } from "./MarketplacePriceFilter";
 import { MarketplaceDateFilter } from "./MarketplaceDateFilter";
 
+export interface MarketplaceFilterType {
+    tags: string[];
+    price: [number, number];
+    dates: number[];
+}
+
 export const MarketplaceSideBar = () => {
     return (
         <div className="min-w-48 lg:min-w-60 h-full border-r max-w-60">
