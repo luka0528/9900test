@@ -19,6 +19,7 @@ export const MarketplaceDefaultQuery: MarketplaceQuery = {
     
 export const MarketplaceContext = React.createContext({
     query: MarketplaceDefaultQuery,
+    isToQuery: false,
     setQuery: (_query: MarketplaceQuery) => {},
     setIsToQuery: (_isToQuery: boolean) => {},
 });

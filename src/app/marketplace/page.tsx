@@ -20,15 +20,8 @@ export default function Marketplace() {
   // Acts as a signal to query the marketplace.
   const [isToQuery, setIsToQuery] = React.useState(false);
 
-  React.useEffect(() => {
-    if (isToQuery) {
-      console.log('Querying:', query);
-      setIsToQuery(false);
-    }
-  }, [isToQuery]);
-
   return (
-    <MarketplaceContext.Provider value={{ query, setQuery, setIsToQuery }}>
+    <MarketplaceContext.Provider value={{ query, isToQuery, setQuery, setIsToQuery }}>
       <div className="flex w-full h-full xl:max-w-[96rem]">
         <MarketplaceSideBar />
         <div className="flex flex-col grow h-full">

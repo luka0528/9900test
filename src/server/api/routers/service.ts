@@ -29,6 +29,15 @@ export const serviceRouter = createTRPCRouter({
     getInfiniteServices: publicProcedure
       .input(
         z.object({
+          query: z.object({
+            search: z.string().nullish(),
+            sort: z.string().nullish(),
+            filters: z.object({
+              tags: z.array(z.string()).nullish(),
+              price: z.array(z.number()).nullish(),
+              dates: z.array(z.number()).nullish(),
+            }),
+          }),
           cursor: z.number().nullish(),
         })
       )
