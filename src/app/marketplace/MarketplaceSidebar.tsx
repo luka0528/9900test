@@ -25,6 +25,12 @@ export const MarketplaceSideBar = () => {
                         <MarketplacePriceFilter />
                     </AccordionContent>
                 </AccordionItem>
+                <AccordionItem value="item-3">
+                    <AccordionTrigger>Date</AccordionTrigger>
+                    <AccordionContent >
+                        <MarketplaceDateFilter />
+                    </AccordionContent>
+                </AccordionItem>
             </Accordion>
         </div>
     );
