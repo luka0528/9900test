@@ -18,7 +18,6 @@ export default function UserProfilePage() {
     }
   }, [status]);
 
-  // Get userId from URL parameters
   const { userId } = useParams();
 
   // Fetch user profile data

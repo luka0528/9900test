@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 
-interface UserPageProps {
-  params: {
-    userId: string;
-  };
-}
-
-export default function UserPage({ params }: UserPageProps) {
+export default function UserPage() {
   const router = useRouter();
-  const { userId } = params;
+  const { userId } = useParams();
 
   useEffect(() => {
     // Redirect to the settings page
