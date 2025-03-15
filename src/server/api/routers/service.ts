@@ -65,57 +65,6 @@ export const serviceRouter = createTRPCRouter({
       // Otherwise, convert the tag to fully lowercase
       const tagName = input.tag.toLowerCase();
 
-      // // Check if this tag already exists
-      // let tagToFind = await ctx.db.tag.findFirst({
-      //   where: {
-      //     name: tagName,
-      //   },
-      // });
-
-      // // If the tag already exists, simply add this service to the
-      // // relevant tag's services table
-      // if (!tagToFind) {
-      //   // Create the tag
-      //   tagToFind = await ctx.db.tag.create({
-      //     data: {
-      //       name: tagName,
-      //     },
-      //   });
-      // }
-
-      // // Add the service to the tag's service list
-      // let foundTag = await ctx.db.tag.findUnique({
-      //   where: {
-      //     id: tagToFind.id,
-      //   },
-      //   select: {
-      //     services: true,
-      //   },
-      // });
-
-      // if (!foundTag) {
-      //   throw new TRPCError({
-      //     code: "NOT_FOUND",
-      //     message: "Service not found",
-      //   });
-      // }
-
-      // // Get the service (we know it exists now) - TODO repetition here
-      // const service = await ctx.db.service.findUnique({
-      //   where: {
-      //     id: input.serviceId,
-      //   },
-      // });
-
-      // if (!service) {
-      //   throw new TRPCError({
-      //     code: "BAD_REQUEST",
-      //     message: "This error should never occur",
-      //   });
-      // }
-
-      // const thing = [...foundTag.services, service];
-
       await ctx.db.service.update({
         where: {
           id: input.serviceId,
@@ -130,6 +79,6 @@ export const serviceRouter = createTRPCRouter({
         },
       });
 
-      // Add the tag to relevant service's tags list
+      return { success: true };
     }),
 });
