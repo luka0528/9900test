@@ -3,11 +3,18 @@
 import React from "react";
 import { Button } from "~/components/ui/button";
 import { DualSlider } from "~/components/ui/dual-slider";
-import { MarketplaceContext } from "./MarketplaceContext";
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
+
+const PRICE_DEFAULT_RANGE = [0, 12];
 
 export const MarketplacePriceFilter: React.FC = () => {
-  const { query, setQuery, setIsToQuery } = React.useContext(MarketplaceContext);
-  const [priceRange, setPriceRange] = React.useState<[number, number]>([0, 12]);
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const { replace } = useRouter();
+
+  const [priceRange, setPriceRange] = React.useState<number[]>(
+    searchParams.get('price')?.split(',').map(Number) || PRICE_DEFAULT_RANGE
+  );
 
   const handleRangeChange = (r: number[]) => {
     const r1 = r[0] ?? 0
@@ -16,18 +23,18 @@ export const MarketplacePriceFilter: React.FC = () => {
   }
 
   const handleApplyFilter = () => {
-      setIsToQuery(true);
+    const params = new URLSearchParams(searchParams);
+
+    const isDefaultRange = priceRange[0] === PRICE_DEFAULT_RANGE[0] && priceRange[1] === PRICE_DEFAULT_RANGE[1];
+
+    if (!isDefaultRange) {
+      params.set('price', priceRange.join(','));
+    } else {
+      params.delete('price');
+    }
+
+    replace(`${pathname}?${params.toString()}`);
   }
-  
-  React.useEffect(() => {
-      setQuery({
-          ...query,
-          filters: {
-              ...query.filters,
-              price: priceRange
-          }
-      })
-  }, [priceRange])
   
   return (
       <div>
@@ -36,7 +43,7 @@ export const MarketplacePriceFilter: React.FC = () => {
                 <div 
                   className="absolute text-xs px-2 py-1 bg-background border rounded-md shadow-sm -translate-y-full"
                   style={{ 
-                    left: `calc(${priceRange[0] / 20 * 100}% - 20px)`
+                    left: `calc(${(priceRange[0] ?? 0) / 20 * 100}% - 20px)`
                   }}
                 >
                   ${priceRange[0]}
@@ -44,7 +51,7 @@ export const MarketplacePriceFilter: React.FC = () => {
                 <div 
                     className="absolute text-xs px-2 py-1 bg-background border rounded-md shadow-sm -translate-y-full"
                     style={{ 
-                        left: `calc(${priceRange[1] / 20 * 100}% - 20px)`,
+                        left: `calc(${(priceRange[1] ?? 0) / 20 * 100}% - 20px)`,
                     }}
                 >   
                     ${priceRange[1]}
