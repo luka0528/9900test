@@ -1,6 +1,6 @@
-// src/server/api/routers/user.ts
 import { z } from "zod";
-import bcrypt, { hash } from "bcryptjs";
+import bcrypt from "bcryptjs";
+import type { User } from "@prisma/client";
 import {
   createTRPCRouter,
   publicProcedure,
@@ -10,6 +10,12 @@ import { TRPCError } from "@trpc/server";
 import { createVerificationToken, verifyToken } from "~/lib/verification";
 import { sendVerificationEmail } from "~/lib/email";
 import { VerificationTokenType } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
+
+interface Context {
+  db: PrismaClient;
+  session: { user: { id: string } };
+}
 
 /**
  * Updates a specific user field in the database.
@@ -20,10 +26,10 @@ import { VerificationTokenType } from "@prisma/client";
  * @returns The updated field value.
  * @throws TRPCError if the user is not found.
  */
-const updateUserField = async (
-  ctx: { db: any; session: any },
-  field: string,
-  value: any,
+const updateUserField = async <K extends keyof User>(
+  ctx: Context,
+  field: K,
+  value: User[K],
 ) => {
   const updatedUser = await ctx.db.user.update({
     where: { id: ctx.session.user.id },
@@ -254,7 +260,9 @@ export const userRouter = createTRPCRouter({
 
   updateBio: protectedProcedure
     .input(z.object({ bio: z.string().optional() }))
-    .mutation(async ({ ctx, input }) => updateUserField(ctx, "bio", input.bio)),
+    .mutation(async ({ ctx, input }) =>
+      updateUserField(ctx, "bio", input.bio ?? ""),
+    ),
 
   updateImage: protectedProcedure
     .input(z.object({ image: z.string().url("Invalid image URL") }))
@@ -308,7 +316,7 @@ export const userRouter = createTRPCRouter({
         where: { id: ctx.session.user.id },
       });
 
-      if (!user || !user.password) {
+      if (!user?.password) {
         // Generic error to avoid leaking information
         throw new TRPCError({
           code: "UNAUTHORIZED",
