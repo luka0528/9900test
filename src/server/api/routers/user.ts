@@ -11,6 +11,35 @@ import { createVerificationToken, verifyToken } from "~/lib/verification";
 import { sendVerificationEmail } from "~/lib/email";
 import { VerificationTokenType } from "@prisma/client";
 
+/**
+ * Updates a specific user field in the database.
+ *
+ * @param ctx - The context object containing the database and session information.
+ * @param field - The name of the field to update.
+ * @param value - The new value to set for the specified field.
+ * @returns The updated field value.
+ * @throws TRPCError if the user is not found.
+ */
+const updateUserField = async (
+  ctx: { db: any; session: any },
+  field: string,
+  value: any,
+) => {
+  const updatedUser = await ctx.db.user.update({
+    where: { id: ctx.session.user.id },
+    data: { [field]: value },
+  });
+
+  if (!updatedUser) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "User not found",
+    });
+  }
+
+  return { [field]: updatedUser[field] };
+};
+
 export const userRouter = createTRPCRouter({
   register: publicProcedure
     .input(
@@ -176,6 +205,7 @@ export const userRouter = createTRPCRouter({
     return user;
   }),
 
+  // Get user profile by ID
   getUserProfile: protectedProcedure
     .input(
       z.object({
@@ -207,47 +237,40 @@ export const userRouter = createTRPCRouter({
       return user;
     }),
 
-  updateUserProfile: protectedProcedure
+  /* 
+  Updating USER FIELDS
+  */
+  updateName: protectedProcedure
+    .input(z.object({ name: z.string().min(1, "Name cannot be empty") }))
+    .mutation(async ({ ctx, input }) =>
+      updateUserField(ctx, "name", input.name),
+    ),
+
+  updateEmail: protectedProcedure
+    .input(z.object({ email: z.string().email("Invalid email format") }))
+    .mutation(async ({ ctx, input }) =>
+      updateUserField(ctx, "email", input.email),
+    ),
+
+  updateBio: protectedProcedure
+    .input(z.object({ bio: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => updateUserField(ctx, "bio", input.bio)),
+
+  updateImage: protectedProcedure
+    .input(z.object({ image: z.string().url("Invalid image URL") }))
+    .mutation(async ({ ctx, input }) =>
+      updateUserField(ctx, "image", input.image),
+    ),
+
+  updatePassword: protectedProcedure
     .input(
       z.object({
-        name: z.string().optional(),
-        bio: z.string().optional(),
-        image: z.string().url().optional(),
-        password: z
-          .string()
-          .min(8, "Password must be at least 8 characters")
-          .optional(),
+        password: z.string().min(8, "Password must be at least 8 characters"),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { name, bio, image, password } = input;
-
-      const data: any = { name, bio, image };
-
-      if (password) {
-        data.password = await hash(password, 12);
-      }
-
-      const updatedUser = await ctx.db.user.update({
-        where: { id: ctx.session.user.id },
-        data,
-      });
-
-      if (!updatedUser) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "User not found",
-        });
-      }
-
-      return {
-        id: updatedUser.id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        bio: updatedUser.bio,
-        image: updatedUser.image,
-        emailVerified: updatedUser.emailVerified,
-      };
+      const hashedPassword = await hash(input.password, 12);
+      return updateUserField(ctx, "password", hashedPassword);
     }),
 
   checkEmailExists: publicProcedure
@@ -266,6 +289,9 @@ export const userRouter = createTRPCRouter({
       return { exists: !!existingUser };
     }),
 
+  /* 
+    Checking if email already exists in database
+  */
   validateCurrentPassword: protectedProcedure
     .input(
       z.object({
@@ -282,21 +308,15 @@ export const userRouter = createTRPCRouter({
         where: { id: ctx.session.user.id },
       });
 
-      if (!user) {
+      if (!user || !user.password) {
+        // Generic error to avoid leaking information
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "User not found",
+          code: "UNAUTHORIZED",
+          message: "Current password is incorrect",
         });
       }
 
       // Validate the current password
-      if (!user.password) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "User password is missing",
-        });
-      }
-
       const isValid = await bcrypt.compare(currentPassword, user.password);
 
       if (!isValid) {
