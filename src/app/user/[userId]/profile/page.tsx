@@ -1,418 +1,349 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useSession } from "next-auth/react";
-import { useParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "~/trpc/react";
-import debounce from "lodash.debounce";
-import ClipLoader from "react-spinners/ClipLoader";
+import { useSession } from "next-auth/react";
+import { useRouter, useParams } from "next/navigation";
+import { Card, CardHeader, CardContent } from "~/components/ui/card";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "~/components/ui/form";
+import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
+import { Pencil } from "lucide-react";
+import { Separator } from "~/components/ui/separator";
+import { Skeleton } from "~/components/ui/skeleton";
+import { toast } from "sonner";
 
-export default function UserProfilePage() {
-  // State variables for managing user profile and form states
-  const [isEditing, setIsEditing] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [passwordsMatch, setPasswordsMatch] = useState(true);
-  const [passwordValid, setPasswordValid] = useState(true);
-  const [emailValid, setEmailValid] = useState(true);
-  const [emailExists, setEmailExists] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [debouncedEmail, setDebouncedEmail] = useState(newEmail);
+// ✅ Define Zod Schema for validation
+const profileSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email format"),
+    bio: z.string().optional(),
+    currentPassword: z.string().optional().or(z.literal("")),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .optional()
+      .or(z.literal("")),
+    confirmPassword: z.string().optional().or(z.literal("")),
+  })
+  .refine((data) => !data.password || data.password === data.confirmPassword, {
+    message: "Passwords must match",
+    path: ["confirmPassword"],
+  });
 
-  // Get session data and status from next-auth
+const UserProfilePage = () => {
+  const router = useRouter();
   const { data: session, status } = useSession();
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      window.location.href = "/login";
-    }
-  }, [status]);
-
   const { userId } = useParams();
+  const isOwnProfile = session?.user?.id === userId;
+  const [isEditing, setIsEditing] = useState(false);
 
-  // Fetch user profile data
-  const { data: userData, isLoading: isLoadingUserProfile } = api.user.getUserProfile.useQuery(
-    { userId: userId as string },
-    { enabled: !!userId },
-  );
+  // ✅ Queries & Mutations
+  const { data: userData, isLoading: isLoadingUserProfile } =
+    api.user.getUserProfile.useQuery(
+      { userId: userId as string },
+      { enabled: !!userId },
+    );
+  const updateNameMutation = api.user.updateName.useMutation();
+  const updateEmailMutation = api.user.updateEmail.useMutation();
+  const updateBioMutation = api.user.updateBio.useMutation();
+  const updatePasswordMutation = api.user.updatePassword.useMutation();
+  const validateCurrentPassword =
+    api.user.validateCurrentPassword.useMutation();
 
-  // Debounce function to delay email validation
-  const debouncedSetEmail = useCallback(
-    debounce((email: string) => setDebouncedEmail(email), 300),
-    [debounce],
-  );
-
-  // Toggle edit mode
-  const handleEditToggle = () => {
-    setIsEditing(!isEditing);
-    setIsChangingPassword(false);
-    setUserInfo({
+  // ✅ React Hook Form
+  const form = useForm<z.infer<typeof profileSchema>>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
       name: userData?.name || "",
       email: userData?.email || "",
       bio: userData?.bio || "",
-      image: userData?.image || "",
+      currentPassword: "",
       password: "",
       confirmPassword: "",
-    });
-    setPasswordsMatch(true);
-    setPasswordValid(true);
-    setEmailValid(true);
-    setEmailExists(false);
-    setNewEmail(userData?.email || "");
-    setCurrentPassword("");
-  };
-
-  // Toggle change password mode
-  const handleChangePasswordToggle = () => {
-    setIsChangingPassword(!isChangingPassword);
-  };
-
-  // Validate password strength
-  const validatePassword = (password: string) => {
-    const minLength = 8;
-    const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
-    return password.length >= minLength && specialCharRegex.test(password);
-  };
-
-  // Validate email format
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  // Update debounced email whenever newEmail changes
-  useEffect(() => {
-    debouncedSetEmail(newEmail);
-  }, [newEmail, debouncedSetEmail]);
-
-  // Query to check if the email exists in the database
-  const { data: doesEmailExist, isFetching } =
-    api.user.checkEmailExists.useQuery(
-      { email: debouncedEmail },
-      { enabled: !!debouncedEmail && debouncedEmail !== userData?.email }, // Runs query only if `debouncedEmail` is non-empty and not equal to the current email
-    );
-
-  // Update emailExists state based on query result
-  useEffect(() => {
-    setEmailExists(doesEmailExist?.exists || false);
-  }, [doesEmailExist]);
-
-  // State for user information
-  const [userInfo, setUserInfo] = useState<{
-    name: string;
-    email: string;
-    bio: string;
-    image: string;
-    password?: string;
-    confirmPassword?: string;
-  }>({
-    name: "",
-    email: "",
-    bio: "",
-    image: "",
-    password: "",
-    confirmPassword: "",
+    },
   });
 
-  // Update userInfo state when userData changes
   useEffect(() => {
     if (userData) {
-      setUserInfo({
+      form.reset({
         name: userData.name || "",
         email: userData.email || "",
         bio: userData.bio || "",
-        image: userData.image || "",
+        currentPassword: "",
         password: "",
         confirmPassword: "",
       });
     }
-  }, [userData]);
+  }, [userData, form]);
 
-  // Handle input changes for form fields
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = e.target;
-    setUserInfo((prevUserInfo) => {
-      const updatedUserInfo = {
-        ...prevUserInfo,
-        [name]: value,
-      };
+  // ✅ Handle Form Submission
+  const onSubmit = async (values: z.infer<typeof profileSchema>) => {
+    try {
+      let profileUpdated = false;
 
-      // Validate passwords and email
-      if (name === "password" || name === "confirmPassword") {
-        setPasswordsMatch(
-          updatedUserInfo.password === updatedUserInfo.confirmPassword,
-        );
-        setPasswordValid(validatePassword(updatedUserInfo.password || ""));
+      // ✅ Update Name if changed
+      if (values.name !== userData?.name) {
+        await updateNameMutation.mutateAsync({ name: values.name });
+        profileUpdated = true;
       }
 
-      if (name === "email") {
-        setNewEmail(value);
-        setEmailValid(validateEmail(value));
+      // ✅ Update Email if changed
+      if (values.email !== userData?.email) {
+        await updateEmailMutation.mutateAsync({ email: values.email });
+        profileUpdated = true;
       }
 
-      return updatedUserInfo;
-    });
+      // ✅ Update Bio if changed
+      if (values.bio !== userData?.bio) {
+        await updateBioMutation.mutateAsync({ bio: values.bio });
+        profileUpdated = true;
+      }
 
-    if (name === "currentPassword") {
-      setCurrentPassword(value);
-    }
-  };
+      // ✅ Handle Password Update
+      if (values.password) {
+        try {
+          // ✅ Validate current password using a mutation
+          await validateCurrentPassword.mutateAsync({
+            currentPassword: values.currentPassword || "",
+          });
 
-  // Handle save action for updating user profile
-  const updateUserProfileMutation = api.user.updateUserProfile.useMutation({
-    onSuccess: () => {
-      setUserInfo({
-        name: userInfo.name,
-        email: userInfo.email,
-        bio: userInfo.bio,
-        image: userInfo.image,
-        password: "",
-        confirmPassword: "",
-      });
-      setIsEditing(false);
-      setIsChangingPassword(false);
-    },
-    onError: (error) => {
-      alert(`Failed to update profile: ${error.message}`);
-    },
-  });
-
-  const validatePasswordMutation = api.user.validateCurrentPassword.useMutation(
-    {
-      onSuccess: (isValid) => {
-        if (!isValid) {
-          alert("Current password is incorrect");
-          return;
+          try {
+            // ✅ If validation succeeds, update the password
+            await updatePasswordMutation.mutateAsync({
+              password: values.password,
+            });
+            toast.success("Password updated successfully!");
+          } catch (error) {
+            toast.error("Failed to update password. Please try again.");
+          }
+        } catch (error) {
+          toast.error("Current password is incorrect.");
+          return; // Stops execution if password validation fails
         }
-        updateProfile();
-      },
-    },
-  );
+      }
 
-  const updateProfile = () => {
-    const { confirmPassword, ...updatedUserInfo } = userInfo;
-    if (!updatedUserInfo.password) {
-      delete updatedUserInfo.password;
-    }
+      // ✅ Show success message only if profile info was updated
+      if (profileUpdated) {
+        toast.success("Profile updated successfully!");
+      }
 
-    // Use the mutation function
-    updateUserProfileMutation.mutate(updatedUserInfo);
-  };
-
-  const handleSave = () => {
-    if (
-      !passwordsMatch ||
-      !passwordValid ||
-      !userInfo.name ||
-      !userInfo.email ||
-      emailExists
-    ) {
-      return;
-    }
-
-    if (isChangingPassword) {
-      // Validate current password before updating
-      validatePasswordMutation.mutate({ currentPassword });
-    } else {
-      updateProfile();
+      // ✅ Exit editing mode after successful updates
+      setIsEditing(false);
+    } catch (error) {
+      toast.error("Failed to update profile.");
     }
   };
 
-  // Determine if the save button should be disabled
-  const isSaveDisabled =
-    !passwordsMatch ||
-    !passwordValid ||
-    !userInfo.name ||
-    !userInfo.email ||
-    emailExists ||
-    !emailValid;
+  if (status === "unauthenticated") {
+    router.replace("/login");
+    return null;
+  }
 
-  // Show loading spinner while session is loading
-  if (status == "loading" || isLoadingUserProfile) {
+  if (status === "loading" || isLoadingUserProfile) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <ClipLoader size={50} color={"#123abc"} loading={true} />
-        <span className="ml-4 text-xl">Loading user profile...</span>
+        <Skeleton className="h-[200px] w-[300px] rounded-lg" />
+        <span className="ml-4 text-xl text-gray-500">
+          Loading user profile...
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col min-h-screen h-full space-y-8 p-0 bg-gray-100">
-      <div className="w-full bg-white shadow-lg rounded-lg p-6 flex flex-col h-full">
-        {/* Profile Header */}
-        <h1 className="text-2xl font-semibold mb-2">Profile</h1>
-        <p className="text-gray-500">This is how others will see you on the site.</p>
-        
-        <div className="border-b my-4"></div>
-  
-        {/* Profile Image */}
-        <div className="flex items-center gap-6">
-          {userInfo.image ? (
-            <img
-              src={userInfo.image}
-              alt="Profile"
-              className="h-20 w-20 rounded-full border"
-            />
-          ) : (
-            <div className="h-20 w-20 rounded-full border flex items-center justify-center bg-gray-200 text-gray-500">
-              No Image
-            </div>
-          )}
-          {isEditing && (
-            <input
-              type="file"
-              accept="image/*"
-              onChange={() => null}
-              className="text-sm"
-            />
-          )}
-        </div>
-  
-        {/* Profile Form */}
-        <div className="space-y-6 mt-4 flex-1">
-          {/* Name */}
-          <div>
-            <label className="text-sm font-medium text-gray-700">Name</label>
-            {isEditing ? (
-              <input
-                type="text"
+    <div className="mx-auto flex min-h-screen w-3/4 justify-center p-6">
+      <Card className="w-full max-w-3xl shadow-lg">
+        <CardHeader className="text-center">
+          <h2 className="text-2xl font-semibold">Profile Settings</h2>
+          <p className="text-sm text-gray-500">
+            {isOwnProfile
+              ? "Edit your profile details"
+              : `${userData?.name}'s profile`}
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-center gap-6">
+            {userData?.image ? (
+              <img
+                src={userData?.image}
+                alt="Profile"
+                className="h-24 w-24 rounded-full border"
+              />
+            ) : (
+              <div className="flex h-24 w-24 items-center justify-center rounded-full border bg-gray-200 text-gray-500">
+                No Image
+              </div>
+            )}
+          </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Name */}
+              <FormField
+                control={form.control}
                 name="name"
-                value={userInfo.name}
-                onChange={handleInputChange}
-                className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      {isEditing ? (
+                        <Input type="name" {...field} />
+                      ) : (
+                        <div className="w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                          {field.value ?? "No name set"}
+                        </div>
+                      )}
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            ) : (
-              <p className="block w-full max-w-2xl rounded border p-2 bg-gray-50">{userInfo.name}</p>
-            )}
-          </div>
-  
-          {/* Email */}
-          <div>
-            <label className="text-sm font-medium text-gray-700">Email</label>
-            {isEditing ? (
-              <input
-                type="email"
+
+              {/* Email */}
+              <FormField
+                control={form.control}
                 name="email"
-                value={userInfo.email}
-                onChange={handleInputChange}
-                className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      {isEditing ? (
+                        <Input type="email" {...field} />
+                      ) : (
+                        <div className="w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                          {field.value ?? "No email set"}
+                        </div>
+                      )}
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            ) : (
-              <p className="block w-full max-w-2xl rounded border p-2 bg-gray-50">{userInfo.email}</p>
-            )}
-            {emailExists && <p className="text-red-500 text-sm">Email already exists</p>}
-            {!emailValid && <p className="text-red-500 text-sm">Invalid email format</p>}
-          </div>
-  
-          {/* Bio */}
-          <div>
-            <label className="text-sm font-medium text-gray-700">Bio</label>
-            {isEditing ? (
-              <textarea
+
+              {/* Bio */}
+              <FormField
+                control={form.control}
                 name="bio"
-                value={userInfo.bio}
-                onChange={handleInputChange}
-                className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2 min-h-[8rem]"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bio</FormLabel>
+                    <FormControl>
+                      {isEditing ? (
+                        <textarea
+                          {...field}
+                          className="min-h-[10rem] w-full resize-none overflow-hidden rounded-lg border px-3 py-2 text-left align-top text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                          rows={1} // Ensures it starts small but expands
+                          onInput={(e) => {
+                            const target = e.target as HTMLTextAreaElement;
+                            target.style.height = "auto"; // Reset height
+                            target.style.height = `${target.scrollHeight}px`; // Expand height dynamically
+                          }}
+                        />
+                      ) : (
+                        <div className="min-h-[10rem] w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                          {field.value || "No bio set"}
+                        </div>
+                      )}
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            ) : (
-              <p className="block w-full max-w-2xl rounded border p-2 bg-gray-50 min-h-[8rem]">{userInfo.bio}</p>
-            )}
-          </div>
-  
-          {isEditing && (
-            <>
-                <div className="border-b my-4 w-1/2"></div>
-                {/* Change Password */}
-                <button
-                onClick={handleChangePasswordToggle}
-                className="rounded-md bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 transition-all"
-                >
-                Change Password
-                </button>
-  
-              {isChangingPassword && (
+
+              {/* Password */}
+              {isEditing && userData?.emailVerified && (
                 <>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Current Password</label>
-                    <input
-                      type="password"
-                      name="currentPassword"
-                      placeholder="Enter current password"
-                      value={currentPassword}
-                      onChange={handleInputChange}
-                      className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">New Password</label>
-                    <input
-                      type="password"
-                      name="password"
-                      placeholder="Enter new password"
-                      value={userInfo.password}
-                      onChange={handleInputChange}
-                      className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2"
-                    />
-                    {!passwordValid && (
-                      <p className="text-red-500 text-sm">
-                        Password must be at least 8 characters and contain a special character.
-                      </p>
+                  <Separator />
+                  <h3 className="text-lg font-semibold">Change Password</h3>
+                  <FormField
+                    control={form.control}
+                    name="currentPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Confirm New Password</label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      placeholder="Confirm new password"
-                      value={userInfo.confirmPassword}
-                      onChange={handleInputChange}
-                      className="block w-full max-w-2xl rounded-lg border border-gray-400 p-2"
-                    />
-                    {!passwordsMatch && <p className="text-red-500 text-sm">Passwords don’t match</p>}
-                  </div>
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </>
               )}
-            </>
-          )}
-  
-          {/* Buttons */}
-          <div className="border-t pt-4 flex gap-4 w-1/2">
-            {isEditing ? (
-              <>
-                <button
-                  onClick={handleSave}
-                  className={`rounded-md px-4 py-2 text-sm w-32 transition-all ${
-                    isSaveDisabled
-                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-black text-white hover:bg-gray-900"
-                  }`}
-                  disabled={isSaveDisabled}
-                >
-                  Update Profile
-                </button>
 
-                <button
-                  onClick={handleEditToggle}
-                  className="rounded-md bg-gray-100 px-4 py-2 text-sm w-32 text-gray-700 hover:bg-gray-200 transition-all"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={handleEditToggle}
-                className="rounded-md bg-gray-900 px-4 py-2 text-white text-sm w-32 transition-all hover:bg-black"
-              >
-                Edit Profile
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+              {/* Submit and Edit Buttons */}
+              {isEditing ? (
+                <div className="flex space-x-4">
+                  <Button
+                    onClick={() => {
+                      setIsEditing(false);
+                      form.reset({
+                        name: userData?.name || "",
+                        email: userData?.email || "",
+                        bio: userData?.bio || "",
+                        currentPassword: "",
+                        password: "",
+                        confirmPassword: "",
+                      });
+                    }}
+                    className="w-full hover:bg-red-400"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="w-full hover:bg-green-400">
+                    Save Changes
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={() => setIsEditing(true)} className="w-full">
+                  Edit Profile
+                </Button>
+              )}
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
+
+export default UserProfilePage;
