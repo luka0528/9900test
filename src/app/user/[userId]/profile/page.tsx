@@ -328,7 +328,7 @@ export default function UserProfilePage() {
                 {/* Change Password */}
                 <button
                 onClick={handleChangePasswordToggle}
-                className="rounded bg-red-400 px-4 py-2 text-white text-sm hover:bg-red-500 transition-all"
+                className="rounded-md bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 transition-all"
                 >
                 Change Password
                 </button>
