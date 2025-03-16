@@ -10,27 +10,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select"
-import { MarketplaceContext } from "./MarketplaceContext";
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 
 export type MarketplaceSortType = 
     "Popularity" | "Name-Asc" | "Name-Desc" | "Price-Asc" | 
-    "Price-Desc" | "New-to-Old" | "Old-to-New" | "Last-Updated";
+    "Price-Desc" | "New-to-Old" | "Old-to-New" | "Last-Updated" | "";
 
 export const MarketplaceSortSelector = () => {
-    const { query, setQuery, setIsToQuery } = React.useContext(MarketplaceContext);
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const { replace } = useRouter();
+
     const [sort, setSort] = React.useState<MarketplaceSortType>("Popularity");
 
-    React.useEffect(() => {
-        setQuery({ ...query, sort });
-        setIsToQuery(true);
-    }, [sort]);
+    const handleSort = (sort: MarketplaceSortType) => {
+        setSort(sort);
+
+        const params = new URLSearchParams(searchParams);
+        // When the sort is 'Popularity', it is considered the default.
+        if (sort === "Popularity") {
+            params.delete('sort');
+        } else {
+            params.set('sort', sort);
+        }
+
+        replace(`${pathname}?${params.toString()}`);
+    }
 
     return (
         <div className="flex w-64 h-8 gap-2 ml-8">
             <div className="flex h-8 items-center">Sort by</div>
-            <Select value={sort} onValueChange={v => setSort(v as MarketplaceSortType)}>
+            <Select value={sort} onValueChange={v => handleSort(v as MarketplaceSortType)}>
             <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select a fruit" />
+                <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
                 <SelectGroup>
