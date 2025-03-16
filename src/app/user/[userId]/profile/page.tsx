@@ -38,7 +38,7 @@ export default function UserProfilePage() {
 
   // Debounce function to delay email validation
   const debouncedSetEmail = useCallback(
-    debounce((email) => setDebouncedEmail(email), 300),
+    debounce((email: string) => setDebouncedEmail(email), 300),
     [debounce],
   );
 
