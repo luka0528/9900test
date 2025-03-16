@@ -5,22 +5,32 @@ import { Search } from 'lucide-react';
 
 import { Input } from "~/components/ui/input"
 import { Button } from "~/components/ui/button"
-import { MarketplaceContext } from "./MarketplaceContext";
+
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 
 export const MarketplaceSearch = () => {
-    const { query, setQuery, setIsToQuery } = React.useContext(MarketplaceContext);
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const { replace } = useRouter();
+
     const [search, setSearch] = React.useState("");
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
-            handleSubmitSearch();
+            handleSearch();
             e.preventDefault();
         }
     }
 
-    const handleSubmitSearch = () => {
-        setQuery({ ...query, search });
-        setIsToQuery(true);
+    const handleSearch = () => {
+        const params = new URLSearchParams(searchParams);
+        if (search) {
+            params.set('search', search);
+        } else {
+            params.delete('search');
+        }
+
+        replace(`${pathname}?${params.toString()}`);
     }
 
     // Placing the Search icon within the input https://github.com/shadcn-ui/ui/discussions/1552
@@ -30,14 +40,14 @@ export const MarketplaceSearch = () => {
             <div>
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                className="w-full pl-10"
-                placeholder="Search..." 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => handleKeyDown(e)}
+                    className="w-full pl-10"
+                    placeholder="Search..."
+                    defaultValue={searchParams.get('search')?.toString()}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e)}
                 />
             </div>
-            <Button type="button" className="grow" onClick={handleSubmitSearch}>Search</Button>
+            <Button type="button" className="grow" onClick={handleSearch}>Search</Button>
             </div>
         </div>
     );
