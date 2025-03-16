@@ -99,7 +99,7 @@ export const MarketplaceServices = ({ query } : MarketplaceServicesProps) => {
     }, [fetchNextPage, inView]);
 
     return (
-        <div className="h-screen overflow-y-auto">
+        <div className="h-screen overflow-y-auto pt-2">
             {status === 'pending' || status === 'error' ? (
                 <MarketplaceServicesSkeleton />
             ) : (
