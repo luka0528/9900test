@@ -15,7 +15,7 @@ export const MarketplaceTagsFilter = () => {
     const { replace } = useRouter();
 
     const [tags, setTags] = React.useState<string[]>(
-        searchParams.get('tags')?.split(',').filter(Boolean) || []
+        searchParams.get('tags')?.split(',').filter(Boolean) ?? []
     );
 
     const handleTagsChanged = (newTags: string[]) => {

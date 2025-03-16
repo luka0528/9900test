@@ -19,7 +19,7 @@ export const MarketplaceDateFilter = () => {
     const { replace } = useRouter();
 
     const [selectedDates, setSelectedDates] = React.useState<Set<number>>(
-        new Set(searchParams.get('dates')?.split(',').map(Number) || [])
+        new Set(searchParams.get('dates')?.split(',').map(Number) ?? [])
     );
     const toggleYear = (year: number) => {
         setSelectedDates((prev) => {

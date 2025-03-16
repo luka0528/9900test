@@ -13,7 +13,7 @@ export const MarketplacePriceFilter: React.FC = () => {
   const { replace } = useRouter();
 
   const [priceRange, setPriceRange] = React.useState<number[]>(
-    searchParams.get('price')?.split(',').map(Number) || PRICE_DEFAULT_RANGE
+    searchParams.get('price')?.split(',').map(Number) ?? PRICE_DEFAULT_RANGE
   );
 
   const handleRangeChange = (r: number[]) => {

@@ -6,15 +6,16 @@ import { MarketplaceServices } from '~/components/marketplace/MarketplaceService
 import { MarketplaceSideBar } from '~/components/marketplace/MarketplaceSidebar';
 
 import { MarketplaceServicesSkeleton } from '~/components/marketplace/MarketplaceServicesSkeleton';
+import { DEFAULT_QUERY } from '~/components/marketplace/MarketplaceQuery';
 
-import { Query, DEFAULT_QUERY } from '~/components/marketplace/MarketplaceQuery';
+import type { Query } from '~/components/marketplace/MarketplaceQuery';
 
 interface MarketplaceProps {
   searchParams?: Promise<Query>;
 }
 
 export default async function Marketplace(props: MarketplaceProps) {
-  const query = await props.searchParams || DEFAULT_QUERY;
+  const query = await props.searchParams ?? DEFAULT_QUERY;
 
   return (
     <div className="flex w-full h-full xl:max-w-[96rem]">

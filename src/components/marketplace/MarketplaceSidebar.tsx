@@ -22,7 +22,7 @@ export const MarketplaceSideBar = () => {
                 <AccordionItem value="item-1">
                     <AccordionTrigger>Tags</AccordionTrigger>
                     <AccordionContent >
-                        <MarketplaceTagsFilter opened={true} />
+                        <MarketplaceTagsFilter />
                     </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="item-2">

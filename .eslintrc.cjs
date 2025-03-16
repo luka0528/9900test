@@ -37,7 +37,7 @@ const config = {
         }
       }
     ],
-    "react-hooks/exhaustive-deps": "off"
+    "@typescript-eslint/unbound-method": "off",
   }
 }
 module.exports = config;
