@@ -7,6 +7,8 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 
+import type { Query } from "~/components/marketplace/MarketplaceQuery";
+
 export const serviceRouter = createTRPCRouter({
   // TODO: There'll be a lot more input here to create a service, this is just a placeholder
   create: protectedProcedure
@@ -29,15 +31,7 @@ export const serviceRouter = createTRPCRouter({
     getInfiniteServices: publicProcedure
       .input(
         z.object({
-          query: z.object({
-            search: z.string().nullish(),
-            sort: z.string().nullish(),
-            filters: z.object({
-              tags: z.array(z.string()).nullish(),
-              price: z.array(z.number()).nullish(),
-              dates: z.array(z.number()).nullish(),
-            }),
-          }),
+          query: z.custom<Query>(),
           cursor: z.number().nullish(),
         })
       )

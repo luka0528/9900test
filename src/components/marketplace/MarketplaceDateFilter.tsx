@@ -3,7 +3,7 @@
 import React from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Button } from "~/components/ui/button";
-import { MarketplaceContext } from "./MarketplaceContext";
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 
 // The set of dates to filter by
 const startYear = 2020;
@@ -14,32 +14,36 @@ const dates = Array.from({ length: numberOfYears }, (_, index) => ({
 }));
 
 export const MarketplaceDateFilter = () => {
-    const { query, setQuery, setIsToQuery } = React.useContext(MarketplaceContext);
-    const [selectedDates, setSelectedDates] = React.useState<Map<number, boolean>>(new Map());
-    const toggleDate = (index: number) => {
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const { replace } = useRouter();
+
+    const [selectedDates, setSelectedDates] = React.useState<Set<number>>(
+        new Set(searchParams.get('dates')?.split(',').map(Number) ?? [])
+    );
+    const toggleYear = (year: number) => {
         setSelectedDates((prev) => {
-            prev.set(index, !prev.get(index))
-            return new Map(prev)
-        })
+            const newSet = new Set(prev);
+            if (prev.has(year)) {
+                newSet.delete(year);
+            } else {
+                newSet.add(year);
+            }
+
+            return newSet;
+        });
     }
 
     const handleApplyFilter = () => {
-        setIsToQuery(true);
+        const params = new URLSearchParams(searchParams);
+        if (selectedDates.size > 0) {
+            params.set('dates', Array.from(selectedDates).join(','));
+        } else {
+            params.delete('dates');
+        }
+
+        replace(`${pathname}?${params.toString()}`);
     }
-
-    React.useEffect(() => {
-        const yearsInc = Array.from(selectedDates.entries())
-            .filter(([_, v]) => v)
-            .map(([k, _]) => k)
-
-        setQuery({
-            ...query,
-            filters: {
-                ...query.filters,
-                dates: yearsInc
-            }
-        })
-    }, [selectedDates])
     
     return (
         <div>
@@ -47,7 +51,8 @@ export const MarketplaceDateFilter = () => {
                 {dates.map((date, idx) => (
                     <div key={idx} className="items-top flex space-x-2">
                         <Checkbox
-                            onCheckedChange={() => toggleDate(date.from)} 
+                            checked={selectedDates.has(date.from)}
+                            onCheckedChange={() => toggleYear(date.from)}
                         />
                         <div className="grid gap-1.5 leading-none">
                         <label
