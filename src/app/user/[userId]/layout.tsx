@@ -3,9 +3,10 @@
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { SidebarProvider } from "~/components/ui/sidebar";
-import { SideBar, SidebarItem } from "~/components/sidebar/SideBar";
+import type { SidebarItem } from "~/components/sidebar/SideBar";
+import { SideBar } from "~/components/sidebar/SideBar";
 import { Package, Settings, Bell, PlusSquare } from "lucide-react";
-import { breadCrumbItem } from "~/components/sidebar/BreadCrumb";
+import type { BreadCrumbItem } from "~/components/sidebar/BreadCrumb";
 
 export default function ProfileLayout({
   children,
@@ -35,15 +36,15 @@ export default function ProfileLayout({
         ];
 
   // Example breadcrumb items (adjust as needed)
-  const breadCrumbItems: breadCrumbItem[] = [
+  const breadCrumbItems: BreadCrumbItem[] = [
     { href: `/`, label: "Home" },
-    { href: `/user/${userId}`, label: "User" },
+    { href: `/user/${String(userId)}`, label: "User" },
     {
-      href: `/user/${userId}/services`,
+      href: `/user/${String(userId)}/services`,
       label: sessionId === userId ? "My Services" : "Services",
     },
     {
-      href: `/user/${userId}/profile`,
+      href: `/user/${String(userId)}/profile`,
       label: sessionId === userId ? "My Profile" : "Profile",
     },
   ];
@@ -55,7 +56,7 @@ export default function ProfileLayout({
         {/* Sidebar (fixed width) */}
         <SideBar
           sideBarItems={sideBarItems}
-          baseUrl={`/user/${userId}`}
+          baseUrl={`/user/${String(userId)}`}
           breadCrumbItems={breadCrumbItems}
         />
 

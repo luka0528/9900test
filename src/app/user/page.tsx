@@ -3,7 +3,6 @@
 import { useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Skeleton } from "~/components/ui/skeleton"; // Optional: For better UX
 
 const RedirectUserPage: React.FC = () => {
   const { data: session, status } = useSession();

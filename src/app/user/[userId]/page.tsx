@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Skeleton } from "~/components/ui/skeleton"; // Optional: For better UX
 
 export default function UserPage() {
   const router = useRouter();
@@ -10,7 +9,7 @@ export default function UserPage() {
 
   // Compute redirect path once to avoid unnecessary re-renders
   const redirectPath = useMemo(
-    () => (userId ? `/user/${userId}/profile` : null),
+    () => (typeof userId === "string" ? `/user/${userId}/profile` : null),
     [userId],
   );
 

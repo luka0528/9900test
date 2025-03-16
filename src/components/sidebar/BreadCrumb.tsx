@@ -1,7 +1,7 @@
 "use client";
 
-import * as React from "react"
-import Link from "next/link"
+import * as React from "react";
+import Link from "next/link";
 
 import {
   Breadcrumb,
@@ -10,32 +10,29 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "~/components/ui/breadcrumb"
-import { usePathname } from "next/navigation"
-
+} from "~/components/ui/breadcrumb";
+import { usePathname } from "next/navigation";
 
 const ITEMS_TO_DISPLAY = 3;
 
-export interface breadCrumbItem {
-    href?: string;
-    label: string;
+export interface BreadCrumbItem {
+  href?: string;
+  label: string;
 }
 
-export interface BreadCrumbProps {
-    breadCrumbItems: breadCrumbItem[];
-}
-
-export function BreadCrumb(items: BreadCrumbProps) {
+export function BreadCrumb({ items = [] }: { items: BreadCrumbItem[] }) {
   const pathname = usePathname();
-  const filteredItems = items.breadCrumbItems.filter(item => pathname.startsWith(item.href ?? ""));
+  const filteredItems = items.filter((item) =>
+    pathname.startsWith(item.href ?? ""),
+  );
   const hasMoreItems = filteredItems.length > ITEMS_TO_DISPLAY;
 
   let itemsToShow = filteredItems;
   if (hasMoreItems) {
     itemsToShow = [
       filteredItems[0]!,
-      { label: '...' },
-      ...filteredItems.slice(-ITEMS_TO_DISPLAY + 1)
+      { label: "..." },
+      ...filteredItems.slice(-ITEMS_TO_DISPLAY + 1),
     ];
   }
 

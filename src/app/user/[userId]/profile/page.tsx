@@ -18,10 +18,10 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
-import { Pencil } from "lucide-react";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { toast } from "sonner";
+import Image from "next/image";
 
 // Define Zod Schema for validation
 const profileSchema = z
@@ -49,7 +49,7 @@ const UserProfilePage = () => {
   const isOwnProfile = session?.user?.id === userId;
   const [isEditing, setIsEditing] = useState(false);
 
-  // ✅ Queries & Mutations
+  // Queries & Mutations
   const { data: userData, isLoading: isLoadingUserProfile } =
     api.user.getUserProfile.useQuery(
       { userId: userId as string },
@@ -62,13 +62,13 @@ const UserProfilePage = () => {
   const validateCurrentPassword =
     api.user.validateCurrentPassword.useMutation();
 
-  // ✅ React Hook Form
+  // React Hook Form
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: userData?.name || "",
-      email: userData?.email || "",
-      bio: userData?.bio || "",
+      name: userData?.name ?? "",
+      email: userData?.email ?? "",
+      bio: userData?.bio ?? "",
       currentPassword: "",
       password: "",
       confirmPassword: "",
@@ -78,9 +78,9 @@ const UserProfilePage = () => {
   useEffect(() => {
     if (userData) {
       form.reset({
-        name: userData.name || "",
-        email: userData.email || "",
-        bio: userData.bio || "",
+        name: userData.name ?? "",
+        email: userData.email ?? "",
+        bio: userData.bio ?? "",
         currentPassword: "",
         password: "",
         confirmPassword: "",
@@ -88,60 +88,60 @@ const UserProfilePage = () => {
     }
   }, [userData, form]);
 
-  // ✅ Handle Form Submission
+  // Handle Form Submission
   const onSubmit = async (values: z.infer<typeof profileSchema>) => {
     try {
       let profileUpdated = false;
 
-      // ✅ Update Name if changed
+      // Update Name if changed
       if (values.name !== userData?.name) {
         await updateNameMutation.mutateAsync({ name: values.name });
         profileUpdated = true;
       }
 
-      // ✅ Update Email if changed
+      // Update Email if changed
       if (values.email !== userData?.email) {
         await updateEmailMutation.mutateAsync({ email: values.email });
         profileUpdated = true;
       }
 
-      // ✅ Update Bio if changed
+      // Update Bio if changed
       if (values.bio !== userData?.bio) {
         await updateBioMutation.mutateAsync({ bio: values.bio });
         profileUpdated = true;
       }
 
-      // ✅ Handle Password Update
+      // Handle Password Update
       if (values.password) {
         try {
-          // ✅ Validate current password using a mutation
+          // Validate current password using a mutation
           await validateCurrentPassword.mutateAsync({
-            currentPassword: values.currentPassword || "",
+            currentPassword: values.currentPassword ?? "",
           });
 
           try {
-            // ✅ If validation succeeds, update the password
+            // If validation succeeds, update the password
             await updatePasswordMutation.mutateAsync({
               password: values.password,
             });
             toast.success("Password updated successfully!");
-          } catch (error) {
+          } catch {
             toast.error("Failed to update password. Please try again.");
           }
-        } catch (error) {
+        } catch {
           toast.error("Current password is incorrect.");
           return; // Stops execution if password validation fails
         }
       }
 
-      // ✅ Show success message only if profile info was updated
+      // Show success message only if profile info was updated
       if (profileUpdated) {
         toast.success("Profile updated successfully!");
       }
 
-      // ✅ Exit editing mode after successful updates
+      // Exit editing mode after successful updates
       setIsEditing(false);
-    } catch (error) {
+    } catch {
       toast.error("Failed to update profile.");
     }
   };
@@ -183,9 +183,11 @@ const UserProfilePage = () => {
         <CardContent className="space-y-6">
           <div className="flex items-center justify-center gap-6">
             {userData?.image ? (
-              <img
-                src={userData?.image}
+              <Image
+                src={userData?.image || "/default-profile.png"}
                 alt="Profile"
+                width={96}
+                height={96}
                 className="h-24 w-24 rounded-full border"
               />
             ) : (
@@ -259,7 +261,7 @@ const UserProfilePage = () => {
                         />
                       ) : (
                         <div className="min-h-[10rem] w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                          {field.value || "No bio set"}
+                          {field.value ?? "No bio set"}
                         </div>
                       )}
                     </FormControl>
@@ -324,9 +326,9 @@ const UserProfilePage = () => {
                     onClick={() => {
                       setIsEditing(false);
                       form.reset({
-                        name: userData?.name || "",
-                        email: userData?.email || "",
-                        bio: userData?.bio || "",
+                        name: userData?.name ?? "",
+                        email: userData?.email ?? "",
+                        bio: userData?.bio ?? "",
                         currentPassword: "",
                         password: "",
                         confirmPassword: "",
