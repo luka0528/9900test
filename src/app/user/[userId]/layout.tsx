@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { SidebarProvider } from "~/components/ui/sidebar";
 import { SideBar, SidebarItem } from "~/components/sidebar/SideBar";
 import { Package, Settings, Bell, PlusSquare } from "lucide-react";
-import { breadCrumbItem } from "~/components/breadcrumb/BreadCrumb";
+import { breadCrumbItem } from "~/components/sidebar/BreadCrumb";
 
 export default function ProfileLayout({
   children,
@@ -23,7 +23,11 @@ export default function ProfileLayout({
           { title: "Profile Settings", url: `/profile`, icon: Settings },
           { title: "Notifications", url: `/notifications`, icon: Bell },
           { title: "My Services", url: `/services`, icon: Package },
-          { title: "My Subscriptions", url: `/subscriptions`, icon: PlusSquare },
+          {
+            title: "My Subscriptions",
+            url: `/subscriptions`,
+            icon: PlusSquare,
+          },
         ]
       : [
           { title: "View Profile", url: `/profile`, icon: Settings },
@@ -56,9 +60,7 @@ export default function ProfileLayout({
         />
 
         {/* Main content expands to fill remaining space */}
-        <main className="flex-1 overflow-auto p-0 bg-gray-100">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto bg-gray-100 p-0">{children}</main>
       </div>
     </SidebarProvider>
   );

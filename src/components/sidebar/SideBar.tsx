@@ -2,25 +2,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-  } from "~/components/ui/sidebar"
-import { BreadCrumb, BreadCrumbProps } from "../breadcrumb/BreadCrumb";
-   
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "~/components/ui/sidebar";
+import { BreadCrumb, BreadCrumbProps } from "./BreadCrumb";
+
 export interface SidebarItem {
-    title: string;
-    url: string;
-    icon: React.ComponentType;
+  title: string;
+  url: string;
+  icon: React.ComponentType;
 }
 
 interface SidebarProps {
-    sideBarItems: SidebarItem[];
+  sideBarItems: SidebarItem[];
 }
 
 /**
@@ -40,7 +40,7 @@ interface SidebarProps {
  *   { title: 'Home', url: '/home', icon: HomeIcon },
  *   { title: 'Profile', url: '/profile', icon: ProfileIcon },
  * ];
- * 
+ *
  * const breadCrumbItems: breadCrumbItem[] = [
  *        { href: `/`, label: "Home" },
  *        { href: `/user/${userId}`, label: "User" },
@@ -56,37 +56,46 @@ interface SidebarProps {
  * />
  * ```
  */
-export function SideBar({ sideBarItems = [], breadCrumbItems=[], baseUrl = "",  }: SidebarProps & BreadCrumbProps &  { baseUrl?: string }) {
-    // Get the current pathname
-    const pathname = usePathname();
-    return (
-        <Sidebar collapsible="none" className={`h-full min-h-screen border-r-[2px] border-gray-200`}>
-            <SidebarContent className="flex-1">
-                <SidebarGroup>
-                    <div className="mb-4"><BreadCrumb breadCrumbItems={breadCrumbItems} /></div>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {sideBarItems.map((item) => {
-                                const isActive = pathname === `${baseUrl}${item.url}`;
-                                // console.error(`pathname: ${pathname} === ${baseUrl}${item.url} = ${isActive}`);
-                                return (
-                                <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton 
-                                        className={isActive ? "bg-gray-200 dark:bg-gray-700" : ""}
-                                        asChild
-                                    >
-                                        <Link href={`${baseUrl}${item.url}`}>
-                                                <item.icon />
-                                                <span>{item.title}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                );
-                            })}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-            </SidebarContent>
-        </Sidebar>
-    );
+export function SideBar({
+  sideBarItems = [],
+  breadCrumbItems = [],
+  baseUrl = "",
+}: SidebarProps & BreadCrumbProps & { baseUrl?: string }) {
+  // Get the current pathname
+  const pathname = usePathname();
+  return (
+    <Sidebar
+      collapsible="none"
+      className={`h-full min-h-screen border-r-[2px] border-gray-200`}
+    >
+      <SidebarContent className="flex-1">
+        <SidebarGroup>
+          <div className="mb-4">
+            <BreadCrumb breadCrumbItems={breadCrumbItems} />
+          </div>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {sideBarItems.map((item) => {
+                const isActive = pathname === `${baseUrl}${item.url}`;
+                // console.error(`pathname: ${pathname} === ${baseUrl}${item.url} = ${isActive}`);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      className={isActive ? "bg-gray-200 dark:bg-gray-700" : ""}
+                      asChild
+                    >
+                      <Link href={`${baseUrl}${item.url}`}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
+  );
 }

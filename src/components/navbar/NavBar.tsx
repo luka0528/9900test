@@ -10,9 +10,11 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { LogOut, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function NavBar() {
   const { data: session } = useSession();
+  const router = useRouter();
 
   return (
     <div className="flex h-20 w-full items-center justify-between border-b-2 border-border bg-background px-8">
@@ -36,9 +38,9 @@ export default function NavBar() {
               <DropdownMenuContent align="end" sideOffset={40} className="w-72">
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={() => (window.location.href = "/user")}
+                  onClick={() => router.push("/user")}
                 >
-                  <User className="mr-2 h-4 w-4" />
+                  <User className="h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem
