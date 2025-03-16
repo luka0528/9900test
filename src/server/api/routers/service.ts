@@ -60,18 +60,40 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      const serviceTags = service.tags.map((tag) => tag.name);
+      const ownerIdToName = new Map<string, string>();
+      for (const owner of service.owners) {
+        ownerIdToName.set(owner.id, owner.user.name!);
+      }
 
-      const serviceVersions = service.versions.map(
-        (version) => version.version,
-      );
-      const ownerNames = service.owners.map((owner) => owner.user.name);
-      // Get ratings
-      // [
-      //	{
-      //			consumerName, starValue, content, createdAt, comments: [{ownerName, content, createdAt}]
-      //	}
-      // ]
+      const ratings = [];
+      for (const rating of service.ratings) {
+        const ownerReplies = new Map();
+        for (const reply of rating.comments) {
+          ownerReplies.set(reply.id, {
+            ownerName: ownerIdToName.get(reply.ownerId),
+            content: reply.content,
+            createdAt: reply.createdAt,
+          });
+        }
+
+        ratings.push({
+          consumerName: rating.consumer.user.name,
+          starValue: rating.starValue,
+          content: rating.content,
+          createdAt: rating.createdAt,
+          comments: ownerReplies.get(rating.id),
+        });
+      }
+
+      return {
+        name: service.name,
+        createdAt: service.createdAt,
+        updatedAt: service.updatedAt,
+        tags: service.tags.map((tag) => tag.name),
+        versions: service.versions.map((version) => version.version),
+        owners: [...ownerIdToName.values()],
+        ratings: ratings,
+      };
     }),
 
   getDocumentationByVersion: publicProcedure
@@ -103,7 +125,7 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      // Should be an array of length one
+      // Should be exactly one version
       if (service.versions.length !== 1) {
         throw new TRPCError({
           code: "BAD_REQUEST",
