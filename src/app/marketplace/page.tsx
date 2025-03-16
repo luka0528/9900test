@@ -1,39 +1,33 @@
-"use client";
+import React, { Suspense } from 'react';
 
-import React from 'react';
-
-import { MarketplaceContext, MarketplaceDefaultQuery } from '~/components/marketplace/MarketplaceContext';
 import { MarketplaceSearch } from '~/components/marketplace/MarketplaceSearch';
 import { MarketplaceSortSelector } from '~/components/marketplace/MarketplaceSortSelector';
 import { MarketplaceServices } from '~/components/marketplace/MarketplaceServices';
 import { MarketplaceSideBar } from '~/components/marketplace/MarketplaceSidebar';
 
-import type { MarketplaceSortType } from '~/components/marketplace/MarketplaceSortSelector';
-import type { MarketplaceFilterType } from '~/components/marketplace/MarketplaceSidebar';
+import { MarketplaceServicesSkeleton } from '~/components/marketplace/MarketplaceServicesSkeleton';
 
-export interface MarketplaceQuery {
-  search: string;
-  sort: MarketplaceSortType;
-  filters: MarketplaceFilterType;
+import { Query, DEFAULT_QUERY } from '~/components/marketplace/MarketplaceQuery';
+
+interface MarketplaceProps {
+  searchParams?: Promise<Query>;
 }
 
-export default function Marketplace() {
-  const [query, setQuery] = React.useState<MarketplaceQuery>(MarketplaceDefaultQuery);
-  // Acts as a signal to query the marketplace.
-  const [isToQuery, setIsToQuery] = React.useState(false);
+export default async function Marketplace(props: MarketplaceProps) {
+  const query = await props.searchParams || DEFAULT_QUERY;
 
   return (
-    <MarketplaceContext.Provider value={{ query, isToQuery, setQuery, setIsToQuery }}>
-      <div className="flex w-full h-full xl:max-w-[96rem]">
-        <MarketplaceSideBar />
-        <div className="flex flex-col grow h-full">
-          <div className="flex min-h-20 justify-between items-center">
-            <MarketplaceSortSelector />
-            <MarketplaceSearch />
-          </div>
-          <MarketplaceServices />
+    <div className="flex w-full h-full xl:max-w-[96rem]">
+      <MarketplaceSideBar />
+      <div className="flex flex-col grow h-full">
+        <div className="flex min-h-20 justify-between items-center">
+          <MarketplaceSortSelector />
+          <MarketplaceSearch />
         </div>
+        <Suspense fallback={<MarketplaceServicesSkeleton />}>
+          <MarketplaceServices query={query}/>
+        </Suspense>
       </div>
-    </MarketplaceContext.Provider>
+    </div>
   );
 }

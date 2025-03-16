@@ -5,10 +5,10 @@ import { api } from "~/trpc/react";
 import { useInView } from "react-intersection-observer";
 
 import { MarketplaceService } from "./MarketplaceService";
-import { MarketplaceContext } from "./MarketplaceContext";
 import { MarketplaceServicesSkeleton } from "./MarketplaceServicesSkeleton";
 import { MarketplaceServicesNoResults } from "./MarketplaceServicesNoResults";
 
+import type { Query } from "./MarketplaceQuery";
 // Mock data for the Marketplace -- cannot use the data from the API
 // as the schema is very limited.
 const packages = [
@@ -70,13 +70,12 @@ const packages = [
   },
 ];
 
-export const MarketplaceServices = () => {
-    const { query, isToQuery, setIsToQuery } = React.useContext(MarketplaceContext);
-    const [ref, inView] = useInView();
+interface MarketplaceServicesProps {
+  query: Query;
+}
 
-    // The API call will refetch when the query changes, hence there is a need
-    // to finalise the query before making the API call.
-    const [finalQuery, setFinalQuery] = React.useState(query);
+export const MarketplaceServices = ({ query } : MarketplaceServicesProps) => {
+    const [ref, inView] = useInView();
 
     // The Marketplace is unidirection, so we only req. the fields related
     // to the 'next' page.
@@ -86,20 +85,12 @@ export const MarketplaceServices = () => {
         fetchNextPage,
     } = api.service.getInfiniteServices.useInfiniteQuery(
         {
-            query: finalQuery,
+            query,
         },
         {
             getNextPageParam: (page) => page.nextCursor,
         }
     );
-
-    React.useEffect(() => {
-      if (isToQuery) {
-        console.log('Querying:', query);
-        setFinalQuery(query);
-        setIsToQuery(false);
-      }
-    }, [isToQuery]);
 
     React.useEffect(() => {
         if (inView) {
@@ -130,8 +121,7 @@ export const MarketplaceServices = () => {
                             </div>
                           )}
                         </div>
-                    ))}
-                    
+                    ))}   
                 </>
             )}
         </div>
