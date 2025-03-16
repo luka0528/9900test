@@ -71,12 +71,9 @@ importers:
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-<<<<<<< HEAD
       lodash.debounce:
         specifier: ^4.0.8
         version: 4.0.8
-=======
->>>>>>> dev
       lucide-react:
         specifier: ^0.477.0
         version: 0.477.0(react@18.3.1)
@@ -98,15 +95,12 @@ importers:
       react-hook-form:
         specifier: ^7.54.2
         version: 7.54.2(react@18.3.1)
-<<<<<<< HEAD
       react-router-dom:
         specifier: ^7.3.0
         version: 7.3.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-spinners:
         specifier: ^0.15.0
         version: 0.15.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-=======
->>>>>>> dev
       resend:
         specifier: ^4.1.2
         version: 4.1.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
