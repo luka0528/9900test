@@ -23,7 +23,7 @@ import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { toast } from "sonner";
 
-// ✅ Define Zod Schema for validation
+// Define Zod Schema for validation
 const profileSchema = z
   .object({
     name: z.string().min(1, "Name is required"),
@@ -154,10 +154,17 @@ const UserProfilePage = () => {
   if (status === "loading" || isLoadingUserProfile) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <Skeleton className="h-[200px] w-[300px] rounded-lg" />
-        <span className="ml-4 text-xl text-gray-500">
-          Loading user profile...
-        </span>
+        <div className="flex w-3/4 max-w-3xl flex-col items-center">
+          <Skeleton className="flex h-[1000px] w-full items-center justify-center rounded-lg">
+            <div className="mr-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-gray-500"></div>
+            <span className="block text-center text-xl text-gray-500">
+              Loading user profile...
+            </span>
+          </Skeleton>
+          <span className="mt-4 block text-center text-xl text-gray-500">
+            Loading user profile...
+          </span>
+        </div>
       </div>
     );
   }
