@@ -13,7 +13,9 @@ export const MarketplaceSearch = () => {
     const pathname = usePathname();
     const { replace } = useRouter();
 
-    const [search, setSearch] = React.useState("");
+    const [search, setSearch] = React.useState(
+        searchParams.get('search')?.toString() || ''
+    );
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {

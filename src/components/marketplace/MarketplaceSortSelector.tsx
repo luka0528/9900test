@@ -21,7 +21,9 @@ export const MarketplaceSortSelector = () => {
     const pathname = usePathname();
     const { replace } = useRouter();
 
-    const [sort, setSort] = React.useState<MarketplaceSortType>("Popularity");
+    const [sort, setSort] = React.useState<MarketplaceSortType>(
+        searchParams.get('sort') as MarketplaceSortType || "Popularity"
+    );
 
     const handleSort = (sort: MarketplaceSortType) => {
         setSort(sort);
