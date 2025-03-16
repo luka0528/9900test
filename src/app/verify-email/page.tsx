@@ -89,63 +89,6 @@ export default function VerifyEmailPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
-<<<<<<< HEAD
-      <div className="flex flex-col items-center gap-2">
-        <h1 className="text-2xl font-bold">Verify your email</h1>
-        <p className="text-sm text-muted-foreground">
-          Please enter the 6-digit verification code sent to your email address.
-        </p>
-      </div>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="otp"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <InputOTP maxLength={6} {...field}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <Button type="submit" className="w-full" disabled={isVerifying}>
-            {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isVerifying ? "Verifying..." : "Verify Email"}
-          </Button>
-        </form>
-      </Form>
-      <div className="text-center text-sm">
-        Didn&apos;t receive a code?{" "}
-        <Button
-          variant="link"
-          onClick={handleResendCode}
-          disabled={isResending}
-          className="h-auto p-0 font-medium"
-        >
-          {isResending ? "Sending..." : "Resend code"}
-        </Button>
-      </div>
-      <div className="text-center text-sm">
-        <Link
-          href="/login"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          Back to sign in
-        </Link>
-      </div>
-=======
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -212,7 +155,6 @@ export default function VerifyEmailPage() {
           </Link>
         </div>
       </motion.div>
->>>>>>> dev
     </div>
   );
 }
