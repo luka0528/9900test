@@ -1,5 +1,5 @@
 import { z } from "zod";
-import bcrypt from "bcryptjs";
+import bcrypt, { hash } from "bcryptjs";
 import type { User } from "@prisma/client";
 import {
   createTRPCRouter,
@@ -97,7 +97,10 @@ export const userRouter = createTRPCRouter({
           name,
         });
       } catch (error) {
-        console.error("Failed to send verification email:", error);
+        console.error(
+          "Failed to send verification email:",
+          error instanceof Error ? error.message : error,
+        );
         // Don't fail the registration if email sending fails
       }
 
@@ -179,7 +182,10 @@ export const userRouter = createTRPCRouter({
 
         return { success: true };
       } catch (error) {
-        console.error("Failed to resend verification email:", error);
+        console.error(
+          "Failed to resend verification email:",
+          error instanceof Error ? error.message : error,
+        );
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to send verification email",
