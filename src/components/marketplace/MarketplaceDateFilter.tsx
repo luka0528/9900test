@@ -51,7 +51,8 @@ export const MarketplaceDateFilter = () => {
                 {dates.map((date, idx) => (
                     <div key={idx} className="items-top flex space-x-2">
                         <Checkbox
-                            onCheckedChange={() => toggleYear(date.from)} 
+                            checked={selectedDates.has(date.from)}
+                            onCheckedChange={() => toggleYear(date.from)}
                         />
                         <div className="grid gap-1.5 leading-none">
                         <label
