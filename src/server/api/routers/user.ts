@@ -11,6 +11,7 @@ import { createVerificationToken, verifyToken } from "~/lib/verification";
 import { sendVerificationEmail, sendPasswordResetEmail } from "~/lib/email";
 import { VerificationTokenType } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
+import { u } from "node_modules/framer-motion/dist/types.d-B50aGbjN";
 
 interface Context {
   db: PrismaClient;
@@ -31,19 +32,19 @@ const updateUserField = async <K extends keyof User>(
   field: K,
   value: User[K],
 ) => {
-  const updatedUser = await ctx.db.user.update({
-    where: { id: ctx.session.user.id },
-    data: { [field]: value },
-  });
+  try {
+    const updatedUser = await ctx.db.user.update({
+      where: { id: ctx.session.user.id },
+      data: { [field]: value },
+    });
 
-  if (!updatedUser) {
+    return { [field]: updatedUser[field] };
+  } catch (error) {
     throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "User not found",
+      code: "INTERNAL_SERVER_ERROR",
+      message: `Failed to update ${field}`,
     });
   }
-
-  return { [field]: updatedUser[field] };
 };
 
 export const userRouter = createTRPCRouter({
@@ -377,6 +378,9 @@ export const userRouter = createTRPCRouter({
           bio: true,
           image: true,
           emailVerified: true,
+          isSubscriptionsPublic: true,
+          isRatingsPublic: true,
+          isUserDataCollectionAllowed: true,
         },
       });
 
@@ -484,37 +488,54 @@ export const userRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  updatePrivacySettings: protectedProcedure
-    .input(
-      z.object({
-        show_subscriptions: z.boolean(),
-        show_reviews: z.boolean(),
-        data_collection_enabled: z.boolean(),
-      }),
-    )
+  updateIsUserSubscriptionsPublic: protectedProcedure
+    .input(z.object({ isSubscriptionsPublic: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
-      const { show_subscriptions, show_reviews, data_collection_enabled } =
-        input;
-
       try {
-        const updatedUser = await ctx.db.user.update({
-          where: { id: ctx.session.user.id },
-          data: {
-            privacySettings: {
-              show_subscriptions,
-              show_reviews,
-              data_collection_enabled,
-            },
-          },
+        updateUserField(
+          ctx,
+          "isSubscriptionsPublic",
+          input.isSubscriptionsPublic,
+        );
+        return { isSubscriptionsPublic: input.isSubscriptionsPublic };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update subscriptions privacy settings",
         });
+      }
+    }),
+
+  updateIsUserRatingsPublic: protectedProcedure
+    .input(z.object({ isRatingsPublic: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        updateUserField(ctx, "isRatingsPublic", input.isRatingsPublic);
+        return { isRatingsPublic: input.isRatingsPublic };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update ratings privacy settings",
+        });
+      }
+    }),
+
+  updateIsUserDataCollectionAllowed: protectedProcedure
+    .input(z.object({ isUserDataCollectionAllowed: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        updateUserField(
+          ctx,
+          "isUserDataCollectionAllowed",
+          input.isUserDataCollectionAllowed,
+        );
         return {
-          success: true,
-          privacySettings: updatedUser.privacySettings,
+          isUserDataCollectionAllowed: input.isUserDataCollectionAllowed,
         };
       } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to update privacy settings",
+          message: "Failed to update data collection settings",
         });
       }
     }),
