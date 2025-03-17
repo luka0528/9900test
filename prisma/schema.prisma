@@ -83,6 +83,8 @@ model ServiceVersion {
     description String
     version String
     createdAt DateTime @default(now())
+
+	@@unique([serviceId, version])
 }
 
 // Service Memberships
@@ -175,6 +177,10 @@ model User {
 
     notifications Notification[] @relation("UserNotifications")
     sentNotifications Notification[] @relation("UserSentNotifications")
+    
+    isSubscriptionsPublic Boolean @default(true)
+    isRatingsPublic Boolean @default(true)
+    isUserDataCollectionAllowed Boolean @default(true)
 }
 
 enum UserRole {
