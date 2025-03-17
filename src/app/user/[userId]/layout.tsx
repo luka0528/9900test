@@ -61,7 +61,9 @@ export default function ProfileLayout({
         />
 
         {/* Main content expands to fill remaining space */}
-        <main className="flex-1 overflow-auto bg-gray-100 p-0">{children}</main>
+        <main className="flex-1 overflow-hidden bg-gray-100 p-0">
+          {children}
+        </main>
       </div>
     </SidebarProvider>
   );
