@@ -8,6 +8,7 @@ import {
 } from "~/server/api/trpc";
 
 import type { Query } from "~/components/marketplace/MarketplaceQuery";
+import { log } from "console";
 
 export const serviceRouter = createTRPCRouter({
   // TODO: There'll be a lot more input here to create a service, this is just a placeholder
@@ -55,8 +56,37 @@ export const serviceRouter = createTRPCRouter({
         return { services, nextCursor };
     }),
 
-  getAll: publicProcedure.query(async ({ ctx }) => {
-    const services = await ctx.db.service.findMany();
-    return services;
-  }),
+	getAll: publicProcedure.query(async ({ ctx }) => {
+		const services = await ctx.db.service.findMany();
+		return services;
+	}),
+
+	getByQuery: publicProcedure
+		.input(
+			z.object({
+				query: z.custom<Query>(),
+				cursor: z.number().nullish(),
+			})
+		)
+		.query(async ({ input, ctx }) => {
+			const { query, cursor } = input;
+			const limit = 12;
+			const skip = cursor ?? 0;
+
+			const services = await ctx.db.service.findMany({
+				where: {
+					name : {
+						contains: query.search,
+						mode: "insensitive",
+					},
+				},
+				skip : skip,
+				take: limit,
+			});
+			log(services);
+			const nextCursor = services.length ? skip + limit : null;
+			return {services, nextCursor};
+		})
+
+
 });
