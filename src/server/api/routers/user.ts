@@ -483,4 +483,39 @@ export const userRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  updatePrivacySettings: protectedProcedure
+    .input(
+      z.object({
+        show_subscriptions: z.boolean(),
+        show_reviews: z.boolean(),
+        data_collection_enabled: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { show_subscriptions, show_reviews, data_collection_enabled } =
+        input;
+
+      try {
+        const updatedUser = await ctx.db.user.update({
+          where: { id: ctx.session.user.id },
+          data: {
+            privacySettings: {
+              show_subscriptions,
+              show_reviews,
+              data_collection_enabled,
+            },
+          },
+        });
+        return {
+          success: true,
+          privacySettings: updatedUser.privacySettings,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update privacy settings",
+        });
+      }
+    }),
 });

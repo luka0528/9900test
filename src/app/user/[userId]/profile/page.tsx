@@ -163,7 +163,7 @@ const UserProfilePage = () => {
   if (status === "loading" || isLoadingUserProfile) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="flex w-3/4 max-w-3xl flex-col items-center">
+        <div className="flex w-3/4 max-w-4xl flex-col items-center">
           <Skeleton className="flex h-[1000px] w-full items-center justify-center rounded-lg">
             <div className="mr-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-gray-500"></div>
             <span className="block text-center text-xl text-gray-500">
@@ -260,7 +260,7 @@ const UserProfilePage = () => {
                       {isEditing ? (
                         <textarea
                           {...field}
-                          className="min-h-[10rem] w-full resize-none overflow-hidden rounded-lg border px-3 py-2 text-left align-top text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                          className="min-h-[10rem] w-full resize-none overflow-hidden rounded-lg border px-3 py-2 text-left align-top text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
                           rows={1} // Ensures it starts small but expands
                           onInput={(e) => {
                             const target = e.target as HTMLTextAreaElement;
