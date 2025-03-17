@@ -116,7 +116,7 @@ const UserProfilePage = () => {
         await updateBioMutation.mutateAsync({ bio: values.bio });
         profileUpdated = true;
         if (userData) {
-          userData.bio = values.bio;
+          userData.bio = values.bio ?? "";
         }
       }
 
