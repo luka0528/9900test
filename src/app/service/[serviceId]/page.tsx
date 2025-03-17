@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
@@ -10,19 +11,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { Pencil, ChevronDown, Heart, HeartOff, Tags } from "lucide-react";
+import { Pencil, ChevronDown, Heart, HeartOff } from "lucide-react";
+
+import { ServiceSidebar } from "../ServiceSidebar";
 
 export default function ServicePage() {
-  const [isSaved, setIsSaved] = useState(false);
+  const { data: session } = useSession();
   const { serviceId } = useParams();
 
-  // Admin only
-  const isAdmin = true;
+  const [isSaved, setIsSaved] = useState(false);
 
   // Dummy Data
   const services = [
     {
       id: 1,
+      creatorId: "cm89i5ruw00005u9yqhg8hl03",
       name: "Service 1",
       versions: [
         {
@@ -36,6 +39,7 @@ export default function ServicePage() {
               content: "nothing here yet",
             },
           ],
+          tags: ["meow"],
         },
         {
           vid: "v1.0",
@@ -109,6 +113,26 @@ export default function ServicePage() {
         },
       ],
     },
+    {
+      id: 2,
+      creatorId: "cm8851knr0000irdvgesgj94r",
+      name: "Service 2",
+      versions: [
+        {
+          vid: "v0.0",
+          name: "Version 0.0",
+          description:
+            "starting with 0.0, this is the first version of the service",
+          details: [
+            {
+              title: "What is Lorem Ipsum?",
+              content: "nothing here yet",
+            },
+          ],
+          tags: ["meow"],
+        },
+      ],
+    },
   ];
 
   // State to track seletected version
@@ -131,9 +155,9 @@ export default function ServicePage() {
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
-      <div className="h-full border-r lg:min-w-60">SideBar</div>
+      <ServiceSidebar></ServiceSidebar>
       <div className="flex h-full grow flex-col">
-        <div className="border-b p-4">
+        <div className="p-4">
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-2xl font-bold">{service?.name}</h1>
             <div className="flex items-center gap-2">
@@ -141,9 +165,11 @@ export default function ServicePage() {
               <Button size="icon" onClick={() => setIsSaved(!isSaved)}>
                 {isSaved ? <HeartOff /> : <Heart />}
               </Button>
-              <Button variant="outline">
-                Edit <Pencil />
-              </Button>
+              {session && session.user.id === service?.creatorId && (
+                <Button variant="outline">
+                  Edit <Pencil />
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
@@ -164,15 +190,15 @@ export default function ServicePage() {
               </DropdownMenu>
             </div>
           </div>
-          {selectedVersion?.tags && (
-            <div className="mb-8 flex items-center gap-2">
-              {selectedVersion.tags.map((tag: string) => (
-                <Badge key={tag} variant="outline">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
+
+          <div className="mb-8 flex items-center gap-2">
+            {selectedVersion?.tags.map((tag: string) => (
+              <Badge key={tag} variant="outline">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+
           <p className="mb-4">{selectedVersion?.description}</p>
         </div>
 
