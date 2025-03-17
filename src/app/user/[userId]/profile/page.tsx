@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { set, z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
@@ -15,6 +15,7 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
+  FormDescription,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
@@ -22,6 +23,9 @@ import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { toast } from "sonner";
 import Image from "next/image";
+import { Pencil } from "lucide-react";
+import { Checkbox } from "~/components/ui/checkbox";
+import Link from "next/link";
 
 // Define Zod Schema for validation
 const profileSchema = z
@@ -36,6 +40,9 @@ const profileSchema = z
       .optional()
       .or(z.literal("")),
     confirmPassword: z.string().optional().or(z.literal("")),
+    isSubscriptionsPublic: z.boolean().optional(),
+    isRatingsPublic: z.boolean().optional(),
+    isDataCollectionAllowed: z.boolean().optional(),
   })
   .refine((data) => !data.password || data.password === data.confirmPassword, {
     message: "Passwords must match",
@@ -48,6 +55,7 @@ const UserProfilePage = () => {
   const { userId } = useParams();
   const isOwnProfile = session?.user?.id === userId;
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingPrivacy, setIsEditingPrivacy] = useState(false);
 
   // Queries & Mutations
   const { data: userData, isLoading: isLoadingUserProfile } =
@@ -61,6 +69,11 @@ const UserProfilePage = () => {
   const updatePasswordMutation = api.user.updatePassword.useMutation();
   const validateCurrentPassword =
     api.user.validateCurrentPassword.useMutation();
+  const updateSubscriptionSettings =
+    api.user.updateIsUserSubscriptionsPublic.useMutation();
+  const updateRatingSettings = api.user.updateIsUserRatingsPublic.useMutation();
+  const updateDataCollectionSettings =
+    api.user.updateIsUserDataCollectionAllowed.useMutation();
 
   // React Hook Form
   const form = useForm<z.infer<typeof profileSchema>>({
@@ -72,6 +85,9 @@ const UserProfilePage = () => {
       currentPassword: "",
       password: "",
       confirmPassword: "",
+      isSubscriptionsPublic: userData?.isSubscriptionsPublic ?? false,
+      isRatingsPublic: userData?.isRatingsPublic ?? false,
+      isDataCollectionAllowed: userData?.isUserDataCollectionAllowed ?? false,
     },
   });
 
@@ -84,9 +100,25 @@ const UserProfilePage = () => {
         currentPassword: "",
         password: "",
         confirmPassword: "",
+        isSubscriptionsPublic: userData.isSubscriptionsPublic ?? false,
+        isRatingsPublic: userData.isRatingsPublic ?? false,
+        isDataCollectionAllowed: userData.isUserDataCollectionAllowed ?? false,
       });
     }
   }, [userData, form]);
+
+  const toggleEditingPrivacy = () => {
+    setIsEditingPrivacy(!isEditingPrivacy);
+    form.setValue(
+      "isSubscriptionsPublic",
+      userData?.isSubscriptionsPublic ?? false,
+    );
+    form.setValue("isRatingsPublic", userData?.isRatingsPublic ?? false);
+    form.setValue(
+      "isDataCollectionAllowed",
+      userData?.isUserDataCollectionAllowed ?? false,
+    );
+  };
 
   // Handle Form Submission
   const onSubmit = async (values: z.infer<typeof profileSchema>) => {
@@ -140,6 +172,40 @@ const UserProfilePage = () => {
         } catch {
           toast.error("Current password is incorrect.");
           return; // Stops execution if password validation fails
+        }
+      }
+
+      if (values.isSubscriptionsPublic !== userData?.isSubscriptionsPublic) {
+        await updateSubscriptionSettings.mutateAsync({
+          isSubscriptionsPublic: values.isSubscriptionsPublic ?? false,
+        });
+        profileUpdated = true;
+        if (userData) {
+          userData.isSubscriptionsPublic =
+            values.isSubscriptionsPublic ?? false;
+        }
+      }
+
+      if (values.isRatingsPublic !== userData?.isRatingsPublic) {
+        await updateRatingSettings.mutateAsync({
+          isRatingsPublic: values.isRatingsPublic ?? false,
+        });
+        profileUpdated = true;
+        if (userData) {
+          userData.isRatingsPublic = values.isRatingsPublic ?? false;
+        }
+      }
+
+      if (
+        values.isDataCollectionAllowed !== userData?.isUserDataCollectionAllowed
+      ) {
+        await updateDataCollectionSettings.mutateAsync({
+          isUserDataCollectionAllowed: values.isDataCollectionAllowed ?? true,
+        });
+        profileUpdated = true;
+        if (userData) {
+          userData.isUserDataCollectionAllowed =
+            values.isDataCollectionAllowed ?? true;
         }
       }
 
@@ -328,10 +394,99 @@ const UserProfilePage = () => {
                 </>
               )}
 
+              {/* Editing Privacy Settings */}
+              {isEditing && (
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => {
+                    toggleEditingPrivacy();
+                  }}
+                  className="ufnderline text-sm font-normal hover:font-semibold"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit Privacy Settings
+                </Button>
+              )}
+
+              {isEditing && isEditingPrivacy && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="isDataCollectionAllowed"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Allow Analytics and Data Collection
+                          </FormLabel>
+                          <FormDescription>
+                            Enable this option to allow the collection of data
+                            for analytics purposes. This helps us improve our
+                            services and provide a better user experience.
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="isSubscriptionsPublic"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Make Your Subscriptions Public</FormLabel>
+                          <FormDescription>
+                            Enable this option to allow other users to see what
+                            you are subscribed to.
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="isRatingsPublic"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Make Your Ratings & Reviews Public
+                          </FormLabel>
+                          <FormDescription>
+                            Enable this option to allow other users to see your
+                            feedback on services.
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+
               {/* Submit and Edit Buttons */}
               {isEditing ? (
                 <div className="flex space-x-4">
                   <Button
+                    variant="outline"
                     onClick={() => {
                       setIsEditing(false);
                       form.reset({
@@ -343,7 +498,7 @@ const UserProfilePage = () => {
                         confirmPassword: "",
                       });
                     }}
-                    className="w-full hover:bg-red-400"
+                    className="w-full border-gray-300 hover:bg-red-400"
                   >
                     Cancel
                   </Button>
@@ -353,7 +508,7 @@ const UserProfilePage = () => {
                 </div>
               ) : (
                 <Button onClick={() => setIsEditing(true)} className="w-full">
-                  Edit Profile
+                  Edit Profile & Privacy Settings
                 </Button>
               )}
             </form>
