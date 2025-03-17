@@ -36,7 +36,8 @@ const config = {
           "attributes": false
         }
       }
-    ]
+    ],
+    "@typescript-eslint/unbound-method": "off",
   }
 }
 module.exports = config;
