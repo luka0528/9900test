@@ -67,11 +67,13 @@ export const serviceRouter = createTRPCRouter({
       const serviceValid = await ctx.db.service.findUnique({
         where: {
           id: input.serviceId,
+          owners: {
+            some: {
+              userId: ctx.session.user.id,
+            },
+          },
         },
         include: {
-          owners: {
-            where: { userId: ctx.session.user.id },
-          },
           tags: true,
         },
       });
