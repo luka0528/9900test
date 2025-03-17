@@ -78,7 +78,6 @@ export const serviceRouter = createTRPCRouter({
         },
       });
 
-      // Check that the service exists and that the userId is in the owners list
       if (!service) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -109,6 +108,41 @@ export const serviceRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Check that user owns this service and that this version exists
+      const service = await ctx.db.service.findUnique({
+        where: {
+          id: input.serviceId,
+        },
+        select: {
+          versions: {
+            where: {
+              version: input.serviceVersion,
+            },
+          },
+          owners: {
+            where: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
       // Edit the documentation
+      await ctx.db.serviceVersion.update({
+        where: {
+          id: service.versions[0]!.id,
+        },
+        data: {
+          description: input.newDocumentation,
+        },
+      });
+
+      return { success: true };
     }),
 });
