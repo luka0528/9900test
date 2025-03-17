@@ -4,7 +4,7 @@ import { createTRPCRouter, publicProcedure } from "../trpc";
 
 // Note that documentation will be contained under versions
 export const versionRouter = createTRPCRouter({
-  getDocumentationByVersion: publicProcedure
+  getDocumentation: publicProcedure
     .input(
       z.object({
         serviceId: z.string().min(1),
@@ -12,34 +12,21 @@ export const versionRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      // Check service with this version exists
-      const service = await ctx.db.service.findUnique({
+      const version = await ctx.db.serviceVersion.findUnique({
         where: {
-          id: input.serviceId,
-        },
-        select: {
-          versions: {
-            where: {
-              version: input.serviceVersion,
-            },
+          serviceId_version: {
+            serviceId: input.serviceId,
+            version: input.serviceVersion,
           },
         },
       });
 
-      if (!service) {
+      if (!version) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Service not found",
+          message: "Service version not found",
         });
       }
-
-      // Should be exactly one version
-      if (service.versions.length !== 1) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "The version does not exist",
-        });
-      }
-      return service.versions[0]!.description;
+      return version.description;
     }),
 });
