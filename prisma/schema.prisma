@@ -177,6 +177,10 @@ model User {
 
     notifications Notification[] @relation("UserNotifications")
     sentNotifications Notification[] @relation("UserSentNotifications")
+    
+    isSubscriptionsPublic Boolean @default(true)
+    isRatingsPublic Boolean @default(true)
+    isUserDataCollectionAllowed Boolean @default(true)
 }
 
 enum UserRole {
