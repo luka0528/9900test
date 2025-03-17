@@ -97,18 +97,27 @@ const UserProfilePage = () => {
       if (values.name !== userData?.name) {
         await updateNameMutation.mutateAsync({ name: values.name });
         profileUpdated = true;
+        if (userData) {
+          userData.name = values.name;
+        }
       }
 
       // Update Email if changed
       if (values.email !== userData?.email) {
         await updateEmailMutation.mutateAsync({ email: values.email });
         profileUpdated = true;
+        if (userData) {
+          userData.email = values.email;
+        }
       }
 
       // Update Bio if changed
       if (values.bio !== userData?.bio) {
         await updateBioMutation.mutateAsync({ bio: values.bio });
         profileUpdated = true;
+        if (userData) {
+          userData.bio = values.bio;
+        }
       }
 
       // Handle Password Update
