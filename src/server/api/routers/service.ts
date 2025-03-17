@@ -72,20 +72,31 @@ export const serviceRouter = createTRPCRouter({
 			const { query, cursor } = input;
 			const limit = 12;
 			const skip = cursor ?? 0;
-
-			const services = await ctx.db.service.findMany({
-				where: {
-					name : {
-						contains: query.search,
-						mode: "insensitive",
-					},
+			const where: any = {
+				name: {
+					contains: query.search || "",
+					mode: "insensitive",
 				},
-				skip : skip,
+			};
+			if (query.tags && query.tags.length > 0) {
+				const tags = Array.isArray(query.tags) ? query.tags : [query.tags];
+				where.tags = {
+					some: {
+						name: {
+							in: tags,
+						},
+					},
+				};
+			}
+			const services = await ctx.db.service.findMany({
+				where,
+				skip: skip,
 				take: limit,
 			});
+
 			log(services);
 			const nextCursor = services.length ? skip + limit : null;
-			return {services, nextCursor};
+			return { services, nextCursor };
 		})
 
 
