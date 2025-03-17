@@ -84,7 +84,7 @@ model ServiceVersion {
     version String
     createdAt DateTime @default(now())
 
-	[serviceId, version] @@unique
+	@@unique([serviceId, version])
 }
 
 // Service Memberships
