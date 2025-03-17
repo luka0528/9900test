@@ -59,4 +59,18 @@ export const serviceRouter = createTRPCRouter({
     const services = await ctx.db.service.findMany();
     return services;
   }),
+
+  getByUserId: protectedProcedure.query(async ({ ctx }) => {
+    const services = await ctx.db.service.findMany({
+      where: {
+        owners: {
+          some: {
+            userId: ctx.session.user.id,
+          },
+        },
+      },
+    });
+
+    return services;
+  }),
 });
