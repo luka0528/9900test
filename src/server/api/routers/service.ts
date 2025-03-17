@@ -37,10 +37,10 @@ export const serviceRouter = createTRPCRouter({
       const service = await ctx.db.service.findUnique({
         where: {
           id: input.serviceId,
-        },
-        include: {
           owners: {
-            where: { userId: ctx.session.user.id },
+            some: {
+              userId: ctx.session.user.id,
+            },
           },
         },
       });
@@ -54,10 +54,8 @@ export const serviceRouter = createTRPCRouter({
       }
 
       // Delete the service from the services table
-      const _ = await ctx.db.service.delete({
-        where: {
-          id: service.id,
-        },
+      await ctx.db.service.delete({
+        where: { id: service.id },
       });
 
       // TODO for future ticket: finally, notify all subscribers that this service is scheduled to be deleted
