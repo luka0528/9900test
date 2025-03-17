@@ -1,3 +1,4 @@
+import type { Service } from "@prisma/client";
 import { z } from "zod";
 
 import {
@@ -5,6 +6,8 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+
+import type { Query } from "~/components/marketplace/MarketplaceQuery";
 
 export const serviceRouter = createTRPCRouter({
   // TODO: There'll be a lot more input here to create a service, this is just a placeholder
@@ -23,6 +26,33 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return service;
+    }),
+
+    getInfiniteServices: publicProcedure
+      .input(
+        z.object({
+          query: z.custom<Query>(),
+          cursor: z.number().nullish(),
+        })
+      )
+      .query(async ({ input }) => {
+        const cursor = input.cursor ?? 0;
+        const limit = 12;
+
+        // Generates fake services as mock data.
+        const services: Service[] = Array.from({ length: limit }, (_, i) => {
+          const id = cursor + i;
+          return {
+            id: id.toString(),
+            name: `Service ${id}`,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+        });
+
+        const nextCursor = services.length ? cursor + limit : null;
+
+        return { services, nextCursor };
     }),
 
   getAll: publicProcedure.query(async ({ ctx }) => {
