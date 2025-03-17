@@ -11,16 +11,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { Pencil, ChevronDown, Heart, HeartOff, Tags } from "lucide-react";
+import { Pencil, ChevronDown, Heart, HeartOff } from "lucide-react";
+
+import { ServiceSidebar } from "../ServiceSidebar";
 
 export default function ServicePage() {
   const { data: session } = useSession();
   const { serviceId } = useParams();
 
   const [isSaved, setIsSaved] = useState(false);
-
-  // Admin only
-  const isAdmin = true;
 
   // Dummy Data
   const services = [
@@ -156,9 +155,9 @@ export default function ServicePage() {
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
-      <div className="h-full border-r lg:min-w-60">SideBar</div>
+      <ServiceSidebar></ServiceSidebar>
       <div className="flex h-full grow flex-col">
-        <div className="border-b p-4">
+        <div className="p-4">
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-2xl font-bold">{service?.name}</h1>
             <div className="flex items-center gap-2">
