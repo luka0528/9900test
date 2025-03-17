@@ -9,6 +9,7 @@ import {
 
 import type { Query } from "~/components/marketplace/MarketplaceQuery";
 import { TRPCError } from "@trpc/server";
+import { version } from "os";
 
 export const serviceRouter = createTRPCRouter({
   // TODO: There'll be a lot more input here to create a service, this is just a placeholder
@@ -70,10 +71,10 @@ export const serviceRouter = createTRPCRouter({
       const service = await ctx.db.service.findUnique({
         where: {
           id: input.serviceId,
-        },
-        include: {
           owners: {
-            where: { userId: ctx.session.user.id },
+            some: {
+              userId: ctx.session.user.id,
+            },
           },
         },
       });
@@ -92,54 +93,6 @@ export const serviceRouter = createTRPCRouter({
         },
         data: {
           name: input.newName,
-        },
-      });
-
-      return { success: true };
-    }),
-
-  editDocumentation: protectedProcedure
-    .input(
-      z.object({
-        serviceId: z.string().min(1),
-        serviceVersion: z.string().min(1),
-        newDocumentation: z.string().min(1),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Check that user owns this service and that this version exists
-      const service = await ctx.db.service.findUnique({
-        where: {
-          id: input.serviceId,
-        },
-        select: {
-          versions: {
-            where: {
-              version: input.serviceVersion,
-            },
-          },
-          owners: {
-            where: {
-              userId: ctx.session.user.id,
-            },
-          },
-        },
-      });
-
-      if (!service) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Service not found",
-        });
-      }
-
-      // Edit the documentation
-      await ctx.db.serviceVersion.update({
-        where: {
-          id: service.versions[0]!.id,
-        },
-        data: {
-          description: input.newDocumentation,
         },
       });
 
