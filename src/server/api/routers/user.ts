@@ -11,7 +11,6 @@ import { createVerificationToken, verifyToken } from "~/lib/verification";
 import { sendVerificationEmail, sendPasswordResetEmail } from "~/lib/email";
 import { VerificationTokenType } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
-import { u } from "node_modules/framer-motion/dist/types.d-B50aGbjN";
 
 interface Context {
   db: PrismaClient;
@@ -39,7 +38,7 @@ const updateUserField = async <K extends keyof User>(
     });
 
     return { [field]: updatedUser[field] };
-  } catch (error) {
+  } catch {
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: `Failed to update ${field}`,
@@ -492,13 +491,13 @@ export const userRouter = createTRPCRouter({
     .input(z.object({ isSubscriptionsPublic: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        updateUserField(
+        const res = await updateUserField(
           ctx,
           "isSubscriptionsPublic",
           input.isSubscriptionsPublic,
         );
-        return { isSubscriptionsPublic: input.isSubscriptionsPublic };
-      } catch (error) {
+        return { isSubscriptionsPublic: res.isSubscriptionsPublic };
+      } catch {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to update subscriptions privacy settings",
@@ -510,9 +509,13 @@ export const userRouter = createTRPCRouter({
     .input(z.object({ isRatingsPublic: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        updateUserField(ctx, "isRatingsPublic", input.isRatingsPublic);
-        return { isRatingsPublic: input.isRatingsPublic };
-      } catch (error) {
+        const res = await updateUserField(
+          ctx,
+          "isRatingsPublic",
+          input.isRatingsPublic,
+        );
+        return { isRatingsPublic: res.isRatingsPublic };
+      } catch {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to update ratings privacy settings",
@@ -524,15 +527,15 @@ export const userRouter = createTRPCRouter({
     .input(z.object({ isUserDataCollectionAllowed: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        updateUserField(
+        const res = await updateUserField(
           ctx,
           "isUserDataCollectionAllowed",
           input.isUserDataCollectionAllowed,
         );
         return {
-          isUserDataCollectionAllowed: input.isUserDataCollectionAllowed,
+          isUserDataCollectionAllowed: res.isUserDataCollectionAllowed,
         };
-      } catch (error) {
+      } catch {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to update data collection settings",

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { set, z } from "zod";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
@@ -25,7 +25,6 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { Pencil } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
-import Link from "next/link";
 
 // Define Zod Schema for validation
 const profileSchema = z
