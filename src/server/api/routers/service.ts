@@ -1,4 +1,4 @@
-import type { Service } from "@prisma/client";
+import type { Prisma, Service } from "@prisma/client";
 import { z } from "zod";
 
 import {
@@ -64,38 +64,42 @@ export const serviceRouter = createTRPCRouter({
 	getByQuery: publicProcedure
 		.input(
 			z.object({
-				query: z.custom<Query>(),
-				cursor: z.number().nullish(),
+				search: z.string().nullish(),
+        tags: z.union([z.array(z.string()), z.string()]).nullish(),
+        sort: z.string().nullish(),
+        price: z.array(z.number()).nullish(),
+        dates: z.array(z.number()).nullish(),
+				cursor: z.string().nullish(),
+        limit: z.number().default(12),
 			})
 		)
 		.query(async ({ input, ctx }) => {
-			const { query, cursor } = input;
-			const limit = 12;
-			const skip = cursor ?? 0;
-			const where: any = {
-				name: {
-					contains: query.search || "",
-					mode: "insensitive",
-				},
-			};
-			if (query.tags && query.tags.length > 0) {
-				const tags = Array.isArray(query.tags) ? query.tags : [query.tags];
-				where.tags = {
-					some: {
-						name: {
-							in: tags,
-						},
-					},
-				};
-			}
+			const { search, tags, sort, price, dates, cursor, limit } = input;
+      const processTags = tags ? (Array.isArray(tags) ? tags : [tags]) : [];
+      const whereClause: Prisma.ServiceWhereInput = {
+        ...(search && {
+          name : {
+            contains: search || "",
+            mode: "insensitive"
+          },
+        }),
+        ...(tags && tags.length > 0 && {
+          tags: {
+            some: {
+              name: {
+                in: processTags,
+              },
+            },
+          },
+        }),
+      }
 			const services = await ctx.db.service.findMany({
-				where,
-				skip: skip,
+				where : whereClause,
+				cursor: cursor ? { id: cursor } : undefined,
 				take: limit,
 			});
-
-			log(services);
-			const nextCursor = services.length ? skip + limit : null;
+      console.log(services);
+      const nextCursor = services.length > limit ? services.pop()?.id : null;
 			return { services, nextCursor };
 		})
 

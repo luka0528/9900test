@@ -85,7 +85,12 @@ export const MarketplaceServices = ({ query } : MarketplaceServicesProps) => {
         fetchNextPage,
     } = api.service.getByQuery.useInfiniteQuery(
         {
-            query,
+            search: query.search,
+            tags: query.tags,
+            sort: query.sort,
+            price: query.price,
+            dates: query.dates,
+            limit: 12 
         },
         {
             getNextPageParam: (page) => page.nextCursor,
@@ -112,7 +117,22 @@ export const MarketplaceServices = ({ query } : MarketplaceServicesProps) => {
                             <div>
                               <div className="grid grid-cols-1 md:grid-cols-2 grow px-8 pb-8 gap-8">
                                 {page.services.map((service, index) => (
-                                  <MarketplaceService key={service.id} service={packages[index % packages.length] ?? undefined} />
+                                  <MarketplaceService key={service.id} service={
+                                    {
+                                      name: service.name,
+                                      description: "Beautifully designed components built with Radix UI and Tailwind CSS.",
+                                      version: "0.4.1",
+                                      stats: {
+                                        downloads: "950K/week",
+                                        stars: 45000,
+                                      },
+                                      creator: { name: "shadcn", url: "https://github.com/shadcn" },
+                                      lastUpdated: "2023-11-25",
+                                      license: "MIT",
+                                      price: 8.00,
+                                      keywords: ["ui", "components", "radix", "tailwind"],
+                                    }
+                                  } />
                                 ))}
                               </div>
                               <button
