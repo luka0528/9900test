@@ -263,7 +263,7 @@ const UserProfilePage = () => {
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-3/4 justify-center p-6">
+    <div className="mx-auto flex w-3/4 justify-center p-6">
       <Card className="w-full max-w-4xl shadow-lg">
         <CardHeader className="text-center">
           <h2 className="text-2xl font-semibold">Profile Settings</h2>
@@ -507,6 +507,7 @@ const UserProfilePage = () => {
                     variant="outline"
                     onClick={() => {
                       setIsEditing(false);
+                      setIsEditingPrivacy(false);
                       form.reset({
                         name: userData?.user?.name ?? "",
                         email: userData?.user?.email ?? "",
@@ -525,9 +526,12 @@ const UserProfilePage = () => {
                   </Button>
                 </div>
               ) : (
-                <Button onClick={() => setIsEditing(true)} className="w-full">
-                  Edit Profile & Privacy Settings
-                </Button>
+                <>
+                  <Button onClick={() => setIsEditing(true)} className="w-full">
+                    Edit Profile & Privacy Settings
+                  </Button>
+                  <div style={{ height: "24rem" }}></div>
+                </>
               )}
             </form>
           </Form>
