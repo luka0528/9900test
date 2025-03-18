@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { Pencil } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
+import { profile } from "console";
 
 // Define Zod Schema for validation
 const profileSchema = z
@@ -41,7 +42,7 @@ const profileSchema = z
     confirmPassword: z.string().optional().or(z.literal("")),
     isSubscriptionsPublic: z.boolean().optional(),
     isRatingsPublic: z.boolean().optional(),
-    isDataCollectionAllowed: z.boolean().optional(),
+    isUserDataCollectionAllowed: z.boolean().optional(),
   })
   .refine((data) => !data.password || data.password === data.confirmPassword, {
     message: "Passwords must match",
@@ -78,30 +79,32 @@ const UserProfilePage = () => {
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: userData?.name ?? "",
-      email: userData?.email ?? "",
-      bio: userData?.bio ?? "",
+      name: userData?.user?.name ?? "",
+      email: userData?.user?.email ?? "",
+      bio: userData?.user?.bio ?? "",
       currentPassword: "",
       password: "",
       confirmPassword: "",
-      isSubscriptionsPublic: userData?.isSubscriptionsPublic ?? false,
-      isRatingsPublic: userData?.isRatingsPublic ?? false,
-      isDataCollectionAllowed: userData?.isUserDataCollectionAllowed ?? false,
+      isSubscriptionsPublic: userData?.user?.isSubscriptionsPublic ?? false,
+      isRatingsPublic: userData?.user?.isRatingsPublic ?? false,
+      isUserDataCollectionAllowed:
+        userData?.user?.isUserDataCollectionAllowed ?? false,
     },
   });
 
   useEffect(() => {
     if (userData) {
       form.reset({
-        name: userData.name ?? "",
-        email: userData.email ?? "",
-        bio: userData.bio ?? "",
+        name: userData.user?.name ?? "",
+        email: userData.user?.email ?? "",
+        bio: userData.user?.bio ?? "",
         currentPassword: "",
         password: "",
         confirmPassword: "",
-        isSubscriptionsPublic: userData.isSubscriptionsPublic ?? false,
-        isRatingsPublic: userData.isRatingsPublic ?? false,
-        isDataCollectionAllowed: userData.isUserDataCollectionAllowed ?? false,
+        isSubscriptionsPublic: userData.user?.isSubscriptionsPublic ?? false,
+        isRatingsPublic: userData.user?.isRatingsPublic ?? false,
+        isUserDataCollectionAllowed:
+          userData.user?.isUserDataCollectionAllowed ?? false,
       });
     }
   }, [userData, form]);
@@ -110,13 +113,19 @@ const UserProfilePage = () => {
     setIsEditingPrivacy(!isEditingPrivacy);
     form.setValue(
       "isSubscriptionsPublic",
-      userData?.isSubscriptionsPublic ?? false,
+      userData?.user?.isSubscriptionsPublic ?? false,
     );
-    form.setValue("isRatingsPublic", userData?.isRatingsPublic ?? false);
+    form.setValue("isRatingsPublic", userData?.user?.isRatingsPublic ?? false);
     form.setValue(
-      "isDataCollectionAllowed",
-      userData?.isUserDataCollectionAllowed ?? false,
+      "isUserDataCollectionAllowed",
+      userData?.user?.isUserDataCollectionAllowed ?? false,
     );
+  };
+
+  const resetFormPasswordFields = () => {
+    form.setValue("currentPassword", "");
+    form.setValue("password", "");
+    form.setValue("confirmPassword", "");
   };
 
   // Handle Form Submission
@@ -125,86 +134,95 @@ const UserProfilePage = () => {
       let profileUpdated = false;
 
       // Update Name if changed
-      if (values.name !== userData?.name) {
+      if (values.name !== userData?.user?.name) {
         await updateNameMutation.mutateAsync({ name: values.name });
         profileUpdated = true;
-        if (userData) {
-          userData.name = values.name;
+        if (userData?.success && userData?.user) {
+          userData.user.name = values.name;
         }
       }
 
       // Update Email if changed
-      if (values.email !== userData?.email) {
+      if (values.email !== userData?.user?.email) {
         await updateEmailMutation.mutateAsync({ email: values.email });
         profileUpdated = true;
-        if (userData) {
-          userData.email = values.email;
+        if (userData?.success && userData?.user) {
+          userData.user.email = values.email;
         }
       }
 
       // Update Bio if changed
-      if (values.bio !== userData?.bio) {
+      if (values.bio !== userData?.user?.bio) {
         await updateBioMutation.mutateAsync({ bio: values.bio });
         profileUpdated = true;
-        if (userData) {
-          userData.bio = values.bio ?? "";
+        if (userData?.success && userData?.user) {
+          userData.user.bio = values.bio ?? "";
         }
       }
 
       // Handle Password Update
       if (values.password) {
-        try {
-          // Validate current password using a mutation
-          await validateCurrentPassword.mutateAsync({
-            currentPassword: values.currentPassword ?? "",
-          });
+        // Validate current password using a mutation
+        const validate = await validateCurrentPassword.mutateAsync({
+          currentPassword: values.currentPassword ?? "",
+        });
 
-          try {
-            // If validation succeeds, update the password
-            await updatePasswordMutation.mutateAsync({
-              password: values.password,
-            });
+        if (!validate.success || !validate.isValidPassword) {
+          toast.error("Current password is incorrect.");
+        } else {
+          // If validation succeeds, update the password
+          const update = await updatePasswordMutation.mutateAsync({
+            password: values.password,
+          });
+          if (update.success) {
+            profileUpdated = true;
             toast.success("Password updated successfully!");
-          } catch {
+          } else {
             toast.error("Failed to update password. Please try again.");
           }
-        } catch {
-          toast.error("Current password is incorrect.");
-          return; // Stops execution if password validation fails
         }
+        resetFormPasswordFields();
+        return; // Stops execution if password validation fails
       }
 
-      if (values.isSubscriptionsPublic !== userData?.isSubscriptionsPublic) {
-        await updateSubscriptionSettings.mutateAsync({
+      // Handle Subscription Privacy Setting
+      if (
+        values.isSubscriptionsPublic !== userData?.user?.isSubscriptionsPublic
+      ) {
+        const update = await updateSubscriptionSettings.mutateAsync({
           isSubscriptionsPublic: values.isSubscriptionsPublic ?? false,
         });
-        profileUpdated = true;
-        if (userData) {
-          userData.isSubscriptionsPublic =
-            values.isSubscriptionsPublic ?? false;
+        if (update.success) profileUpdated = true;
+        if (userData?.success && userData?.user) {
+          userData.user.isSubscriptionsPublic =
+            values.isSubscriptionsPublic ?? true;
         }
       }
 
-      if (values.isRatingsPublic !== userData?.isRatingsPublic) {
-        await updateRatingSettings.mutateAsync({
+      // Handle Ratings Privacy Setting
+      if (values.isRatingsPublic !== userData?.user?.isRatingsPublic) {
+        const update = await updateRatingSettings.mutateAsync({
           isRatingsPublic: values.isRatingsPublic ?? false,
         });
-        profileUpdated = true;
-        if (userData) {
-          userData.isRatingsPublic = values.isRatingsPublic ?? false;
+        if (update.success) profileUpdated = true;
+        if (userData?.success && userData?.user) {
+          userData.user.isRatingsPublic = values.isRatingsPublic ?? true;
         }
       }
 
+      // Handle Data Collection Setting
       if (
-        values.isDataCollectionAllowed !== userData?.isUserDataCollectionAllowed
+        values.isUserDataCollectionAllowed !==
+        userData?.user?.isUserDataCollectionAllowed
       ) {
-        await updateDataCollectionSettings.mutateAsync({
-          isUserDataCollectionAllowed: values.isDataCollectionAllowed ?? true,
+        const update = await updateDataCollectionSettings.mutateAsync({
+          isUserDataCollectionAllowed:
+            values.isUserDataCollectionAllowed ?? true,
         });
-        profileUpdated = true;
-        if (userData) {
-          userData.isUserDataCollectionAllowed =
-            values.isDataCollectionAllowed ?? true;
+        if (update.success) profileUpdated = true;
+        if (userData?.success && userData?.user) {
+          userData.user.isUserDataCollectionAllowed =
+            values.isUserDataCollectionAllowed ?? true;
         }
       }
 
@@ -213,12 +231,9 @@ const UserProfilePage = () => {
         toast.success("Profile updated successfully!");
       }
 
-      form.setValue("currentPassword", "");
-      form.setValue("password", "");
-      form.setValue("confirmPassword", "");
-
       // Exit editing mode after successful updates
       setIsEditing(false);
+      resetFormPasswordFields();
     } catch {
       toast.error("Failed to update profile.");
     }
@@ -255,14 +270,14 @@ const UserProfilePage = () => {
           <p className="text-sm text-gray-500">
             {isOwnProfile
               ? "Edit your profile details"
-              : `${userData?.name}'s profile`}
+              : `${userData?.user?.name}'s profile`}
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-center gap-6">
-            {userData?.image ? (
+            {userData?.user?.image ? (
               <Image
-                src={userData?.image || "/default-profile.png"}
+                src={userData?.user?.image || "/default-profile.png"}
                 alt="Profile"
                 width={96}
                 height={96}
@@ -349,7 +364,7 @@ const UserProfilePage = () => {
               />
 
               {/* Password */}
-              {isEditing && userData?.emailVerified && (
+              {isEditing && userData?.user?.emailVerified && (
                 <>
                   <Separator />
                   <h3 className="text-lg font-semibold">Change Password</h3>
@@ -460,7 +475,7 @@ const UserProfilePage = () => {
                   />
                   <FormField
                     control={form.control}
-                    name="isDataCollectionAllowed"
+                    name="isUserDataCollectionAllowed"
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
                         <FormControl>
@@ -493,9 +508,9 @@ const UserProfilePage = () => {
                     onClick={() => {
                       setIsEditing(false);
                       form.reset({
-                        name: userData?.name ?? "",
-                        email: userData?.email ?? "",
-                        bio: userData?.bio ?? "",
+                        name: userData?.user?.name ?? "",
+                        email: userData?.user?.email ?? "",
+                        bio: userData?.user?.bio ?? "",
                         currentPassword: "",
                         password: "",
                         confirmPassword: "",
