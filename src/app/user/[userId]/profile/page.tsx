@@ -213,6 +213,10 @@ const UserProfilePage = () => {
         toast.success("Profile updated successfully!");
       }
 
+      form.setValue("currentPassword", "");
+      form.setValue("password", "");
+      form.setValue("confirmPassword", "");
+
       // Exit editing mode after successful updates
       setIsEditing(false);
     } catch {
@@ -281,7 +285,7 @@ const UserProfilePage = () => {
                     <FormLabel>Name</FormLabel>
                     <FormControl>
                       {isEditing ? (
-                        <Input type="name" {...field} />
+                        <Input type="name" {...field} className="w-1/2" />
                       ) : (
                         <div className="w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
                           {field.value ?? "No name set"}
@@ -302,7 +306,7 @@ const UserProfilePage = () => {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       {isEditing ? (
-                        <Input type="email" {...field} />
+                        <Input type="email" {...field} className="w-1/2" />
                       ) : (
                         <div className="w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
                           {field.value ?? "No email set"}
@@ -325,7 +329,7 @@ const UserProfilePage = () => {
                       {isEditing ? (
                         <textarea
                           {...field}
-                          className="min-h-[10rem] w-full resize-none overflow-hidden rounded-lg border px-3 py-2 text-left align-top text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                          className="className=w-1/2 min-h-[10rem] w-full resize-none overflow-hidden rounded-lg border px-3 py-2 text-left align-top text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
                           rows={1} // Ensures it starts small but expands
                           onInput={(e) => {
                             const target = e.target as HTMLTextAreaElement;
@@ -334,7 +338,7 @@ const UserProfilePage = () => {
                           }}
                         />
                       ) : (
-                        <div className="min-h-[10rem] w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                        <div className="className=w-1/2 min-h-[10rem] w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
                           {field.value ?? "No bio set"}
                         </div>
                       )}
@@ -356,7 +360,7 @@ const UserProfilePage = () => {
                       <FormItem>
                         <FormLabel>Current Password</FormLabel>
                         <FormControl>
-                          <Input type="password" {...field} />
+                          <Input type="password" {...field} className="w-1/2" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -370,7 +374,7 @@ const UserProfilePage = () => {
                       <FormItem>
                         <FormLabel>New Password</FormLabel>
                         <FormControl>
-                          <Input type="password" {...field} />
+                          <Input type="password" {...field} className="w-1/2" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -384,7 +388,7 @@ const UserProfilePage = () => {
                       <FormItem>
                         <FormLabel>Confirm Password</FormLabel>
                         <FormControl>
-                          <Input type="password" {...field} />
+                          <Input type="password" {...field} className="w-1/2" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -410,30 +414,6 @@ const UserProfilePage = () => {
 
               {isEditing && isEditingPrivacy && (
                 <>
-                  <FormField
-                    control={form.control}
-                    name="isDataCollectionAllowed"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Allow Analytics and Data Collection
-                          </FormLabel>
-                          <FormDescription>
-                            Enable this option to allow the collection of data
-                            for analytics purposes. This helps us improve our
-                            services and provide a better user experience.
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
                   <FormField
                     control={form.control}
                     name="isSubscriptionsPublic"
@@ -473,6 +453,30 @@ const UserProfilePage = () => {
                           <FormDescription>
                             Enable this option to allow other users to see your
                             feedback on services.
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="isDataCollectionAllowed"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Allow Analytics and Data Collection
+                          </FormLabel>
+                          <FormDescription>
+                            Enable this option to allow the collection of data
+                            for analytics purposes. This helps us improve our
+                            services and provide a better user experience.
                           </FormDescription>
                         </div>
                       </FormItem>
