@@ -1,4 +1,5 @@
 import {
+  ChevronLeft,
   NotebookPen,
   MessagesSquare,
   TestTube,
@@ -9,6 +10,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -44,6 +46,25 @@ export const ServiceSidebar = () => {
     <div className="h-full max-w-60 border-r lg:min-w-60">
       <SidebarProvider className="items-start">
         <Sidebar collapsible="none" className="hidden md:flex">
+          <SidebarHeader>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton size="lg" asChild>
+                  <a href="/service/services">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                      <ChevronLeft className="size-4" />
+                    </div>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">
+                        Your Services
+                      </span>
+                      <span className="truncate text-xs">Blow me</span>
+                    </div>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupContent>
