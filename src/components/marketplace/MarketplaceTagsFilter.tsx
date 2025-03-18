@@ -7,6 +7,7 @@ import {
 } from "~/components/ui/toggle-group"
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 
+import { useFilterReset } from '~/lib/hooks/useFilterReset';
 const tagList = ["Transport", "Education", "Commerce", "Health", "Finance", "Entertainment", "Food", "Travel", "Sports", "Technology", "Fashion", "Art", "Music", "Science", "Environment", "Politics"];
 
 export const MarketplaceTagsFilter = () => {
@@ -17,6 +18,8 @@ export const MarketplaceTagsFilter = () => {
     const [tags, setTags] = React.useState<string[]>(
         searchParams.get('tags')?.split(',').filter(Boolean) ?? []
     );
+
+    const reset = useFilterReset();
 
     const handleTagsChanged = (newTags: string[]) => {
         setTags(newTags);
@@ -30,6 +33,10 @@ export const MarketplaceTagsFilter = () => {
         
         replace(`${pathname}?${params.toString()}`);
     }
+
+    React.useEffect(() => {
+        setTags([]);
+    }, [reset]);
 
     return (
         <div className="mt-2">
