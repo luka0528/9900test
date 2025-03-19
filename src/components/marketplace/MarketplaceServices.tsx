@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react"
+import React from "react";
 import { api } from "~/trpc/react";
 import { useInView } from "react-intersection-observer";
 
 import { MarketplaceService } from "./MarketplaceService";
 import { MarketplaceServicesSkeleton } from "./MarketplaceServicesSkeleton";
 import { MarketplaceServicesNoResults } from "./MarketplaceServicesNoResults";
+
+import { Loader2 } from "lucide-react";
 
 import type { Query } from "./MarketplaceQuery";
 // Mock data for the Marketplace -- cannot use the data from the API
@@ -42,7 +44,8 @@ const packages = [
   },
   {
     name: "tailwindcss",
-    description: "A utility-first CSS framework for rapidly building custom user interfaces.",
+    description:
+      "A utility-first CSS framework for rapidly building custom user interfaces.",
     version: "3.3.5",
     stats: {
       downloads: "4.8M/week",
@@ -51,12 +54,13 @@ const packages = [
     creator: { name: "Adam Wathan", url: "https://github.com/adamwathan" },
     lastUpdated: "2023-11-10",
     license: "MIT",
-    price: 10.00,
+    price: 10.0,
     keywords: ["css", "tailwind", "utility", "responsive"],
   },
   {
     name: "shadcn-ui",
-    description: "Beautifully designed components built with Radix UI and Tailwind CSS.",
+    description:
+      "Beautifully designed components built with Radix UI and Tailwind CSS.",
     version: "0.4.1",
     stats: {
       downloads: "950K/week",
@@ -65,7 +69,7 @@ const packages = [
     creator: { name: "shadcn", url: "https://github.com/shadcn" },
     lastUpdated: "2023-11-25",
     license: "MIT",
-    price: 8.00,
+    price: 8.0,
     keywords: ["ui", "components", "radix", "tailwind"],
   },
 ];
@@ -74,8 +78,11 @@ interface MarketplaceServicesProps {
   query: Query;
 }
 
-export const MarketplaceServices = ({ query } : MarketplaceServicesProps) => {
-    const [ref, inView] = useInView();
+export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
+  const [ref, inView] = useInView({
+    threshold: 0,
+    rootMargin: "100px", // Load a bit before reaching the actual bottom
+  });
 
     // The Marketplace is unidirection, so we only req. the fields related
     // to the 'next' page.
@@ -97,11 +104,11 @@ export const MarketplaceServices = ({ query } : MarketplaceServicesProps) => {
         }
     );
 
-    React.useEffect(() => {
-        if (inView) {
-          void fetchNextPage()
-        }
-    }, [fetchNextPage, inView]);
+  React.useEffect(() => {
+    if (inView) {
+      void fetchNextPage();
+    }
+  }, [fetchNextPage, inView]);
 
     return (
         <div className="h-screen overflow-y-auto">

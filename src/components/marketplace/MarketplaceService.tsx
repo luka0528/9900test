@@ -1,6 +1,5 @@
 import { Badge } from "~/components/ui/badge"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip"
 import { Download, Package, Calendar, Users} from "lucide-react"
 import { Button } from "~/components/ui/button";
 
@@ -35,69 +34,58 @@ export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
         keywords: ["react", "javascript", "library", "ui"],
     }
     return (
-        <TooltipProvider>
-          <Card
-            className="overflow-hidden transition-all duration-300 hover:shadow-md"
-          >
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg font-bold">{name}</CardTitle>
-                </div>
-                <Badge variant="outline">{version}</Badge>
+      <Card
+        className="overflow-hidden transition-all duration-300 hover:shadow-xl group hover:scale-105 hover:cursor-pointer"
+      >
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary group-hover:text-blue-600" />
+              <CardTitle className="text-lg font-bold group-hover:text-blue-600">{name}</CardTitle>
+            </div>
+            <Badge variant="outline">{version}</Badge>
+          </div>
+          <CardDescription className="line-clamp-2 h-10 text-sm">{description}</CardDescription>
+        </CardHeader>
+        <CardContent className="pb-2 ">
+          <div className="grid grid-cols-1 gap-2 text-sm">
+            <div className="flex items-center gap-1.5">
+              <Download className="h-4 w-4 text-muted-foreground" />
+              <span>{stats.downloads}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span>{lastUpdated}</span>
+            </div>
+          </div>
+
+          {keywords && keywords.length > 0 && (
+            <div className="mt-6 mb-2 flex flex-wrap gap-1">
+              {keywords.map((keyword) => (
+                <Badge key={keyword} variant="secondary" className="text-xs">
+                  {keyword}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="border-t bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
+          <div className="flex w-full items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5" />
+              <div>
+                {creator.name}
               </div>
-              <CardDescription className="line-clamp-2 h-10 text-sm">{description}</CardDescription>
-            </CardHeader>
-            <CardContent className="pb-2 ">
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                <div className="flex items-center gap-1.5">
-                  <Download className="h-4 w-4 text-muted-foreground" />
-                  <span>{stats.downloads}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{lastUpdated}</span>
-                </div>
-              </div>
-    
-              {keywords && keywords.length > 0 && (
-                <div className="mt-6 mb-2 flex flex-wrap gap-1">
-                  {keywords.map((keyword) => (
-                    <Badge key={keyword} variant="secondary" className="text-xs">
-                      {keyword}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="border-t bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
-              <div className="flex w-full items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>
-                        {creator.name}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                    <ul className="list-disc pl-5">
-                        <li key={creator.name}>{creator.name}</li>
-                    </ul>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-blue-500 min-w-20 text-sm font-medium hover:bg-blue-50 hover:text-blue-600"
-                    >
-                        {Number(price) === 0 ? "Free" : "$" + price.toFixed(2)}
-                    </Button>
-              </div>
-            </CardFooter>
-          </Card>
-        </TooltipProvider>
-      );
+            </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-500 min-w-20 text-sm font-medium hover:bg-blue-50 hover:text-blue-600"
+                >
+                  {Number(price) === 0 ? "Free" : "$" + price.toFixed(2)}
+                </Button>
+          </div>
+        </CardFooter>
+      </Card>
+    );
 }

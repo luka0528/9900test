@@ -8,6 +8,9 @@ import "./src/env.js";
 const config = {
   reactStrictMode: true,
   output: "standalone",
+  images: {
+    domains: ["cdn.discordapp.com"],
+  },
 };
 
 export default config;
