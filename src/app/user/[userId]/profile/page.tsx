@@ -25,7 +25,6 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { Pencil } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
-import { profile } from "console";
 
 // Define Zod Schema for validation
 const profileSchema = z
@@ -263,7 +262,7 @@ const UserProfilePage = () => {
   }
 
   return (
-    <div className="mx-auto flex w-3/4 justify-center p-6">
+    <div className="mx-auto flex w-full max-w-4xl justify-center p-6">
       <Card className="w-full max-w-4xl shadow-lg">
         <CardHeader className="text-center">
           <h2 className="text-2xl font-semibold">Profile Settings</h2>
