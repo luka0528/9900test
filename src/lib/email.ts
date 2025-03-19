@@ -1,5 +1,5 @@
 // src/lib/email.ts
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
 // Initialize Resend with your API key
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -14,8 +14,8 @@ export const sendVerificationEmail = async ({
   token: string;
   name?: string | null;
 }) => {
-  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Your T3 App';
-  
+  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Your T3 App";
+
   try {
     const { data, error } = await resend.emails.send({
       from: `noreply@${process.env.RESEND_DOMAIN}`,
@@ -24,7 +24,7 @@ export const sendVerificationEmail = async ({
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <h1>Email Verification</h1>
-          <p>Hello ${name ?? 'there'},</p>
+          <p>Hello ${name ?? "there"},</p>
           <p>Thank you for signing up for ${appName}. Please use the verification code below to confirm your email address:</p>
           <div style="background-color: #f4f4f4; padding: 12px; font-size: 24px; text-align: center; letter-spacing: 4px; font-weight: bold; margin: 20px 0;">
             ${token}
@@ -58,8 +58,8 @@ export const sendPasswordResetEmail = async ({
   token: string;
   name?: string | null;
 }) => {
-  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'Your T3 App';
-  
+  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Your T3 App";
+
   try {
     const { data, error } = await resend.emails.send({
       from: `noreply@${process.env.RESEND_DOMAIN}`,
@@ -68,7 +68,7 @@ export const sendPasswordResetEmail = async ({
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <h1>Password Reset</h1>
-          <p>Hello ${name ?? 'there'},</p>
+          <p>Hello ${name ?? "there"},</p>
           <p>We received a request to reset your password for ${appName}. Please use the verification code below to reset your password:</p>
           <div style="background-color: #f4f4f4; padding: 12px; font-size: 24px; text-align: center; letter-spacing: 4px; font-weight: bold; margin: 20px 0;">
             ${token}
