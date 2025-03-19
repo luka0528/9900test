@@ -36,12 +36,10 @@ export const MarketplaceDateFilter = () => {
 
     const handleApplyFilter = () => {
         const params = new URLSearchParams(searchParams);
-        if (selectedDates.size > 0) {
-            params.set('dates', Array.from(selectedDates).join(','));
-        } else {
-            params.delete('dates');
-        }
-
+        params.delete('dates');
+        selectedDates.forEach((date) => {
+            params.append('dates', date.toString());
+        });
         replace(`${pathname}?${params.toString()}`);
     }
     
