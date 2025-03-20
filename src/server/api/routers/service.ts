@@ -29,31 +29,31 @@ export const serviceRouter = createTRPCRouter({
       return service;
     }),
 
-    getInfiniteServices: publicProcedure
-      .input(
-        z.object({
-          query: z.custom<Query>(),
-          cursor: z.number().nullish(),
-        })
-      )
-      .query(async ({ input }) => {
-        const cursor = input.cursor ?? 0;
-        const limit = 12;
+  getInfiniteServices: publicProcedure
+    .input(
+      z.object({
+        query: z.custom<Query>(),
+        cursor: z.number().nullish(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const cursor = input.cursor ?? 0;
+      const limit = 12;
 
-        // Generates fake services as mock data.
-        const services: Service[] = Array.from({ length: limit }, (_, i) => {
-          const id = cursor + i;
-          return {
-            id: id.toString(),
-            name: `Service ${id}`,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-        });
+      // Generates fake services as mock data.
+      const services: Service[] = Array.from({ length: limit }, (_, i) => {
+        const id = cursor + i;
+        return {
+          id: id.toString(),
+          name: `Service ${id}`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      });
 
-        const nextCursor = services.length ? cursor + limit : null;
+      const nextCursor = services.length ? cursor + limit : null;
 
-        return { services, nextCursor };
+      return { services, nextCursor };
     }),
 
   getAll: publicProcedure.query(async ({ ctx }) => {
@@ -70,7 +70,15 @@ export const serviceRouter = createTRPCRouter({
         },
         include: {
           tags: true,
-          versions: true,
+          versions: {
+            include: {
+              contents: {
+                include: {
+                  rows: true,
+                },
+              },
+            },
+          },
           owners: {
             include: { user: true },
           },
@@ -120,7 +128,10 @@ export const serviceRouter = createTRPCRouter({
         createdAt: service.createdAt,
         updatedAt: service.updatedAt,
         tags: service.tags.map((tag) => tag.name),
-        versions: service.versions.map((version) => version.version),
+        versions: service.versions.map((version) => ({
+          versionDescription: version.description,
+          contents: version.contents,
+        })),
         owners: [...ownerIdToName.values()],
         ratings: ratings,
       };
