@@ -25,12 +25,10 @@ export const MarketplaceTagsFilter = () => {
         setTags(newTags);
 
         const params = new URLSearchParams(searchParams.toString());
-        if (newTags.length > 0) {
-            params.set('tags', newTags.join(','));
-        } else {
-            params.delete('tags');
-        }
-        
+        params.delete('tags');
+        newTags.forEach((tag) => {
+            params.append('tags', tag);
+        });
         replace(`${pathname}?${params.toString()}`);
     }
 
