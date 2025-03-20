@@ -5,7 +5,7 @@ export interface Query {
   sort: MarketplaceSortType;
   tags: string[];
   price: number[];
-  dates: number[];
+  dates: string[];
 }
 
 export const DEFAULT_QUERY: Query = {

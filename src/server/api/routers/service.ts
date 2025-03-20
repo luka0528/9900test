@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import type { Service } from "@prisma/client";
+import type { Prisma, Service } from "@prisma/client";
 import { z } from "zod";
 
 import {
@@ -9,6 +9,7 @@ import {
 } from "~/server/api/trpc";
 
 import type { Query } from "~/components/marketplace/MarketplaceQuery";
+import { log } from "console";
 
 export const serviceRouter = createTRPCRouter({
   // TODO: There'll be a lot more input here to create a service, this is just a placeholder
@@ -56,9 +57,9 @@ export const serviceRouter = createTRPCRouter({
       return { services, nextCursor };
     }),
 
-  getAll: publicProcedure.query(async ({ ctx }) => {
-    const services = await ctx.db.service.findMany();
-    return services;
+	getAll: publicProcedure.query(async ({ ctx }) => {
+		const services = await ctx.db.service.findMany();
+		return services;
   }),
 
   getAllByUserId: protectedProcedure.query(async ({ ctx }) => {
@@ -259,5 +260,148 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return { success: true };
+  	}),
+
+  deleteTag: protectedProcedure
+    .input(z.object({ serviceId: z.string().min(1), tag: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: {
+          id: input.serviceId,
+          owners: {
+            some: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+        include: {
+          tags: true,
+        },
+      });
+
+      // Ensure that the userId is an owner of the service
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // Check that the tag is in the service
+      const toDelete = input.tag.toLowerCase();
+      const tag = await ctx.db.tag.findUnique({
+        where: {
+          name: toDelete,
+          services: {
+            some: {
+              id: input.serviceId,
+            },
+          },
+        },
+        include: {
+          services: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      if (!tag) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Tag not found",
+        });
+      }
+
+      // Tag only belongs to this service, so delete it
+      if (tag.services.length == 1) {
+        await ctx.db.tag.delete({
+          where: {
+            name: toDelete,
+          },
+        });
+      } else {
+        // Otherwise, just disconnect it
+        await ctx.db.service.update({
+          where: {
+            id: input.serviceId,
+          },
+          data: {
+            tags: {
+              disconnect: {
+                id: tag.id,
+              },
+            },
+          },
+        });
+      }
+      return { success: true };
     }),
+
+	getServiceByQuery: publicProcedure
+		.input(
+			z.object({
+				search: z.string().nullish(),
+        tags: z.union([z.array(z.string()), z.string()]).nullish(),
+        sort: z.string().nullish(),
+        price: z.array(z.number()).nullish(),
+        dates: z.union([z.array(z.string()), z.string()]).nullish(),
+				cursor: z.string().nullish(),
+        limit: z.number().default(12),
+			})
+		)
+		.query(async ({ input, ctx }) => {
+			const { search, tags, sort, price, dates, cursor, limit } = input;
+      const processTags = tags ? (Array.isArray(tags) ? tags : [tags]) : [];
+      const processDates = dates ? (Array.isArray(dates) ? dates : [dates]) : [];
+      let orderBy: Prisma.ServiceOrderByWithRelationInput = { views : 'desc' };
+      let dateFilter: Prisma.ServiceWhereInput = {};
+      if (dates && dates.length > 0) {
+        const dateConditions = processDates.map(yearStr => {
+          const year = parseInt(yearStr);
+          // Utilising UTC to avoid timezone issues - need to implement service wide
+          const startDate = new Date(`${year}-01-01T00:00:00Z`);
+          const endDate = new Date(`${year + 1}-01-01T00:00:00Z`);
+          return {
+            createdAt: {
+              gte: startDate,
+              lt: endDate,
+            }
+          }
+        });
+        dateFilter = {
+          OR: dateConditions,
+        }
+      }
+      const whereClause: Prisma.ServiceWhereInput = {
+        ...(search && {
+          name : {
+            contains: search || "",
+            mode: "insensitive"
+          },
+        }),
+        ...(tags && tags.length > 0 && {
+          tags: {
+            some: {
+              name: {
+                in: processTags,
+              },
+            },
+          },
+        }),
+        ...dateFilter,
+      }
+			const services = await ctx.db.service.findMany({
+				where : whereClause,
+        orderBy: orderBy,
+				cursor: cursor ? { id: cursor } : undefined,
+				take: limit,
+			});
+
+      const nextCursor = services.length > limit ? services.pop()?.id : null;
+			return { services, nextCursor };
+		})
+
+
 });

@@ -74,6 +74,8 @@ model Service {
     versions ServiceVersion[]
     owners ServiceOwner[]
     consumers ServiceConsumer[]
+    price     Float?
+    views     Int     @default(0)
 }
 
 model ServiceVersion {
@@ -201,6 +203,9 @@ model User {
     isSubscriptionsPublic Boolean @default(true)
     isRatingsPublic Boolean @default(true)
     isUserDataCollectionAllowed Boolean @default(true)
+
+    billingHistory BillingReceipt[]
+    paymentMethods PaymentMethod[]
 }
 
 enum UserRole {
@@ -223,4 +228,46 @@ model VerificationToken {
 enum VerificationTokenType {
     EMAIL
     PASSWORD_RESET
+}
+
+
+model BillingReceipt {
+    id      String   @id @default(cuid())
+    date   DateTime @default(now())
+    paymentMethodId String?
+    amount  Float
+    description String
+    from String
+    to String
+    status BillingStatus
+    automaticRenewal Boolean
+    automaticRenewalDate DateTime?
+    userId  String
+    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum BillingStatus {
+    PAID
+    PENDING
+    PROCESSING
+    FAILED
+}
+
+model PaymentMethod {
+    id      String   @id @default(cuid())
+    paymentType PaymentType
+    nameOnCard String
+    cardNumber String
+    expirationDate DateTime
+    cvv String
+    billingAddress String
+    userId  String
+    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum PaymentType {
+    CREDIT_CARD
+    PAYPAL
+    APPLE_PAY
+    GOOGLE_PAY
 }
