@@ -61,6 +61,43 @@ export const serviceRouter = createTRPCRouter({
     return services;
   }),
 
+  editName: protectedProcedure
+    .input(
+      z.object({ serviceId: z.string().min(1), newName: z.string().min(1) }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check that user owns this service
+      const service = await ctx.db.service.findUnique({
+        where: {
+          id: input.serviceId,
+          owners: {
+            some: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // Edit the name
+      await ctx.db.service.update({
+        where: {
+          id: input.serviceId,
+        },
+        data: {
+          name: input.newName,
+        },
+      });
+
+      return { success: true };
+    }),
+
   getInfoById: publicProcedure
     .input(z.string().min(1))
     .query(async ({ ctx, input }) => {
