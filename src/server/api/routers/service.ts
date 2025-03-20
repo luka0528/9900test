@@ -7,10 +7,11 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+import { Query } from "~/components/marketplace/MarketplaceQuery";
 
-import type { Query } from "~/components/marketplace/MarketplaceQuery";
-import { log } from "console";
 
+// make a max float string
+const MAX_FLOAT = "3.4028235e+38";
 export const serviceRouter = createTRPCRouter({
   create: protectedProcedure
     .input(
@@ -407,7 +408,7 @@ export const serviceRouter = createTRPCRouter({
         search: z.string().nullish(),
         tags: z.union([z.array(z.string()), z.string()]).nullish(),
         sort: z.string().nullish(),
-        price: z.array(z.number()).nullish(),
+        price: z.array(z.string()),
         dates: z.union([z.array(z.string()), z.string()]).nullish(),
         cursor: z.string().nullish(),
         limit: z.number().default(12),
@@ -416,14 +417,25 @@ export const serviceRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       const { search, tags, sort, price, dates, cursor, limit } = input;
       const processTags = tags ? (Array.isArray(tags) ? tags : [tags]) : [];
-      const processDates = dates
-        ? Array.isArray(dates)
-          ? dates
-          : [dates]
-        : [];
-      const orderBy: Prisma.ServiceOrderByWithRelationInput = {
-        createdAt: "desc",
-      };
+      const processDates = dates ? (Array.isArray(dates) ? dates : [dates]) : [];
+      console.log(processTags);
+      let orderBy: Prisma.ServiceOrderByWithRelationInput = { views : 'desc' };
+      if (sort == "Price-Desc") {
+        orderBy = { price: 'desc' } as Prisma.ServiceOrderByWithRelationInput;
+      } else if (sort == "Price-Asc") {
+        orderBy = { price: 'asc' } as Prisma.ServiceOrderByWithRelationInput;
+      } else if (sort == "New-to-Old") {
+        orderBy = { createdAt: 'asc' } as Prisma.ServiceOrderByWithRelationInput;
+      } else if (sort == "Old-to-New") {
+        orderBy = { createdAt: 'desc' } as Prisma.ServiceOrderByWithRelationInput;
+      } else if (sort == "Last-Updated") {
+        orderBy = { updatedAt: 'desc' } as Prisma.ServiceOrderByWithRelationInput;
+      } else if (sort == "Name-Asc") {
+        orderBy = { name: 'asc' } as Prisma.ServiceOrderByWithRelationInput;
+      } else if (sort == "Name-Desc") {
+        orderBy = { name: 'desc' } as Prisma.ServiceOrderByWithRelationInput;
+      }
+      
       let dateFilter: Prisma.ServiceWhereInput = {};
       if (dates && dates.length > 0) {
         const dateConditions = processDates.map((yearStr) => {
@@ -459,6 +471,12 @@ export const serviceRouter = createTRPCRouter({
               },
             },
           }),
+        ...(price && price.length == 2 && {
+          price: {
+            gte: parseFloat(price[0] ?? "0"),
+            lte: parseFloat(price[1] ?? MAX_FLOAT),
+          },
+        }),
         ...dateFilter,
       };
       const services = await ctx.db.service.findMany({
