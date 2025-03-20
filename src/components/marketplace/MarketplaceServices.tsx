@@ -90,7 +90,7 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
         status,
         data,
         fetchNextPage,
-    } = api.service.getByQuery.useInfiniteQuery(
+    } = api.service.getServiceByQuery.useInfiniteQuery(
         {
             search: query.search,
             tags: query.tags,

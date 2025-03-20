@@ -261,7 +261,7 @@ export const serviceRouter = createTRPCRouter({
       return { success: true };
   	}),
 
-	getByQuery: publicProcedure
+	getServiceByQuery: publicProcedure
 		.input(
 			z.object({
 				search: z.string().nullish(),
