@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
@@ -25,6 +25,40 @@ import { Separator } from "~/components/ui/separator";
 
 import { AddServiceSidebar } from "../../../components/service/AddServiceSidebar";
 
+// Import or define your dummy data
+const dummy_data = {
+  name: "Service 1",
+  description: "This is a service and it does thins.",
+  version: "1.0",
+  tags: ["meow", "woof", "fish", "glizzy"],
+  details: [
+    {
+      title: "What is Lorem Ipsum?",
+      content: "nothing here yet",
+      table: [],
+    },
+    {
+      title: "Where does it come from?",
+      content: "Ad iaculis lectus senectus sapien nisl sem.",
+      table: [
+        { code: "Code 1", description: "Description 1" },
+        { code: "Code 2", description: "Description 2" },
+        { code: "Code 3", description: "Description 3" },
+      ],
+    },
+    {
+      title: "Code Table",
+      content: "",
+      table: [
+        { code: "Meow", description: "Cat" },
+        { code: "Woof", description: "Dog" },
+        { code: "Fish", description: "Fish" },
+        { code: "Glizzy", description: "Hot Dog" },
+      ],
+    },
+  ],
+};
+
 // Define interfaces for better type safety
 interface TableRow {
   code: string;
@@ -34,7 +68,7 @@ interface TableRow {
 interface DetailItem {
   title: string;
   content: string;
-  table: TableRow[]; // Always an array, never undefined
+  table: TableRow[];
 }
 
 // Define form schema with consistent structure
@@ -49,44 +83,36 @@ const formSchema = z.object({
     message: "Version is required (e.g. 1.0).",
   }),
   tags: z.array(z.string()).default([]),
-  details: z
-    .array(
-      z.object({
-        title: z.string().min(2),
-        content: z.string().default(""), // Always a string, never undefined
-        table: z
-          .array(
-            z.object({
-              code: z.string(),
-              description: z.string(),
-            }),
-          )
-          .default([]), // Always an array, never undefined
-      }),
-    )
-    .default([]),
+  details: z.array(
+    z.object({
+      title: z.string().min(2),
+      content: z.string().default(""),
+      table: z
+        .array(
+          z.object({
+            code: z.string(),
+            description: z.string(),
+          }),
+        )
+        .default([]),
+    }),
+  ),
 });
 
-export default function AddServicePage() {
+export default function EditServicePage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [tagInput, setTagInput] = useState("");
 
-  // Initialize the form
+  // Initialize the form with dummy data
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      version: "",
-      tags: [],
-      details: [
-        {
-          title: "",
-          content: "",
-          table: [], // Empty array but guaranteed to exist
-        },
-      ],
+      name: dummy_data.name,
+      description: dummy_data.description,
+      version: dummy_data.version,
+      tags: dummy_data.tags,
+      details: dummy_data.details,
     },
   });
 
@@ -120,7 +146,7 @@ export default function AddServicePage() {
         {
           title: "",
           content: "",
-          table: [{ code: "", description: "" }], // Initialize with one row
+          table: [{ code: "", description: "" }],
         },
       ]);
     } else {
@@ -129,7 +155,7 @@ export default function AddServicePage() {
         {
           title: "",
           content: "",
-          table: [], // Empty array by default
+          table: [],
         },
       ]);
     }
@@ -139,7 +165,7 @@ export default function AddServicePage() {
   const addTableRow = (detailIndex: number) => {
     const details = form.getValues("details");
     const detail = details[detailIndex] as any;
-    const currentTable = detail.table; // No need for type assertion now
+    const currentTable = detail.table;
 
     const updatedDetails = [...details];
     updatedDetails[detailIndex] = {
@@ -154,7 +180,7 @@ export default function AddServicePage() {
   const removeTableRow = (detailIndex: number, rowIndex: number) => {
     const details = form.getValues("details");
     const detail = details[detailIndex] as any;
-    const currentTable = detail.table; // No need for type assertion
+    const currentTable = detail.table;
 
     if (currentTable.length <= 1) return; // Keep at least one row
 
@@ -178,19 +204,16 @@ export default function AddServicePage() {
 
   // Handle form submission
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // You would typically send this data to an API
     console.log(values);
-
-    // For now, just log the values and navigate back
-    alert("Service created successfully!");
-    router.push("/service/services");
+    alert("Service updated successfully!");
+    router.push("/service");
   }
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
       <AddServiceSidebar />
       <div className="flex h-full grow flex-col overflow-y-auto p-6">
-        <h1 className="mb-6 text-2xl font-bold">Create New Service</h1>
+        <h1 className="mb-6 text-2xl font-bold">Edit Service</h1>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -232,7 +255,7 @@ export default function AddServicePage() {
               )}
             />
 
-            {/* Version Field*/}
+            {/* Version Field */}
             <FormField
               control={form.control}
               name="version"
@@ -240,7 +263,7 @@ export default function AddServicePage() {
                 <FormItem>
                   <FormLabel>Version</FormLabel>
                   <FormControl>
-                    <Input placeholder="1.0" {...field} />
+                    <Input placeholder="e.g. 1.0" {...field} />
                   </FormControl>
                   <FormDescription>
                     Specify the version of your service (e.g. 1.0, 2.1.3)
@@ -461,11 +484,11 @@ export default function AddServicePage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push("/service/services")}
+                onClick={() => router.back()}
               >
                 Cancel
               </Button>
-              <Button type="submit">Create Service</Button>
+              <Button type="submit">Update Service</Button>
             </div>
           </form>
         </Form>

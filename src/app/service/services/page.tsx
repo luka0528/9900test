@@ -157,7 +157,7 @@ export default function ServicesPage() {
 
         <Separator className="my-4" />
 
-        {/* CONTENT HERE */}
+        <div>CONTENT HERE</div>
       </div>
     </div>
   );

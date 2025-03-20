@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import {
@@ -19,6 +19,7 @@ import { ServiceSidebar } from "../../../components/service/ServiceSidebar";
 export default function ServicePage() {
   const { data: session } = useSession();
   const { serviceId } = useParams();
+  const router = useRouter();
 
   const [isSaved, setIsSaved] = useState(false);
 
@@ -167,8 +168,11 @@ export default function ServicePage() {
                 {isSaved ? <HeartOff /> : <Heart />}
               </Button>
               {session && session.user.id === service?.creatorId && (
-                <Button variant="outline">
-                  Edit <Pencil />
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/service/edit-service")}
+                >
+                  Edit <Pencil className="ml-2 h-4 w-4" />
                 </Button>
               )}
               <DropdownMenu>
