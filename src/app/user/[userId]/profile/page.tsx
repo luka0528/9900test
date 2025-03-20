@@ -62,17 +62,11 @@ const UserProfilePage = () => {
       { userId: userId as string },
       { enabled: !!userId },
     );
-  const updateNameMutation = api.user.updateName.useMutation();
-  const updateEmailMutation = api.user.updateEmail.useMutation();
-  const updateBioMutation = api.user.updateBio.useMutation();
+  const { mutate: updateUser, isPending: isUpdatingUser } =
+    api.user.update.useMutation();
   const updatePasswordMutation = api.user.updatePassword.useMutation();
   const validateCurrentPassword =
     api.user.validateCurrentPassword.useMutation();
-  const updateSubscriptionSettings =
-    api.user.updateIsUserSubscriptionsPublic.useMutation();
-  const updateRatingSettings = api.user.updateIsUserRatingsPublic.useMutation();
-  const updateDataCollectionSettings =
-    api.user.updateIsUserDataCollectionAllowed.useMutation();
 
   // React Hook Form
   const form = useForm<z.infer<typeof profileSchema>>({
@@ -129,112 +123,37 @@ const UserProfilePage = () => {
 
   // Handle Form Submission
   const onSubmit = async (values: z.infer<typeof profileSchema>) => {
-    try {
-      let profileUpdated = false;
+    updateUser({
+      name: values.name,
+      email: values.email,
+      bio: values.bio,
+      isSubscriptionsPublic: values.isSubscriptionsPublic,
+      isRatingsPublic: values.isRatingsPublic,
+      isUserDataCollectionAllowed: values.isUserDataCollectionAllowed,
+    });
 
-      // Update Name if changed
-      if (values.name !== userData?.user?.name) {
-        await updateNameMutation.mutateAsync({ name: values.name });
-        profileUpdated = true;
-        if (userData?.success && userData?.user) {
-          userData.user.name = values.name;
-        }
-      }
+    // Handle Password Update
+    if (values.password) {
+      // Validate current password using a mutation
+      const validate = await validateCurrentPassword.mutateAsync({
+        currentPassword: values.currentPassword ?? "",
+      });
 
-      // Update Email if changed
-      if (values.email !== userData?.user?.email) {
-        await updateEmailMutation.mutateAsync({ email: values.email });
-        profileUpdated = true;
-        if (userData?.success && userData?.user) {
-          userData.user.email = values.email;
-        }
-      }
-
-      // Update Bio if changed
-      if (values.bio !== userData?.user?.bio) {
-        await updateBioMutation.mutateAsync({ bio: values.bio });
-        profileUpdated = true;
-        if (userData?.success && userData?.user) {
-          userData.user.bio = values.bio ?? "";
-        }
-      }
-
-      // Handle Password Update
-      if (values.password) {
-        // Validate current password using a mutation
-        const validate = await validateCurrentPassword.mutateAsync({
-          currentPassword: values.currentPassword ?? "",
+      if (!validate.success || !validate.isValidPassword) {
+        toast.error("Current password is incorrect.");
+      } else {
+        // If validation succeeds, update the password
+        const update = await updatePasswordMutation.mutateAsync({
+          password: values.password,
         });
-
-        if (!validate.success || !validate.isValidPassword) {
-          toast.error("Current password is incorrect.");
+        if (update.success) {
+          toast.success("Password updated successfully!");
         } else {
-          // If validation succeeds, update the password
-          const update = await updatePasswordMutation.mutateAsync({
-            password: values.password,
-          });
-          if (update.success) {
-            profileUpdated = true;
-            toast.success("Password updated successfully!");
-          } else {
-            toast.error("Failed to update password. Please try again.");
-          }
-        }
-        resetFormPasswordFields();
-        return; // Stops execution if password validation fails
-      }
-
-      // Handle Subscription Privacy Setting
-      if (
-        values.isSubscriptionsPublic !== userData?.user?.isSubscriptionsPublic
-      ) {
-        const update = await updateSubscriptionSettings.mutateAsync({
-          isSubscriptionsPublic: values.isSubscriptionsPublic ?? false,
-        });
-        if (update.success) profileUpdated = true;
-        if (userData?.success && userData?.user) {
-          userData.user.isSubscriptionsPublic =
-            values.isSubscriptionsPublic ?? true;
+          toast.error("Failed to update password. Please try again.");
         }
       }
-
-      // Handle Ratings Privacy Setting
-      if (values.isRatingsPublic !== userData?.user?.isRatingsPublic) {
-        const update = await updateRatingSettings.mutateAsync({
-          isRatingsPublic: values.isRatingsPublic ?? false,
-        });
-        if (update.success) profileUpdated = true;
-        if (userData?.success && userData?.user) {
-          userData.user.isRatingsPublic = values.isRatingsPublic ?? true;
-        }
-      }
-
-      // Handle Data Collection Setting
-      if (
-        values.isUserDataCollectionAllowed !==
-        userData?.user?.isUserDataCollectionAllowed
-      ) {
-        const update = await updateDataCollectionSettings.mutateAsync({
-          isUserDataCollectionAllowed:
-            values.isUserDataCollectionAllowed ?? true,
-        });
-        if (update.success) profileUpdated = true;
-        if (userData?.success && userData?.user) {
-          userData.user.isUserDataCollectionAllowed =
-            values.isUserDataCollectionAllowed ?? true;
-        }
-      }
-
-      // Show success message only if profile info was updated
-      if (profileUpdated) {
-        toast.success("Profile updated successfully!");
-      }
-
-      // Exit editing mode after successful updates
-      setIsEditing(false);
       resetFormPasswordFields();
-    } catch {
-      toast.error("Failed to update profile.");
+      return; // Stops execution if password validation fails
     }
   };
 

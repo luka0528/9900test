@@ -12,41 +12,27 @@ import { sendVerificationEmail, sendPasswordResetEmail } from "~/lib/email";
 import { VerificationTokenType } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
 
-interface Context {
-  db: PrismaClient;
-  session: { user: { id: string } };
-}
-
-/**
- * Updates a specific user field in the database.
- *
- * @param ctx - The context object containing the database and session information.
- * @param field - The name of the field to update.
- * @param value - The new value to set for the specified field.
- * @returns The updated field value.
- * @throws TRPCError if the user is not found.
- */
-const updateUserField = async <K extends keyof User>(
-  ctx: Context,
-  field: K,
-  value: User[K],
-) => {
-  try {
-    const updatedUser = await ctx.db.user.update({
-      where: { id: ctx.session.user.id },
-      data: { [field]: value },
-    });
-
-    return { [field]: updatedUser[field] };
-  } catch {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: `Failed to update ${field}`,
-    });
-  }
-};
-
 export const userRouter = createTRPCRouter({
+  update: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1, "Name is required"),
+      email: z.string().email("Invalid email address"),
+      bio: z.string().optional(),
+      isSubscriptionsPublic: z.boolean().default(false),
+      isRatingsPublic: z.boolean().default(false),
+      isUserDataCollectionAllowed: z.boolean().default(false),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { name, email, bio, isSubscriptionsPublic, isRatingsPublic, isUserDataCollectionAllowed } = input;
+
+      const updatedUser = await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data: { name, email, bio, isSubscriptionsPublic, isRatingsPublic, isUserDataCollectionAllowed },
+      });
+
+      return { success: true, user: updatedUser };
+    }),
+
   register: publicProcedure
     .input(
       z.object({
@@ -388,68 +374,7 @@ export const userRouter = createTRPCRouter({
       }
     }),
 
-  /* 
-  Updating USER FIELDS
-  */
-  updateName: protectedProcedure
-    .input(z.object({ name: z.string().min(1, "Name cannot be empty") }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const update = await updateUserField(ctx, "name", input.name);
-        return { success: true, name: update };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateEmail: protectedProcedure
-    .input(z.object({ email: z.string().email("Invalid email format") }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const update = await updateUserField(ctx, "email", input.email);
-        return { success: true, email: update };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateBio: protectedProcedure
-    .input(z.object({ bio: z.string().optional() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const update = await updateUserField(ctx, "bio", input.bio ?? "");
-        return { success: true, bio: update };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateImage: protectedProcedure
-    .input(z.object({ image: z.string().url("Invalid image URL") }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const update = await updateUserField(ctx, "image", input.image);
-        return { success: true, image: update };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updatePassword: protectedProcedure
-    .input(
-      z.object({
-        password: z.string().min(8, "Password must be at least 8 characters"),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const hashedPassword = await hash(input.password, 12);
-        const update = await updateUserField(ctx, "password", hashedPassword);
-        return { success: true, password: update };
-      } catch {
-        return { success: false };
-      }
-    }),
+  
 
   checkEmailExists: publicProcedure
     .input(
@@ -469,9 +394,28 @@ export const userRouter = createTRPCRouter({
       }
     }),
 
-  /* 
-    Checking if email already exists in database
-  */
+  updatePassword: protectedProcedure
+    .input(
+      z.object({
+        password: z.string().min(8, "Password must be at least 8 characters"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { password } = input;
+
+      // Hash the new password
+      const hashedPassword = await hash(password, 12);
+
+      // Update user's password
+      await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data: { password: hashedPassword },
+      });
+
+      return { success: true };
+    }),
+  
+
   validateCurrentPassword: protectedProcedure
     .input(
       z.object({
@@ -496,57 +440,6 @@ export const userRouter = createTRPCRouter({
         return isValid
           ? { success: true, isValidPassword: true }
           : { success: true, isValidPassword: false };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateIsUserSubscriptionsPublic: protectedProcedure
-    .input(z.object({ isSubscriptionsPublic: z.boolean() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const res = await updateUserField(
-          ctx,
-          "isSubscriptionsPublic",
-          input.isSubscriptionsPublic,
-        );
-        return {
-          success: true,
-          isSubscriptionsPublic: res.isSubscriptionsPublic,
-        };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateIsUserRatingsPublic: protectedProcedure
-    .input(z.object({ isRatingsPublic: z.boolean() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const res = await updateUserField(
-          ctx,
-          "isRatingsPublic",
-          input.isRatingsPublic,
-        );
-        return { success: true, isRatingsPublic: res.isRatingsPublic };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateIsUserDataCollectionAllowed: protectedProcedure
-    .input(z.object({ isUserDataCollectionAllowed: z.boolean() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const res = await updateUserField(
-          ctx,
-          "isUserDataCollectionAllowed",
-          input.isUserDataCollectionAllowed,
-        );
-        return {
-          success: true,
-          isUserDataCollectionAllowed: res.isUserDataCollectionAllowed,
-        };
       } catch {
         return { success: false };
       }
