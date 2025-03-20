@@ -4,35 +4,32 @@ import { Download, Package, Calendar, Users} from "lucide-react"
 import { Button } from "~/components/ui/button";
 
 interface MarketplaceServiceProps {
-    service?: {
+  service: {
+    id: string,
+    name: string,
+    createdAt: Date,
+    updatedAt: Date,
+    price: number | null,
+    views: number,
+    tags: {
         name: string;
+    }[];
+    versions: {
         description: string;
         version: string;
-        stats: {
-            downloads: string;
-            stars: number;
+    }[];
+    owners: {
+        user: {
+            name: string | null;
         };
-        creator: { name: string; url: string };
-        lastUpdated: string;
-        license: string;
-        price: number,
-        keywords: string[];
-    }
+    }[];
+  };
 }
+    
 export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
-    const { name, description, version, stats, creator, lastUpdated, price, keywords } = service ?? {
-        name: "react",
-        description: "React is a JavaScript library for building user interfaces.",
-        version: "18.2.0",
-        stats: {
-            downloads: "20M/week",
-            stars: 213000,
-        },
-        creator: { name: "Meta Open Source", url: "https://github.com/facebook" },
-        lastUpdated: "2023-10-15",
-        price: 0.00,
-        keywords: ["react", "javascript", "library", "ui"],
-    }
+    const { name, createdAt, price, views, versions, tags } = service;
+    const { description, version } = versions[0] ?? { description: "", version: "" };
+    const creatorName = service.owners[0]?.user?.name
     return (
       <Card
         className="overflow-hidden transition-all duration-300 hover:shadow-xl group hover:scale-105 hover:cursor-pointer"
@@ -51,19 +48,19 @@ export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
           <div className="grid grid-cols-1 gap-2 text-sm">
             <div className="flex items-center gap-1.5">
               <Download className="h-4 w-4 text-muted-foreground" />
-              <span>{stats.downloads}</span>
+              <span>{views + "K"}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span>{lastUpdated}</span>
+              <span>{createdAt.toDateString()}</span>
             </div>
           </div>
 
-          {keywords && keywords.length > 0 && (
+          {tags && tags.length > 0 && (
             <div className="mt-6 mb-2 flex flex-wrap gap-1">
-              {keywords.map((keyword) => (
-                <Badge key={keyword} variant="secondary" className="text-xs">
-                  {keyword}
+              {tags.map((tag) => (
+                <Badge key={tag.name} variant="secondary" className="text-xs">
+                  {tag.name}
                 </Badge>
               ))}
             </div>
@@ -74,7 +71,7 @@ export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
             <div className="flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5" />
               <div>
-                {creator.name}
+                {creatorName}
               </div>
             </div>
                 <Button
@@ -82,7 +79,7 @@ export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
                     size="sm"
                     className="border-blue-500 min-w-20 text-sm font-medium hover:bg-blue-50 hover:text-blue-600"
                 >
-                  {Number(price) === 0 ? "Free" : "$" + price.toFixed(2)}
+                  {price && (Number(price) === 0 ? "Free" : "$" + price.toFixed(2))}
                 </Button>
           </div>
         </CardFooter>
