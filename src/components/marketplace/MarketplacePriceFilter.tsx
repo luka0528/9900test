@@ -6,7 +6,7 @@ import { DualSlider } from "~/components/ui/dual-slider";
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { useFilterReset } from "~/lib/hooks/useFilterReset";
 
-const PRICE_DEFAULT_RANGE = [0, 12];
+export const PRICE_DEFAULT_RANGE = [0, 12];
 
 export const MarketplacePriceFilter: React.FC = () => {
   const searchParams = useSearchParams();
@@ -29,9 +29,11 @@ export const MarketplacePriceFilter: React.FC = () => {
     const params = new URLSearchParams(searchParams);
 
     const isDefaultRange = priceRange[0] === PRICE_DEFAULT_RANGE[0] && priceRange[1] === PRICE_DEFAULT_RANGE[1];
-
+    params.delete('price');
     if (!isDefaultRange) {
-      params.set('price', priceRange.join(','));
+      priceRange.forEach((price) => {
+        params.append('price', price.toString());
+      });
     } else {
       params.delete('price');
     }
