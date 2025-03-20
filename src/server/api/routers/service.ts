@@ -77,12 +77,12 @@ export const serviceRouter = createTRPCRouter({
 			const { search, tags, sort, price, dates, cursor, limit } = input;
       const processTags = tags ? (Array.isArray(tags) ? tags : [tags]) : [];
       const processDates = dates ? (Array.isArray(dates) ? dates : [dates]) : [];
-
+      let orderBy: Prisma.ServiceOrderByWithRelationInput = { views: 'desc' };
       let dateFilter: Prisma.ServiceWhereInput = {};
       if (dates && dates.length > 0) {
         const dateConditions = processDates.map(yearStr => {
           const year = parseInt(yearStr);
-          // Utilising UTC to avoid timezone issues
+          // Utilising UTC to avoid timezone issues - need to implement service wide
           const startDate = new Date(`${year}-01-01T00:00:00Z`);
           const endDate = new Date(`${year + 1}-01-01T00:00:00Z`);
           return {
@@ -116,10 +116,11 @@ export const serviceRouter = createTRPCRouter({
       }
 			const services = await ctx.db.service.findMany({
 				where : whereClause,
+        orderBy: orderBy,
 				cursor: cursor ? { id: cursor } : undefined,
 				take: limit,
 			});
-      console.log(services);
+
       const nextCursor = services.length > limit ? services.pop()?.id : null;
 			return { services, nextCursor };
 		})
