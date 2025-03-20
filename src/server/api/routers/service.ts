@@ -277,7 +277,7 @@ export const serviceRouter = createTRPCRouter({
 			const { search, tags, sort, price, dates, cursor, limit } = input;
       const processTags = tags ? (Array.isArray(tags) ? tags : [tags]) : [];
       const processDates = dates ? (Array.isArray(dates) ? dates : [dates]) : [];
-      let orderBy: Prisma.ServiceOrderByWithRelationInput = { views: 'desc' };
+      let orderBy: Prisma.ServiceOrderByWithRelationInput = { views : 'desc' };
       let dateFilter: Prisma.ServiceWhereInput = {};
       if (dates && dates.length > 0) {
         const dateConditions = processDates.map(yearStr => {
