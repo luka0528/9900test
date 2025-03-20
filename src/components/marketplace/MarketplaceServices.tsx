@@ -134,9 +134,13 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
                                         stars: 45000,
                                       },
                                       creator: { name: "shadcn", url: "https://github.com/shadcn" },
-                                      lastUpdated: "2023-11-25",
+                                      lastUpdated: service.updatedAt.toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                      }),
                                       license: "MIT",
-                                      price: 8.00,
+                                      price: service.price,
                                       keywords: ["ui", "components", "radix", "tailwind"],
                                     }
                                   } />

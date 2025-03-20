@@ -4,7 +4,7 @@ export interface Query {
   search: string;
   sort: MarketplaceSortType;
   tags: string[];
-  price: number[];
+  price: string[];
   dates: string[];
 }
 
@@ -12,6 +12,6 @@ export const DEFAULT_QUERY: Query = {
   search: '',
   sort: 'Popularity',
   tags: [],
-  price: [0, 12],
+  price: ["0", "12"],
   dates: [],
 };
