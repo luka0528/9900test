@@ -88,6 +88,7 @@ export default function EditServicePage() {
   const editVersionCall = api.version.editDocumentation.useMutation({
     onSuccess: () => {
       utils.service.getInfoById.invalidate(serviceId as string);
+      router.push(`/service/${serviceId}`);
     },
   });
   const addTagCall = api.service.addTag.useMutation();
@@ -137,10 +138,8 @@ export default function EditServicePage() {
   // Populate form once data is loaded
   useEffect(() => {
     if (service && versionData && !isSubmitting) {
-      // Transform version data to match our form structure
       const details =
         versionData.contents.map((content) => {
-          // Convert technical rows to table format
           const tableRows =
             content.rows?.map((row) => ({
               code: row.routeName,
@@ -156,7 +155,6 @@ export default function EditServicePage() {
           };
         }) || [];
 
-      // Set form values with data from API
       form.reset({
         name: service.name,
         description: versionData.versionDescription,
@@ -235,7 +233,7 @@ export default function EditServicePage() {
     const detail = details[detailIndex] as any;
     const currentTable = detail.table;
 
-    if (currentTable.length <= 1) return; // Keep at least one row
+    if (currentTable.length <= 1) return;
 
     const updatedDetails = [...details];
     updatedDetails[detailIndex] = {
@@ -313,15 +311,13 @@ export default function EditServicePage() {
       const transformedData = transformDataForAPI(values);
 
       // TODO: EDIT TAGS
-      // Handle tags (check if any new tags to add)
+      // Handle tags
       if (values.tags && values.tags.length > 0) {
         if (service?.tags) {
-          // Find new tags that weren't in the original service
           const newTags = values.tags.filter(
             (tag) => !service.tags.includes(tag),
           );
 
-          // Add each new tag
           for (const tag of newTags) {
             await addTagCall.mutateAsync({
               serviceId: serviceId,
@@ -332,16 +328,12 @@ export default function EditServicePage() {
       }
 
       // Update version documentation
-      await editVersionCall.mutateAsync(transformedData);
+      await editVersionCall.mutate(transformedData);
 
       toast({
         title: "Success!",
         description: "Service updated successfully",
       });
-
-      // TODO: Make it not have to reload the page
-      // Navigate back to the service page
-      router.push(`/service/${serviceId}`);
     } catch (error) {
       console.error("Error updating service:", error);
       toast({

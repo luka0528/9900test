@@ -79,7 +79,6 @@ export default function ServicePage() {
     },
     {
       enabled: !!serviceId && !!selectedVersion,
-      retry: 1,
     },
   );
 

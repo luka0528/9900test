@@ -133,9 +133,9 @@ export const versionRouter = createTRPCRouter({
             nonTechnicalDocu: z.string(),
             technicalRows: z.array(
               z.object({
-                rowId: z.string().min(1),
-                routeName: z.string().min(1),
-                routeDocu: z.string().min(1),
+                rowId: z.string(),
+                routeName: z.string(),
+                routeDocu: z.string(),
               }),
             ),
           }),
