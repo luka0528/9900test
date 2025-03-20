@@ -189,6 +189,7 @@ model User {
     bio           String?
     accounts      Account[]
     sessions      Session[]
+    billingHistory BillingReceipt[]
     verificationTokens VerificationToken[]
     role          UserRole  @default(USER)
 
@@ -223,4 +224,28 @@ model VerificationToken {
 enum VerificationTokenType {
     EMAIL
     PASSWORD_RESET
+}
+
+
+model BillingReceipt {
+    id      String   @id @default(cuid())
+    date   DateTime @default(now())
+    amount  Float
+    description String
+    paymentMethod String
+    paidTo String
+    paidFrom String
+    billingAddress String
+    automaticRenewal Boolean
+    automaticRenewalDate DateTime?
+    status BillingStatus
+    userId  String
+    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum BillingStatus {
+    PAID
+    PENDING
+    PROCESSING
+    FAILED
 }
