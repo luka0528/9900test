@@ -58,7 +58,7 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
                           ) : (
                             <div>
                               <div className="grid grid-cols-1 md:grid-cols-2 grow mt-2 px-8 pb-8 gap-8">
-                                {page.services.map((service, index) => (
+                                {page.services.map((service) => (
                                   <MarketplaceService key={service.id} service={service} />
                                 ))}
                               </div>

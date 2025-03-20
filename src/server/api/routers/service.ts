@@ -7,7 +7,7 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import { Query } from "~/components/marketplace/MarketplaceQuery";
+import type { Query } from "~/components/marketplace/MarketplaceQuery";
 
 
 // make a max float string
