@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import type { Prisma, Service } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import {
@@ -8,13 +8,12 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 
-import type { Query } from "~/components/marketplace/MarketplaceQuery";
-import { log } from "console";
-import { PRICE_DEFAULT_RANGE } from "~/components/marketplace/MarketplacePriceFilter";
+
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";
 export const serviceRouter = createTRPCRouter({
   // TODO: There'll be a lot more input here to create a service, this is just a placeholder
+  // 
   create: protectedProcedure
     .input(z.object({ name: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
