@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -10,12 +9,10 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { Separator } from "~/components/ui/separator";
 import { Upload, UserPen } from "lucide-react";
-
+import Link from "next/link";
 import { AllServiceSidebar } from "../../../components/service/AllServiceSidebar";
 
 export default function ServicesPage() {
-  const { data: session } = useSession();
-
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
       <AllServiceSidebar />
@@ -27,12 +24,12 @@ export default function ServicesPage() {
               <Button className="flex items-center gap-2">Add Service</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <a href="/service/add-service" className="w-full">
+              <Link href="/service/add" className="w-full">
                 <DropdownMenuItem key={"manual"}>
                   <UserPen />
                   Manual Input
                 </DropdownMenuItem>
-              </a>
+              </Link>
               <DropdownMenuItem key={"automatic"}>
                 <Upload />
                 Automatic Extraction

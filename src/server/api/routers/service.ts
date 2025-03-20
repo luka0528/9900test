@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, Service } from "@prisma/client";
 import { z } from "zod";
 
 import {
@@ -7,33 +7,114 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+import { Query } from "~/components/marketplace/MarketplaceQuery";
 
 
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";
 export const serviceRouter = createTRPCRouter({
-  // TODO: There'll be a lot more input here to create a service, this is just a placeholder
-  // 
   create: protectedProcedure
-    .input(z.object({ name: z.string().min(1) }))
+    .input(
+      z.object({
+        name: z.string().min(1),
+        version: z.string().min(1),
+        description: z.string().min(1),
+        tags: z.array(z.string()).default([]),
+        contents: z.array(
+          z.object({
+            title: z.string().min(1),
+            description: z.string().min(1),
+            rows: z.array(
+              z.object({
+                routeName: z.string().min(1),
+                description: z.string().min(1),
+              }),
+            ),
+          }),
+        ),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const service = await ctx.db.service.create({
         data: {
           name: input.name,
+          tags: {
+            connectOrCreate: input.tags.map((tag) => ({
+              where: { name: tag },
+              create: { name: tag },
+            })),
+          },
           owners: {
             create: {
-              userId: ctx.session.user.id,
+              user: {
+                connect: {
+                  id: ctx.session.user.id,
+                },
+              },
+            },
+          },
+          versions: {
+            create: {
+              version: input.version,
+              description: input.description,
+              contents: {
+                create: input.contents.map((content) => ({
+                  title: content.title,
+                  description: content.description,
+                  rows: {
+                    create: content.rows.map((row) => ({
+                      routeName: row.routeName,
+                      description: row.description,
+                    })),
+                  },
+                })),
+              },
             },
           },
         },
+        include: {
+          versions: true,
+        },
       });
 
-      return service;
+      return {
+        serviceId: service.id,
+        versionId: service.versions[0]!.id,
+      };
     }),
 
-	getAll: publicProcedure.query(async ({ ctx }) => {
-		const services = await ctx.db.service.findMany();
-		return services;
+  getInfiniteServices: publicProcedure
+    .input(
+      z.object({
+        query: z.custom<Query>(),
+        cursor: z.number().nullish(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const cursor = input.cursor ?? 0;
+      const limit = 12;
+
+      // Generates fake services as mock data.
+      const services: Service[] = Array.from({ length: limit }, (_, i) => {
+        const id = cursor + i;
+        return {
+          id: id.toString(),
+          name: `Service ${id}`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          price: 0,
+          views: 0,
+        };
+      });
+
+      const nextCursor = services.length ? cursor + limit : null;
+
+      return { services, nextCursor };
+    }),
+
+  getAll: publicProcedure.query(async ({ ctx }) => {
+    const services = await ctx.db.service.findMany();
+    return services;
   }),
 
   getAllByUserId: protectedProcedure.query(async ({ ctx }) => {
@@ -98,7 +179,41 @@ export const serviceRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  getInfoById: publicProcedure
+  getServiceMetadataById: publicProcedure
+    .input(z.object({ serviceId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+        select: {
+          name: true,
+          tags: true,
+          versions: {
+            select: {
+              version: true,
+              description: true,
+            },
+          },
+          owners: {
+            select: {
+              user: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      return service;
+    }),
+
+  getServiceById: publicProcedure
     .input(z.string().min(1))
     .query(async ({ ctx, input }) => {
       const service = await ctx.db.service.findUnique({
@@ -117,12 +232,31 @@ export const serviceRouter = createTRPCRouter({
             },
           },
           owners: {
-            include: { user: true },
+            select: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
           },
           ratings: {
-            include: {
-              consumer: { include: { user: true } },
+            select: {
+              consumer: {
+                select: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
               comments: true,
+              starValue: true,
+              content: true,
+              createdAt: true,
             },
           },
         },
@@ -135,51 +269,7 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      const ownerIdToName = new Map<string, string>();
-      for (const owner of service.owners) {
-        ownerIdToName.set(owner.id, owner.user.name!);
-      }
-
-      const ratings = [];
-      for (const rating of service.ratings) {
-        const ownerReplies = new Map();
-        for (const reply of rating.comments) {
-          ownerReplies.set(reply.id, {
-            ownerName: ownerIdToName.get(reply.ownerId),
-            content: reply.content,
-            createdAt: reply.createdAt,
-          });
-        }
-
-        ratings.push({
-          consumerName: rating.consumer.user.name,
-          starValue: rating.starValue,
-          content: rating.content,
-          createdAt: rating.createdAt,
-          comments: ownerReplies.get(rating.id),
-        });
-      }
-
-      const ownerUserIds = [];
-      for (const owner of service.owners) {
-        ownerUserIds.push(owner.user.id);
-      }
-
-      return {
-        name: service.name,
-        createdAt: service.createdAt,
-        updatedAt: service.updatedAt,
-        tags: service.tags.map((tag) => tag.name),
-        versions: service.versions.map((version) => ({
-          versionDescription: version.description,
-          contents: version.contents,
-          version: version.version,
-          id: version.id,
-        })),
-        owners: [...ownerIdToName.keys()],
-        ownerUserIds: ownerUserIds,
-        ratings: ratings,
-      };
+      return service;
     }),
 
   addTag: protectedProcedure
@@ -233,7 +323,7 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return { success: true };
-  	}),
+    }),
 
   deleteTag: protectedProcedure
     .input(z.object({ serviceId: z.string().min(1), tag: z.string().min(1) }))
@@ -348,7 +438,7 @@ export const serviceRouter = createTRPCRouter({
       
       let dateFilter: Prisma.ServiceWhereInput = {};
       if (dates && dates.length > 0) {
-        const dateConditions = processDates.map(yearStr => {
+        const dateConditions = processDates.map((yearStr) => {
           const year = parseInt(yearStr);
           // Utilising UTC to avoid timezone issues - need to implement service wide
           const startDate = new Date(`${year}-01-01T00:00:00Z`);
@@ -357,29 +447,30 @@ export const serviceRouter = createTRPCRouter({
             createdAt: {
               gte: startDate,
               lt: endDate,
-            }
-          }
+            },
+          };
         });
         dateFilter = {
           OR: dateConditions,
-        }
+        };
       }
       const whereClause: Prisma.ServiceWhereInput = {
         ...(search && {
-          name : {
+          name: {
             contains: search || "",
-            mode: "insensitive"
+            mode: "insensitive",
           },
         }),
-        ...(tags && tags.length > 0 && {
-          tags: {
-            some: {
-              name: {
-                in: processTags,
+        ...(tags &&
+          tags.length > 0 && {
+            tags: {
+              some: {
+                name: {
+                  in: processTags,
+                },
               },
             },
-          },
-        }),
+          }),
         ...(price && price.length == 2 && {
           price: {
             gte: parseFloat(price[0] ?? "0"),
@@ -427,8 +518,6 @@ export const serviceRouter = createTRPCRouter({
       console.log(services);
 
       const nextCursor = services.length > limit ? services.pop()?.id : null;
-			return { services, nextCursor };
-		})
-
-
+      return { services, nextCursor };
+    }),
 });

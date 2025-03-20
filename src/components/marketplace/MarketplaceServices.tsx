@@ -62,9 +62,9 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
                                   <MarketplaceService key={service.id} service={service} />
                                 ))}
                               </div>
-                              <button
-                                ref={ref}
-                              />
+                              <div className="mb-2 flex justify-center">
+                                <Loader2 ref={ref} className="animate-spin" />
+                              </div>
                             </div>
                           )}
                         </div>

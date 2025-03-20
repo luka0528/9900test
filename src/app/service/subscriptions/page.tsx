@@ -1,21 +1,10 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { Button } from "~/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
 import { Separator } from "~/components/ui/separator";
-import { Upload, UserPen } from "lucide-react";
 
 import { AllServiceSidebar } from "../../../components/service/AllServiceSidebar";
 
 export default function SubscriptionsPage() {
-  const { data: session } = useSession();
-
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
       <AllServiceSidebar />
