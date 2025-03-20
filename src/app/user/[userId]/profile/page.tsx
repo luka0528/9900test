@@ -25,7 +25,6 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { Pencil } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
-import { profile } from "console";
 
 // Define Zod Schema for validation
 const profileSchema = z

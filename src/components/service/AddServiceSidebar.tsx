@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from "~/components/ui/sidebar";
+import Link from "next/link";
 
 export const AddServiceSidebar = () => {
   return (
@@ -20,7 +21,7 @@ export const AddServiceSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" asChild>
-                  <a href="/service/services">
+                  <Link href="/service/services">
                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                       <ChevronLeft className="size-4" />
                     </div>
@@ -30,7 +31,7 @@ export const AddServiceSidebar = () => {
                       </span>
                       <span className="truncate text-xs">Blow me</span>
                     </div>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

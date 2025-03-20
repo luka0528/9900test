@@ -34,13 +34,6 @@ interface TableRow {
   rowId?: string;
 }
 
-interface DetailItem {
-  title: string;
-  content: string;
-  table: TableRow[];
-  contentId?: string;
-}
-
 // Define form schema with consistent structure
 const formSchema = z.object({
   name: z.string().min(1, {
