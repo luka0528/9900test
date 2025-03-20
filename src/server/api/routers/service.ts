@@ -60,8 +60,123 @@ export const serviceRouter = createTRPCRouter({
     const services = await ctx.db.service.findMany();
     return services;
   }),
+  
+  editName: protectedProcedure
+    .input(
+      z.object({ serviceId: z.string().min(1), newName: z.string().min(1) }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check that user owns this service
+      const service = await ctx.db.service.findUnique({
+        where: {
+          id: input.serviceId,
+          owners: {
+            some: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
 
-  addTag: protectedProcedure
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // Edit the name
+      await ctx.db.service.update({
+        where: {
+          id: input.serviceId,
+        },
+        data: {
+          name: input.newName,
+        },
+      });
+
+      return { success: true };
+    }),
+
+  getInfoById: publicProcedure
+    .input(z.string().min(1))
+    .query(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: {
+          id: input,
+        },
+        include: {
+          tags: true,
+          versions: {
+            include: {
+              contents: {
+                include: {
+                  rows: true,
+                },
+              },
+            },
+          },
+          owners: {
+            include: { user: true },
+          },
+          ratings: {
+            include: {
+              consumer: { include: { user: true } },
+              comments: true,
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      const ownerIdToName = new Map<string, string>();
+      for (const owner of service.owners) {
+        ownerIdToName.set(owner.id, owner.user.name!);
+      }
+
+      const ratings = [];
+      for (const rating of service.ratings) {
+        const ownerReplies = new Map();
+        for (const reply of rating.comments) {
+          ownerReplies.set(reply.id, {
+            ownerName: ownerIdToName.get(reply.ownerId),
+            content: reply.content,
+            createdAt: reply.createdAt,
+          });
+        }
+
+        ratings.push({
+          consumerName: rating.consumer.user.name,
+          starValue: rating.starValue,
+          content: rating.content,
+          createdAt: rating.createdAt,
+          comments: ownerReplies.get(rating.id),
+        });
+      }
+
+      return {
+        name: service.name,
+        createdAt: service.createdAt,
+        updatedAt: service.updatedAt,
+        tags: service.tags.map((tag) => tag.name),
+        versions: service.versions.map((version) => ({
+          versionDescription: version.description,
+          contents: version.contents,
+          version: version.version,
+          id: version.id,
+        })),
+        owners: [...ownerIdToName.values()],
+        ratings: ratings,
+      };
+    }),
+  
+    addTag: protectedProcedure
     .input(z.object({ serviceId: z.string().min(1), tag: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const serviceValid = await ctx.db.service.findUnique({
@@ -113,4 +228,4 @@ export const serviceRouter = createTRPCRouter({
 
       return { success: true };
     }),
-});
+  });
