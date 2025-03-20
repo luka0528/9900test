@@ -31,19 +31,19 @@ const updateUserField = async <K extends keyof User>(
   field: K,
   value: User[K],
 ) => {
-  const updatedUser = await ctx.db.user.update({
-    where: { id: ctx.session.user.id },
-    data: { [field]: value },
-  });
+  try {
+    const updatedUser = await ctx.db.user.update({
+      where: { id: ctx.session.user.id },
+      data: { [field]: value },
+    });
 
-  if (!updatedUser) {
+    return { [field]: updatedUser[field] };
+  } catch {
     throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "User not found",
+      code: "INTERNAL_SERVER_ERROR",
+      message: `Failed to update ${field}`,
     });
   }
-
-  return { [field]: updatedUser[field] };
 };
 
 export const userRouter = createTRPCRouter({
@@ -366,28 +366,26 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { userId } = input;
-
-      const user = await ctx.db.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          bio: true,
-          image: true,
-          emailVerified: true,
-        },
-      });
-
-      if (!user) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "User not found",
+      try {
+        const { userId } = input;
+        const user = await ctx.db.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            bio: true,
+            image: true,
+            emailVerified: true,
+            isSubscriptionsPublic: true,
+            isRatingsPublic: true,
+            isUserDataCollectionAllowed: true,
+          },
         });
+        return user ? { success: true, user } : { success: false };
+      } catch {
+        return { success: false };
       }
-
-      return user;
     }),
 
   /* 
@@ -395,27 +393,47 @@ export const userRouter = createTRPCRouter({
   */
   updateName: protectedProcedure
     .input(z.object({ name: z.string().min(1, "Name cannot be empty") }))
-    .mutation(async ({ ctx, input }) =>
-      updateUserField(ctx, "name", input.name),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const update = await updateUserField(ctx, "name", input.name);
+        return { success: true, name: update };
+      } catch {
+        return { success: false };
+      }
+    }),
 
   updateEmail: protectedProcedure
     .input(z.object({ email: z.string().email("Invalid email format") }))
-    .mutation(async ({ ctx, input }) =>
-      updateUserField(ctx, "email", input.email),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const update = await updateUserField(ctx, "email", input.email);
+        return { success: true, email: update };
+      } catch {
+        return { success: false };
+      }
+    }),
 
   updateBio: protectedProcedure
     .input(z.object({ bio: z.string().optional() }))
-    .mutation(async ({ ctx, input }) =>
-      updateUserField(ctx, "bio", input.bio ?? ""),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const update = await updateUserField(ctx, "bio", input.bio ?? "");
+        return { success: true, bio: update };
+      } catch {
+        return { success: false };
+      }
+    }),
 
   updateImage: protectedProcedure
     .input(z.object({ image: z.string().url("Invalid image URL") }))
-    .mutation(async ({ ctx, input }) =>
-      updateUserField(ctx, "image", input.image),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const update = await updateUserField(ctx, "image", input.image);
+        return { success: true, image: update };
+      } catch {
+        return { success: false };
+      }
+    }),
 
   updatePassword: protectedProcedure
     .input(
@@ -424,8 +442,13 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const hashedPassword = await hash(input.password, 12);
-      return updateUserField(ctx, "password", hashedPassword);
+      try {
+        const hashedPassword = await hash(input.password, 12);
+        const update = await updateUserField(ctx, "password", hashedPassword);
+        return { success: true, password: update };
+      } catch {
+        return { success: false };
+      }
     }),
 
   checkEmailExists: publicProcedure
@@ -435,13 +458,15 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { email } = input;
-
-      const existingUser = await ctx.db.user.findUnique({
-        where: { email },
-      });
-
-      return { exists: !!existingUser };
+      try {
+        const { email } = input;
+        const existingUser = await ctx.db.user.findUnique({
+          where: { email },
+        });
+        return { success: true, exists: !!existingUser };
+      } catch {
+        return { success: false };
+      }
     }),
 
   /* 
@@ -459,28 +484,71 @@ export const userRouter = createTRPCRouter({
       const { currentPassword } = input;
 
       // Find the user
-      const user = await ctx.db.user.findUnique({
-        where: { id: ctx.session.user.id },
-      });
-
-      if (!user?.password) {
-        // Generic error to avoid leaking information
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Current password is incorrect",
+      try {
+        const user = await ctx.db.user.findUnique({
+          where: { id: ctx.session.user.id },
         });
+        // Validate the current password
+        const isValid = await bcrypt.compare(
+          currentPassword,
+          user?.password ?? "",
+        );
+        return isValid
+          ? { success: true, isValidPassword: true }
+          : { success: true, isValidPassword: false };
+      } catch {
+        return { success: false };
       }
+    }),
 
-      // Validate the current password
-      const isValid = await bcrypt.compare(currentPassword, user.password);
-
-      if (!isValid) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Current password is incorrect",
-        });
+  updateIsUserSubscriptionsPublic: protectedProcedure
+    .input(z.object({ isSubscriptionsPublic: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const res = await updateUserField(
+          ctx,
+          "isSubscriptionsPublic",
+          input.isSubscriptionsPublic,
+        );
+        return {
+          success: true,
+          isSubscriptionsPublic: res.isSubscriptionsPublic,
+        };
+      } catch {
+        return { success: false };
       }
+    }),
 
-      return { success: true };
+  updateIsUserRatingsPublic: protectedProcedure
+    .input(z.object({ isRatingsPublic: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const res = await updateUserField(
+          ctx,
+          "isRatingsPublic",
+          input.isRatingsPublic,
+        );
+        return { success: true, isRatingsPublic: res.isRatingsPublic };
+      } catch {
+        return { success: false };
+      }
+    }),
+
+  updateIsUserDataCollectionAllowed: protectedProcedure
+    .input(z.object({ isUserDataCollectionAllowed: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const res = await updateUserField(
+          ctx,
+          "isUserDataCollectionAllowed",
+          input.isUserDataCollectionAllowed,
+        );
+        return {
+          success: true,
+          isUserDataCollectionAllowed: res.isUserDataCollectionAllowed,
+        };
+      } catch {
+        return { success: false };
+      }
     }),
 });
