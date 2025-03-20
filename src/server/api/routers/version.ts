@@ -9,7 +9,19 @@ export const versionRouter = createTRPCRouter({
       z.object({
         serviceId: z.string().min(1),
         newVersion: z.string().min(1),
-        documentation: z.string().min(1),
+        versionDescription: z.string().min(1),
+        contents: z.array(
+          z.object({
+            title: z.string().min(1),
+            nonTechnicalDocu: z.string().min(1),
+            technicalRows: z.array(
+              z.object({
+                routeName: z.string().min(1),
+                routeDocu: z.string().min(1),
+              }),
+            ),
+          }),
+        ),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -44,17 +56,31 @@ export const versionRouter = createTRPCRouter({
       }
 
       // Create the version
-      await ctx.db.serviceVersion.create({
+      const createdVersion = await ctx.db.serviceVersion.create({
         data: {
           service: {
             connect: {
               id: input.serviceId,
             },
           },
-          description: input.documentation,
+          description: input.versionDescription,
           version: input.newVersion,
+          contents: {
+            create: input.contents.map((content) => ({
+              title: content.title,
+              description: content.nonTechnicalDocu,
+              rows: {
+                create: content.technicalRows.map((row) => ({
+                  routeName: row.routeName,
+                  description: row.routeDocu,
+                })),
+              },
+            })),
+          },
         },
       });
+
+      return createdVersion;
     }),
 
   getDocumentation: publicProcedure
