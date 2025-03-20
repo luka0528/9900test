@@ -312,18 +312,18 @@ export const serviceRouter = createTRPCRouter({
       return { success: true };
     }),
 
-	getServiceByQuery: publicProcedure
-		.input(
-			z.object({
-				search: z.string().nullish(),
+  getServiceByQuery: publicProcedure
+    .input(
+      z.object({
+        search: z.string().nullish(),
         tags: z.union([z.array(z.string()), z.string()]).nullish(),
         sort: z.string().nullish(),
-        price: z.array(z.string()),
+        price: z.array(z.string()).nullish(),
         dates: z.union([z.array(z.string()), z.string()]).nullish(),
-				cursor: z.string().nullish(),
+        cursor: z.string().nullish(),
         limit: z.number().default(12),
-			})
-		)
+      })
+    )
 		.query(async ({ input, ctx }) => {
 			const { search, tags, sort, price, dates, cursor, limit } = input;
       const processTags = tags ? (Array.isArray(tags) ? tags : [tags]) : [];
@@ -388,12 +388,43 @@ export const serviceRouter = createTRPCRouter({
         }),
         ...dateFilter,
       }
+
 			const services = await ctx.db.service.findMany({
 				where : whereClause,
         orderBy: orderBy,
+        include: {
+          versions: {
+            orderBy: {
+              version: 'desc',
+            },
+            take: 1,
+            select: {
+              version: true,
+              description: true,
+            }
+          },
+          owners: {
+            take: 1,
+            select: {
+              user: {
+                select: {
+                  name: true,
+                }
+              }
+            }
+          },
+          tags: {
+            take: 4,
+            select: {
+              name: true,
+            }
+          }
+        },
 				cursor: cursor ? { id: cursor } : undefined,
 				take: limit,
 			});
+
+      console.log(services);
 
       const nextCursor = services.length > limit ? services.pop()?.id : null;
 			return { services, nextCursor };

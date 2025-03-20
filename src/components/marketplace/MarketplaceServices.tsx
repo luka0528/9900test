@@ -17,10 +17,7 @@ interface MarketplaceServicesProps {
 }
 
 export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
-  const [ref, inView] = useInView({
-    threshold: 0,
-    rootMargin: "100px", // Load a bit before reaching the actual bottom
-  });
+  const [ref, inView] = useInView();
 
     // The Marketplace is unidirection, so we only req. the fields related
     // to the 'next' page.
@@ -35,7 +32,7 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
             sort: query.sort,
             price: query.price,
             dates: query.dates,
-            limit: 12 
+            limit: 12,
         },
         {
             getNextPageParam: (page) => page.nextCursor,
@@ -60,28 +57,9 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
                             <MarketplaceServicesNoResults />
                           ) : (
                             <div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 grow px-8 pb-8 gap-8">
+                              <div className="grid grid-cols-1 md:grid-cols-2 grow mt-2 px-8 pb-8 gap-8">
                                 {page.services.map((service, index) => (
-                                  <MarketplaceService key={service.id} service={
-                                    {
-                                      name: service.name,
-                                      description: "Beautifully designed components built with Radix UI and Tailwind CSS.",
-                                      version: "0.4.1",
-                                      stats: {
-                                        downloads: "950K/week",
-                                        stars: 45000,
-                                      },
-                                      creator: { name: "shadcn", url: "https://github.com/shadcn" },
-                                      lastUpdated: service.updatedAt.toLocaleDateString('en-US', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                      }),
-                                      license: "MIT",
-                                      price: service.price ?? 0,
-                                      keywords: ["ui", "components", "radix", "tailwind"],
-                                    }
-                                  } />
+                                  <MarketplaceService key={service.id} service={service} />
                                 ))}
                               </div>
                               <button
