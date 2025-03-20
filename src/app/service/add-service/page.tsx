@@ -94,9 +94,10 @@ export default function AddServicePage() {
     },
   });
 
-  // tRPC mutations
-  const createService = api.service.create.useMutation();
-  const createVersion = api.version.create.useMutation();
+  // tRPC
+  const createServiceCall = api.service.create.useMutation();
+  const addTagCall = api.service.addTag.useMutation();
+  const createVersionCall = api.version.create.useMutation();
 
   // Add a tag
   const addTag = () => {
@@ -227,12 +228,23 @@ export default function AddServicePage() {
       const transformedData = transformDataForAPI(values);
 
       // Step 1: Create the service
-      const service = await createService.mutateAsync({
+      const service = await createServiceCall.mutateAsync({
         name: transformedData.serviceName,
       });
 
-      // Step 2: Create the first version with all the documentation
-      await createVersion.mutateAsync({
+      // Step 2: Add all tags to the service
+      if (transformedData.tags.length > 0) {
+        // Add each tag one by one to ensure they're all processed
+        for (const tag of transformedData.tags) {
+          await addTagCall.mutateAsync({
+            serviceId: service.id,
+            tag: tag,
+          });
+        }
+      }
+
+      // Step 3: Create the first version with all the documentation
+      await createVersionCall.mutateAsync({
         serviceId: service.id,
         newVersion: transformedData.version,
         versionDescription: transformedData.serviceDescription,

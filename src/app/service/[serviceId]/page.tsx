@@ -50,7 +50,6 @@ export default function ServicePage() {
     error: serviceError,
   } = api.service.getInfoById.useQuery(serviceId, {
     enabled: !!serviceId,
-    retry: 1,
   });
 
   // Tries to get latest version
@@ -153,12 +152,16 @@ export default function ServicePage() {
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Support
               </Button>
-              <Button size="icon" variant="outline" onClick={toggleSaveService}>
+              <Button
+                size="icon"
+                variant="secondary"
+                onClick={toggleSaveService}
+              >
                 {isSaved ? <HeartOff /> : <Heart />}
               </Button>
 
               {/* Only show edit button for service creator */}
-              {session && service.owners.includes(session.user.id) && (
+              {session && service.ownerUserIds.includes(session.user.id) && (
                 <Button
                   variant="outline"
                   onClick={() =>
@@ -216,7 +219,7 @@ export default function ServicePage() {
                   <span>Loading version information...</span>
                 </div>
               ) : versionData ? (
-                <p className="text-lg">{versionData.versionDescription}</p>
+                <p>{versionData.versionDescription}</p>
               ) : (
                 <p className="text-muted-foreground">
                   No version description available
@@ -247,12 +250,12 @@ export default function ServicePage() {
               <div className="space-y-10">
                 {versionData.contents.map((content, index) => (
                   <div key={content.id || index} className="mb-10">
-                    <h2 className="mb-4 text-2xl font-semibold">
+                    <h2 className="mb-4 text-xl font-semibold">
                       {content.title}
                     </h2>
 
                     {/* Content description */}
-                    <p className="mb-6 text-lg">{content.description}</p>
+                    <p className="mb-6">{content.description}</p>
 
                     {/* If content has table rows, display them */}
                     {content.rows && content.rows.length > 0 && (
@@ -279,10 +282,6 @@ export default function ServicePage() {
                         </Table>
                       </div>
                     )}
-
-                    {index < versionData.contents.length - 1 && (
-                      <Separator className="mt-10" />
-                    )}
                   </div>
                 ))}
               </div>
@@ -299,66 +298,6 @@ export default function ServicePage() {
                 Select a version to view content
               </p>
             </div>
-          )}
-
-          {/* Ratings Section */}
-          {service.ratings && service.ratings.length > 0 && (
-            <>
-              <Separator className="my-8" />
-              <div className="mb-6">
-                <h2 className="mb-6 text-2xl font-bold">Customer Reviews</h2>
-                <div className="space-y-6">
-                  {service.ratings.map((rating, index) => (
-                    <div key={index} className="mb-6 rounded-lg border p-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">
-                          {rating.consumerName}
-                        </h3>
-                        <div className="flex">
-                          {Array.from({ length: rating.starValue }).map(
-                            (_, i) => (
-                              <span key={i} className="text-yellow-500">
-                                ★
-                              </span>
-                            ),
-                          )}
-                          {Array.from({ length: 5 - rating.starValue }).map(
-                            (_, i) => (
-                              <span key={i} className="text-gray-300">
-                                ★
-                              </span>
-                            ),
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(rating.createdAt).toLocaleDateString()}
-                      </div>
-                      <p className="mt-2">{rating.content}</p>
-
-                      {/* Owner replies */}
-                      {rating.comments && rating.comments.length > 0 && (
-                        <div className="mt-4 rounded-md bg-muted p-4">
-                          <p className="font-medium">
-                            {rating.comments[0].ownerName} (Owner)
-                          </p>
-                          <p className="mt-1">{rating.comments[0].content}</p>
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            {new Date(
-                              rating.comments[0].createdAt,
-                            ).toLocaleDateString()}
-                          </p>
-                        </div>
-                      )}
-
-                      {index < service.ratings.length - 1 && (
-                        <Separator className="my-4" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
           )}
         </div>
       </div>

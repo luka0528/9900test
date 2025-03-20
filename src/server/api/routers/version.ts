@@ -130,7 +130,7 @@ export const versionRouter = createTRPCRouter({
           z.object({
             contentId: z.string().min(1),
             title: z.string().min(1),
-            nonTechnicalDocu: z.string().min(1),
+            nonTechnicalDocu: z.string(),
             technicalRows: z.array(
               z.object({
                 rowId: z.string().min(1),

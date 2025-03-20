@@ -160,6 +160,11 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
+      const ownerUserIds = [];
+      for (const owner of service.owners) {
+        ownerUserIds.push(owner.user.id);
+      }
+
       return {
         name: service.name,
         createdAt: service.createdAt,
@@ -171,7 +176,8 @@ export const serviceRouter = createTRPCRouter({
           version: version.version,
           id: version.id,
         })),
-        owners: [...ownerIdToName.values()],
+        owners: [...ownerIdToName.keys()],
+        ownerUserIds: ownerUserIds,
         ratings: ratings,
       };
     }),
