@@ -11,6 +11,7 @@ import { createVerificationToken, verifyToken } from "~/lib/verification";
 import { sendVerificationEmail, sendPasswordResetEmail } from "~/lib/email";
 import { VerificationTokenType } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
+import Stripe from "stripe";
 
 interface Context {
   db: PrismaClient;
@@ -45,6 +46,8 @@ const updateUserField = async <K extends keyof User>(
     });
   }
 };
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export const userRouter = createTRPCRouter({
   register: publicProcedure
@@ -551,4 +554,106 @@ export const userRouter = createTRPCRouter({
         return { success: false };
       }
     }),
+
+  initializeSetupIntent: protectedProcedure.mutation(async ({ ctx }) => {
+    // Fetch the current user from the database.
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.session.user.id },
+    });
+    if (!user) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    if (!user.email) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          "Email is required to create a Stripe customer. Fix this in your profile settings.",
+      });
+    }
+
+    if (!user.name) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          "A name is required to create a Stripe customer. Fix this in your profile settings.",
+      });
+    }
+
+    let stripeCustomerId = user.stripeCustomerId;
+    // If the user does not already have a Stripe customer ID, create one.
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.name,
+      });
+      stripeCustomerId = customer.id;
+      await ctx.db.user.update({
+        where: { id: user.id },
+        data: { stripeCustomerId },
+      });
+    }
+
+    // Create a SetupIntent associated with the Stripe customer.
+    const setupIntent = await stripe.setupIntents.create({
+      customer: stripeCustomerId,
+    });
+
+    if (!setupIntent.client_secret) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to create SetupIntent",
+      });
+    }
+
+    return { clientSecret: setupIntent.client_secret };
+  }),
+
+  // Procedure to save the PaymentMethod returned by Stripe.
+  savePaymentMethod: protectedProcedure
+    .input(
+      z.object({
+        paymentMethodId: z.string(), // Stripe PaymentMethod ID (pm_xxx)
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get the user and their Stripe customer ID
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+      });
+
+      if (!user || !user.stripeCustomerId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User or Stripe customer ID not found",
+        });
+      }
+
+      // Attach the payment method to the user's Stripe customer account
+      await stripe.paymentMethods.attach(input.paymentMethodId, {
+        customer: user.stripeCustomerId,
+      });
+
+      // Save the payment method in the database
+      await ctx.db.paymentMethod.create({
+        data: {
+          userId: user.id,
+          stripeCustomerId: user.stripeCustomerId,
+          stripePaymentId: input.paymentMethodId,
+        },
+      });
+
+      return { success: true };
+    }),
+
+  getPaymentMethods: protectedProcedure.query(async ({ ctx }) => {
+    // Fetch payment methods associated with the current user
+    const paymentMethods = await ctx.db.paymentMethod.findMany({
+      where: { userId: ctx.session.user.id },
+    });
+    return paymentMethods;
+  }),
 });
