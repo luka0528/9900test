@@ -98,6 +98,13 @@ export const versionRouter = createTRPCRouter({
             version: input.serviceVersion,
           },
         },
+        include: {
+          contents: {
+            include: {
+              rows: true,
+            },
+          },
+        },
       });
 
       if (!version) {
@@ -106,6 +113,10 @@ export const versionRouter = createTRPCRouter({
           message: "Service version not found",
         });
       }
-      return version.description;
+
+      return {
+        versionDescription: version.description,
+        contents: version.contents,
+      };
     }),
 });
