@@ -4,6 +4,7 @@ import React from "react";
 import { Button } from "~/components/ui/button";
 import { DualSlider } from "~/components/ui/dual-slider";
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
+import { useFilterReset } from "~/lib/hooks/useFilterReset";
 
 const PRICE_DEFAULT_RANGE = [0, 12];
 
@@ -11,6 +12,8 @@ export const MarketplacePriceFilter: React.FC = () => {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { replace } = useRouter();
+
+  const reset = useFilterReset();
 
   const [priceRange, setPriceRange] = React.useState<number[]>(
     searchParams.get('price')?.split(',').map(Number) ?? PRICE_DEFAULT_RANGE
@@ -35,6 +38,10 @@ export const MarketplacePriceFilter: React.FC = () => {
 
     replace(`${pathname}?${params.toString()}`);
   }
+
+  React.useEffect(() => {
+    setPriceRange(PRICE_DEFAULT_RANGE);
+  }, [reset]);
   
   return (
       <div>
