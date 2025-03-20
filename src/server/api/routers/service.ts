@@ -60,7 +60,7 @@ export const serviceRouter = createTRPCRouter({
     const services = await ctx.db.service.findMany();
     return services;
   }),
-
+  
   editName: protectedProcedure
     .input(
       z.object({ serviceId: z.string().min(1), newName: z.string().min(1) }),
@@ -175,4 +175,57 @@ export const serviceRouter = createTRPCRouter({
         ratings: ratings,
       };
     }),
-});
+  
+    addTag: protectedProcedure
+    .input(z.object({ serviceId: z.string().min(1), tag: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const serviceValid = await ctx.db.service.findUnique({
+        where: {
+          id: input.serviceId,
+          owners: {
+            some: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+        include: {
+          tags: true,
+        },
+      });
+
+      // Ensure that the userId is an owner of the service
+      if (!serviceValid) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // If the service has 10 or more tags, return early
+      if (serviceValid.tags.length >= 10) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This service has reached the maximum number of tags",
+        });
+      }
+
+      // Otherwise, convert the tag to fully lowercase
+      const tagName = input.tag.toLowerCase();
+
+      await ctx.db.service.update({
+        where: {
+          id: input.serviceId,
+        },
+        data: {
+          tags: {
+            connectOrCreate: {
+              where: { name: tagName },
+              create: { name: tagName },
+            },
+          },
+        },
+      });
+
+      return { success: true };
+    }),
+  });
