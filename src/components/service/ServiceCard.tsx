@@ -17,16 +17,17 @@ interface ServiceCardProps {
     name: string;
     owner: string;
     tags: string[];
+    latestVersionId: string;
     latestVersion: string;
   };
 }
 
 export const ServiceCard = ({ service }: ServiceCardProps) => {
   const router = useRouter();
-  const { id, name, owner, tags, latestVersion } = service;
+  const { id, name, owner, tags, latestVersionId, latestVersion } = service;
 
   const navigateToService = () => {
-    router.push(`/service/${id}`);
+    router.push(`/service/${id}/${latestVersionId}`);
   };
 
   return (
@@ -46,7 +47,7 @@ export const ServiceCard = ({ service }: ServiceCardProps) => {
       <CardContent className="pb-2">
         <div className="mb-4 flex items-center gap-1.5 text-sm">
           <User className="h-4 w-4 text-muted-foreground" />
-          <span>Owner: {owner}</span>
+          <span>{owner}</span>
         </div>
 
         <div className="flex flex-wrap gap-2">

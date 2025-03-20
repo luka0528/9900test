@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -11,17 +10,13 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { Separator } from "~/components/ui/separator";
 import { Upload, UserPen, Loader2, Package } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
 import { AllServiceSidebar } from "~/components/service/AllServiceSidebar";
 import { ServiceCard } from "~/components/service/ServiceCard";
-import { Input } from "~/components/ui/input";
 import Link from "next/link";
 
 export default function ServicesPage() {
   const { data: session } = useSession();
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch Data from BE
   console.log(api.service.getAllByUserId.useQuery());
@@ -30,11 +25,6 @@ export default function ServicesPage() {
     isLoading,
     error,
   } = api.service.getAllByUserId.useQuery();
-
-  // Handle direct navigation to add service page
-  const handleAddServiceClick = () => {
-    router.push("/service/add-service");
-  };
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
@@ -47,12 +37,6 @@ export default function ServicesPage() {
               <Button className="flex items-center gap-2">Add Service</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem key="manual" onClick={handleAddServiceClick}>
-                <UserPen className="mr-2 h-4 w-4" />
-                Manual Input
-              </DropdownMenuItem>
-              <DropdownMenuItem key="automatic">
-                <Upload className="mr-2 h-4 w-4" />
               <Link href="/service/add" className="w-full">
                 <DropdownMenuItem key={"manual"}>
                   <UserPen />
@@ -65,15 +49,6 @@ export default function ServicesPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-
-        <div className="px-4 pb-4">
-          <Input
-            placeholder="Search services by name or tag..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-md"
-          />
         </div>
 
         <Separator className="mb-6" />
@@ -102,7 +77,7 @@ export default function ServicesPage() {
               <Package className="mb-2 h-12 w-12 text-muted-foreground" />
               <h3 className="text-lg font-semibold">No services found</h3>
               <p className="text-muted-foreground">
-                You haven't created any services yet.
+                You haven&apost created any services yet.
               </p>
             </div>
           ) : (
@@ -113,9 +88,10 @@ export default function ServicesPage() {
                   service={{
                     id: service.id,
                     name: service.name,
-                    owner: service.owner ? service.owner : "No Name",
+                    owner: service.owner ?? "No Name",
                     tags: service.tags,
-                    latestVersion: service.latestVersion,
+                    latestVersionId: service.latestVersion.id,
+                    latestVersion: service.latestVersion.version,
                   }}
                 />
               ))}
