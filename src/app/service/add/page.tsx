@@ -27,12 +27,6 @@ import { api } from "~/trpc/react";
 
 import { AddServiceSidebar } from "~/components/service/AddServiceSidebar";
 
-// Define interfaces for better type safety
-interface TableRow {
-  code: string;
-  description: string;
-}
-
 // Define form schema with consistent structure
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -45,15 +39,15 @@ const formSchema = z.object({
     message: "Version is required (e.g. 1.0).",
   }),
   tags: z.array(z.string()).default([]),
-  details: z
+  contents: z
     .array(
       z.object({
         title: z.string().min(2),
-        content: z.string().default(""),
-        table: z
+        description: z.string().default(""),
+        rows: z
           .array(
             z.object({
-              code: z.string(),
+              routeName: z.string(),
               description: z.string(),
             }),
           )
@@ -78,26 +72,31 @@ export default function AddServicePage() {
       description: "",
       version: "",
       tags: [],
-      details: [
+      contents: [
         {
           title: "",
-          content: "",
-          table: [],
+          description: "",
+          rows: [],
         },
       ],
     },
   });
 
   // tRPC
-  const createServiceCall = api.service.create.useMutation();
-  const addTagCall = api.service.addTag.useMutation();
-  const createVersionCall = api.version.create.useMutation();
+  const createServiceCall = api.service.create.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: "Success!",
+        description: "Service created successfully",
+      });
+      router.push(`/service/${data.serviceId}/${data.versionId}`);
+    },
+  });
 
   // Add a tag
   const addTag = () => {
     if (tagInput.trim() === "") return;
-
-    const currentTags = form.getValues("tags") || [];
+    const currentTags = form.getValues("tags") ?? [];
     if (!currentTags.includes(tagInput.trim())) {
       form.setValue("tags", [...currentTags, tagInput.trim()]);
       setTagInput("");
@@ -106,7 +105,7 @@ export default function AddServicePage() {
 
   // Remove a tag
   const removeTag = (tag: string) => {
-    const currentTags = form.getValues("tags") || [];
+    const currentTags = form.getValues("tags") ?? [];
     form.setValue(
       "tags",
       currentTags.filter((t) => t !== tag),
@@ -115,94 +114,74 @@ export default function AddServicePage() {
 
   // Add a new detail section (text or table)
   const addDetail = (type: "text" | "table") => {
-    const details = form.getValues("details") || [];
+    const contents = form.getValues("contents") ?? [];
 
     if (type === "table") {
-      form.setValue("details", [
-        ...details,
+      form.setValue("contents", [
+        ...contents,
         {
           title: "",
-          content: "",
-          table: [{ code: "", description: "" }],
+          description: "",
+          rows: [{ routeName: "", description: "" }],
         },
       ]);
     } else {
-      form.setValue("details", [
-        ...details,
+      form.setValue("contents", [
+        ...contents,
         {
           title: "",
-          content: "",
-          table: [],
+          description: "",
+          rows: [],
         },
       ]);
     }
   };
 
   // Add a row to a table
-  const addTableRow = (detailIndex: number) => {
-    const details = form.getValues("details");
-    const detail = details[detailIndex] as any;
-    const currentTable = detail.table;
-
-    const updatedDetails = [...details];
-    updatedDetails[detailIndex] = {
-      ...detail,
-      table: [...currentTable, { code: "", description: "" }],
+  const addTableRow = (contentIndex: number) => {
+    const contents = form.getValues("contents");
+    const content = contents[contentIndex] ?? {
+      title: "",
+      description: "",
+      rows: [],
     };
 
-    form.setValue("details", updatedDetails);
+    const updatedContents = [...contents];
+    updatedContents[contentIndex] = {
+      ...content,
+      rows: [...content.rows, { routeName: "", description: "" }],
+    };
+
+    form.setValue("contents", updatedContents);
   };
 
   // Remove a row from a table
-  const removeTableRow = (detailIndex: number, rowIndex: number) => {
-    const details = form.getValues("details");
-    const detail = details[detailIndex] as any;
-    const currentTable = detail.table;
-
-    if (currentTable.length <= 1) return; // Keep at least one row
-
-    const updatedDetails = [...details];
-    updatedDetails[detailIndex] = {
-      ...detail,
-      table: currentTable.filter((_: any, idx: number) => idx !== rowIndex),
+  const removeTableRow = (contentIndex: number, rowIndex: number) => {
+    const contents = form.getValues("contents");
+    const content = contents[contentIndex] ?? {
+      title: "",
+      description: "",
+      rows: [],
     };
 
-    form.setValue("details", updatedDetails);
+    if (content.rows.length <= 1) return; // Keep at least one row
+
+    const updatedContents = [...contents];
+    updatedContents[contentIndex] = {
+      ...content,
+      rows: content.rows.filter((_, idx) => idx !== rowIndex),
+    };
+
+    form.setValue("contents", updatedContents);
   };
 
   // Remove a detail section
   const removeDetail = (index: number) => {
-    const details = form.getValues("details");
+    const contents = form.getValues("contents");
     form.setValue(
-      "details",
-      details.filter((_, idx) => idx !== index),
+      "contents",
+      contents.filter((_, idx) => idx !== index),
     );
-  };
-
-  // Transform form data to match API format
-  const transformDataForAPI = (values: z.infer<typeof formSchema>) => {
-    // First create the contents array for the version API
-    const contents = values.details.map((detail) => {
-      // Convert table format to technical rows
-      const technicalRows = detail.table.map((row) => ({
-        routeName: row.code,
-        routeDocu: row.description,
-      }));
-
-      return {
-        title: detail.title,
-        nonTechnicalDocu: detail.content,
-        technicalRows: technicalRows,
-      };
-    });
-
-    return {
-      serviceName: values.name,
-      serviceDescription: values.description,
-      version: values.version,
-      tags: values.tags,
-      contents: contents,
-    };
   };
 
   // Handle form submission
@@ -218,40 +197,13 @@ export default function AddServicePage() {
 
     try {
       setIsSubmitting(true);
-
-      const transformedData = transformDataForAPI(values);
-
-      // Step 1: Create the service
-      const service = await createServiceCall.mutateAsync({
-        name: transformedData.serviceName,
+      await createServiceCall.mutateAsync({
+        name: values.name,
+        description: values.description,
+        version: values.version,
+        contents: values.contents,
+        tags: values.tags,
       });
-
-      // Step 2: Add all tags to the service
-      if (transformedData.tags.length > 0) {
-        // Add each tag one by one to ensure they're all processed
-        for (const tag of transformedData.tags) {
-          await addTagCall.mutateAsync({
-            serviceId: service.id,
-            tag: tag,
-          });
-        }
-      }
-
-      // Step 3: Create the first version with all the documentation
-      await createVersionCall.mutateAsync({
-        serviceId: service.id,
-        newVersion: transformedData.version,
-        versionDescription: transformedData.serviceDescription,
-        contents: transformedData.contents,
-      });
-
-      toast({
-        title: "Success!",
-        description: "Service created successfully",
-      });
-
-      // Navigate to the service page
-      router.push(`/service/${service.id}`);
     } catch (error) {
       console.error("Error creating service:", error);
       toast({
@@ -397,14 +349,14 @@ export default function AddServicePage() {
                 </div>
               </div>
 
-              {form.watch("details")?.map((detail, detailIndex) => (
-                <Card key={detailIndex} className="relative">
+              {form.watch("contents")?.map((content, contentIndex) => (
+                <Card key={contentIndex} className="relative">
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="absolute right-2 top-2"
-                    onClick={() => removeDetail(detailIndex)}
+                    onClick={() => removeDetail(contentIndex)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -412,7 +364,7 @@ export default function AddServicePage() {
                   <CardHeader>
                     <FormField
                       control={form.control}
-                      name={`details.${detailIndex}.title`}
+                      name={`contents.${contentIndex}.title`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Section Title</FormLabel>
@@ -426,12 +378,12 @@ export default function AddServicePage() {
                   </CardHeader>
 
                   <CardContent>
-                    {detail.table.length > 0 ? (
+                    {content.rows.length > 0 ? (
                       // Table content
                       <div className="space-y-4">
                         <FormField
                           control={form.control}
-                          name={`details.${detailIndex}.content`}
+                          name={`contents.${contentIndex}.description`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Table Description</FormLabel>
@@ -451,7 +403,7 @@ export default function AddServicePage() {
                             Table Rows
                           </div>
                           <div className="p-4">
-                            {detail.table.map((row, rowIndex) => (
+                            {content.rows.map((row, rowIndex) => (
                               <div
                                 key={rowIndex}
                                 className="mb-4 grid grid-cols-[1fr_auto] gap-4"
@@ -459,7 +411,7 @@ export default function AddServicePage() {
                                 <div className="grid grid-cols-2 gap-4">
                                   <FormField
                                     control={form.control}
-                                    name={`details.${detailIndex}.table.${rowIndex}.code`}
+                                    name={`contents.${contentIndex}.rows.${rowIndex}.routeName`}
                                     render={({ field }) => (
                                       <FormItem>
                                         <FormControl>
@@ -473,7 +425,7 @@ export default function AddServicePage() {
                                   />
                                   <FormField
                                     control={form.control}
-                                    name={`details.${detailIndex}.table.${rowIndex}.description`}
+                                    name={`contents.${contentIndex}.rows.${rowIndex}.description`}
                                     render={({ field }) => (
                                       <FormItem>
                                         <FormControl>
@@ -491,7 +443,7 @@ export default function AddServicePage() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() =>
-                                    removeTableRow(detailIndex, rowIndex)
+                                    removeTableRow(contentIndex, rowIndex)
                                   }
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -503,7 +455,7 @@ export default function AddServicePage() {
                               variant="outline"
                               size="sm"
                               className="mt-2"
-                              onClick={() => addTableRow(detailIndex)}
+                              onClick={() => addTableRow(contentIndex)}
                             >
                               <PlusCircle className="mr-1 h-4 w-4" />
                               Add Row
@@ -515,7 +467,7 @@ export default function AddServicePage() {
                       // Text content
                       <FormField
                         control={form.control}
-                        name={`details.${detailIndex}.content`}
+                        name={`contents.${contentIndex}.description`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Content</FormLabel>

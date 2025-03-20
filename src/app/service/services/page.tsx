@@ -16,6 +16,7 @@ import { api } from "~/trpc/react";
 import { AllServiceSidebar } from "~/components/service/AllServiceSidebar";
 import { ServiceCard } from "~/components/service/ServiceCard";
 import { Input } from "~/components/ui/input";
+import Link from "next/link";
 
 export default function ServicesPage() {
   const { data: session } = useSession();
@@ -52,6 +53,14 @@ export default function ServicesPage() {
               </DropdownMenuItem>
               <DropdownMenuItem key="automatic">
                 <Upload className="mr-2 h-4 w-4" />
+              <Link href="/service/add" className="w-full">
+                <DropdownMenuItem key={"manual"}>
+                  <UserPen />
+                  Manual Input
+                </DropdownMenuItem>
+              </Link>
+              <DropdownMenuItem key={"automatic"}>
+                <Upload />
                 Automatic Extraction
               </DropdownMenuItem>
             </DropdownMenuContent>
