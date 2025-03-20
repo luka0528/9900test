@@ -9,7 +9,6 @@ import {
 } from "~/server/api/trpc";
 import type { Query } from "~/components/marketplace/MarketplaceQuery";
 
-
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";
 export const serviceRouter = createTRPCRouter({
@@ -133,10 +132,11 @@ export const serviceRouter = createTRPCRouter({
     });
 
     const res = services.map((service) => ({
+      id: service.id,
       name: service.name,
       owner: ctx.session.user.name,
       tags: service.tags.map((tag) => tag.name),
-      latestVersion: service.versions[service.versions.length - 1]!.version,
+      latestVersion: service.versions[service.versions.length - 1]!,
     }));
 
     return res;
@@ -412,30 +412,40 @@ export const serviceRouter = createTRPCRouter({
         dates: z.union([z.array(z.string()), z.string()]).nullish(),
         cursor: z.string().nullish(),
         limit: z.number().default(12),
-      })
+      }),
     )
-		.query(async ({ input, ctx }) => {
-			const { search, tags, sort, price, dates, cursor, limit } = input;
+    .query(async ({ input, ctx }) => {
+      const { search, tags, sort, price, dates, cursor, limit } = input;
       const processTags = tags ? (Array.isArray(tags) ? tags : [tags]) : [];
-      const processDates = dates ? (Array.isArray(dates) ? dates : [dates]) : [];
+      const processDates = dates
+        ? Array.isArray(dates)
+          ? dates
+          : [dates]
+        : [];
       console.log(processTags);
-      let orderBy: Prisma.ServiceOrderByWithRelationInput = { views : 'desc' };
+      let orderBy: Prisma.ServiceOrderByWithRelationInput = { views: "desc" };
       if (sort == "Price-Desc") {
-        orderBy = { price: 'desc' } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = { price: "desc" } as Prisma.ServiceOrderByWithRelationInput;
       } else if (sort == "Price-Asc") {
-        orderBy = { price: 'asc' } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = { price: "asc" } as Prisma.ServiceOrderByWithRelationInput;
       } else if (sort == "New-to-Old") {
-        orderBy = { createdAt: 'asc' } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = {
+          createdAt: "asc",
+        } as Prisma.ServiceOrderByWithRelationInput;
       } else if (sort == "Old-to-New") {
-        orderBy = { createdAt: 'desc' } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = {
+          createdAt: "desc",
+        } as Prisma.ServiceOrderByWithRelationInput;
       } else if (sort == "Last-Updated") {
-        orderBy = { updatedAt: 'desc' } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = {
+          updatedAt: "desc",
+        } as Prisma.ServiceOrderByWithRelationInput;
       } else if (sort == "Name-Asc") {
-        orderBy = { name: 'asc' } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = { name: "asc" } as Prisma.ServiceOrderByWithRelationInput;
       } else if (sort == "Name-Desc") {
-        orderBy = { name: 'desc' } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = { name: "desc" } as Prisma.ServiceOrderByWithRelationInput;
       }
-      
+
       let dateFilter: Prisma.ServiceWhereInput = {};
       if (dates && dates.length > 0) {
         const dateConditions = processDates.map((yearStr) => {
@@ -471,28 +481,29 @@ export const serviceRouter = createTRPCRouter({
               },
             },
           }),
-        ...(price && price.length == 2 && {
-          price: {
-            gte: parseFloat(price[0] ?? "0"),
-            lte: parseFloat(price[1] ?? MAX_FLOAT),
-          },
-        }),
+        ...(price &&
+          price.length == 2 && {
+            price: {
+              gte: parseFloat(price[0] ?? "0"),
+              lte: parseFloat(price[1] ?? MAX_FLOAT),
+            },
+          }),
         ...dateFilter,
-      }
+      };
 
-			const services = await ctx.db.service.findMany({
-				where : whereClause,
+      const services = await ctx.db.service.findMany({
+        where: whereClause,
         orderBy: orderBy,
         include: {
           versions: {
             orderBy: {
-              version: 'desc',
+              version: "desc",
             },
             take: 1,
             select: {
               version: true,
               description: true,
-            }
+            },
           },
           owners: {
             take: 1,
@@ -500,20 +511,20 @@ export const serviceRouter = createTRPCRouter({
               user: {
                 select: {
                   name: true,
-                }
-              }
-            }
+                },
+              },
+            },
           },
           tags: {
             take: 4,
             select: {
               name: true,
-            }
-          }
+            },
+          },
         },
-				cursor: cursor ? { id: cursor } : undefined,
-				take: limit,
-			});
+        cursor: cursor ? { id: cursor } : undefined,
+        take: limit,
+      });
 
       console.log(services);
 
