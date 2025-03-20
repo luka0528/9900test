@@ -21,7 +21,7 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
 
     // The Marketplace is unidirection, so we only req. the fields related
     // to the 'next' page.
-    const { 
+    const {
         status,
         data,
         fetchNextPage,
@@ -62,13 +62,11 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
                                   <MarketplaceService key={service.id} service={service} />
                                 ))}
                               </div>
-                              <div className="mb-2 flex justify-center">
-                                <Loader2 ref={ref} className="animate-spin" />
-                              </div>
+                              <button ref={ref} />
                             </div>
                           )}
                         </div>
-                    ))}   
+                    ))}
                 </>
             )}
         </div>
