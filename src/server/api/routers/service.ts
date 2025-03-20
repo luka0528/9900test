@@ -82,6 +82,38 @@ export const serviceRouter = createTRPCRouter({
       };
     }),
 
+  delete: protectedProcedure
+    .input(z.object({ serviceId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: {
+          id: input.serviceId,
+          owners: {
+            some: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
+
+      // Check that the service exists and that the userId is in the owners list
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // Delete the service from the services table
+      await ctx.db.service.delete({
+        where: { id: service.id },
+      });
+
+      // TODO for future ticket: finally, notify all subscribers that this service is scheduled to be deleted
+
+      return { success: true };
+    }),
+
   getInfiniteServices: publicProcedure
     .input(
       z.object({
