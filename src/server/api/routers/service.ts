@@ -261,6 +261,83 @@ export const serviceRouter = createTRPCRouter({
       return { success: true };
   	}),
 
+  deleteTag: protectedProcedure
+    .input(z.object({ serviceId: z.string().min(1), tag: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: {
+          id: input.serviceId,
+          owners: {
+            some: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+        include: {
+          tags: true,
+        },
+      });
+
+      // Ensure that the userId is an owner of the service
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // Check that the tag is in the service
+      const toDelete = input.tag.toLowerCase();
+      const tag = await ctx.db.tag.findUnique({
+        where: {
+          name: toDelete,
+          services: {
+            some: {
+              id: input.serviceId,
+            },
+          },
+        },
+        include: {
+          services: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      if (!tag) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Tag not found",
+        });
+      }
+
+      // Tag only belongs to this service, so delete it
+      if (tag.services.length == 1) {
+        await ctx.db.tag.delete({
+          where: {
+            name: toDelete,
+          },
+        });
+      } else {
+        // Otherwise, just disconnect it
+        await ctx.db.service.update({
+          where: {
+            id: input.serviceId,
+          },
+          data: {
+            tags: {
+              disconnect: {
+                id: tag.id,
+              },
+            },
+          },
+        });
+      }
+      return { success: true };
+    }),
+
 	getServiceByQuery: publicProcedure
 		.input(
 			z.object({

@@ -8,6 +8,7 @@ import {
 import { MarketplaceTagsFilter } from "./MarketplaceTagsFilter";
 import { MarketplacePriceFilter } from "./MarketplacePriceFilter";
 import { MarketplaceDateFilter } from "./MarketplaceDateFilter";
+import { MarketplaceClearFilters } from "./MarketplaceClearFilters";
 
 export interface MarketplaceFilterType {
     tags: string[];
@@ -18,7 +19,7 @@ export interface MarketplaceFilterType {
 export const MarketplaceSideBar = () => {
     return (
         <div className="min-w-48 lg:min-w-60 h-full border-r max-w-60 overflow-y-auto">
-            <Accordion type="multiple" className="w-full p-4">
+            <Accordion type="multiple" className="w-full p-4 pb-0">
                 <AccordionItem value="item-1">
                     <AccordionTrigger>Tags</AccordionTrigger>
                     <AccordionContent >
@@ -38,6 +39,7 @@ export const MarketplaceSideBar = () => {
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
+            <MarketplaceClearFilters />
         </div>
     );
 }
