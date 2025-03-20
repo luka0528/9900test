@@ -48,7 +48,7 @@ export default function ServicePage() {
     data: service,
     isLoading: serviceLoading,
     error: serviceError,
-  } = api.service.getInfoById.useQuery(serviceId, {
+  } = api.service.getServiceById.useQuery(serviceId, {
     enabled: !!serviceId,
   });
 
@@ -127,8 +127,8 @@ export default function ServicePage() {
             Service not found
           </h2>
           <p className="mt-2 text-muted-foreground">
-            The service you're looking for doesn't exist or you don't have
-            permission to view it.
+            The service you&apos;re looking for doesn&apos;t exist or you don&apos;t
+            have permission to view it.
           </p>
           <Button className="mt-4" onClick={() => router.push("/service")}>
             Back to Services
@@ -160,12 +160,15 @@ export default function ServicePage() {
               </Button>
 
               {/* Only show edit button for service creator */}
-              {session && service.ownerUserIds.includes(session.user.id) && (
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    router.push(`/service/edit-service?id=${serviceId}`)
-                  }
+              {session &&
+                service.owners.some(
+                  (owner) => owner.user.id === session.user.id,
+                ) && (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      router.push(`/service/${serviceId}/edit`)
+                    }
                 >
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
@@ -197,9 +200,9 @@ export default function ServicePage() {
 
           {/* Tags */}
           <div className="mb-6 flex flex-wrap gap-2">
-            {service.tags.map((tag, index) => (
-              <Badge key={index} variant="secondary">
-                {tag}
+            {service.tags.map((tag) => (
+              <Badge key={tag.id} variant="secondary">
+                {tag.name}
               </Badge>
             ))}
           </div>
@@ -218,7 +221,7 @@ export default function ServicePage() {
                   <span>Loading version information...</span>
                 </div>
               ) : versionData ? (
-                <p>{versionData.versionDescription}</p>
+                <p>{versionData.description}</p>
               ) : (
                 <p className="text-muted-foreground">
                   No version description available

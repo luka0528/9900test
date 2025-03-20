@@ -13,11 +13,11 @@ export const versionRouter = createTRPCRouter({
         contents: z.array(
           z.object({
             title: z.string().min(1),
-            nonTechnicalDocu: z.string(),
-            technicalRows: z.array(
+            description: z.string(),
+            rows: z.array(
               z.object({
                 routeName: z.string().min(1),
-                routeDocu: z.string().min(1),
+                description: z.string().min(1),
               }),
             ),
           }),
@@ -68,11 +68,11 @@ export const versionRouter = createTRPCRouter({
           contents: {
             create: input.contents.map((content) => ({
               title: content.title,
-              description: content.nonTechnicalDocu,
+              description: content.description,
               rows: {
-                create: content.technicalRows.map((row) => ({
+                create: content.rows.map((row) => ({
                   routeName: row.routeName,
-                  description: row.routeDocu,
+                  description: row.description,
                 })),
               },
             })),
@@ -114,13 +114,10 @@ export const versionRouter = createTRPCRouter({
         });
       }
 
-      return {
-        versionDescription: version.description,
-        contents: version.contents,
-      };
+      return version;
     }),
 
-  editDocumentation: protectedProcedure
+  upsertDocumentation: protectedProcedure
     .input(
       z.object({
         serviceId: z.string().min(1),
