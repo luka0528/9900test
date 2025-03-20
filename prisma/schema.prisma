@@ -258,11 +258,9 @@ enum BillingStatus {
 
 model PaymentMethod {
   id              String   @id @default(cuid())
-  stripePaymentId String   @unique  // Stripe Payment Method ID
-  stripeCustomerId String  // Links to Stripe Customer
+  stripePaymentId String   @unique 
+  stripeCustomerId String
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // elation to BillingReceipt
   billingReceipts BillingReceipt[]
 }
