@@ -34,7 +34,7 @@ export const serviceRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return await ctx.db.service.create({
+      const service = await ctx.db.service.create({
         data: {
           name: input.name,
           tags: {
@@ -71,7 +71,15 @@ export const serviceRouter = createTRPCRouter({
             },
           },
         },
+        include: {
+          versions: true,
+        },
       });
+
+      return {
+        serviceId: service.id,
+        versionId: service.versions[0]!.id,
+      };
     }),
 
   getInfiniteServices: publicProcedure
@@ -166,6 +174,40 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return { success: true };
+    }),
+
+  getServiceMetadataById: publicProcedure
+    .input(z.object({ serviceId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+        select: {
+          name: true,
+          tags: true,
+          versions: {
+            select: {
+              version: true,
+              description: true,
+            },
+          },
+          owners: {
+            select: {
+              user: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      return service;
     }),
 
   getServiceById: publicProcedure

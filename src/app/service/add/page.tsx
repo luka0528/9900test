@@ -27,12 +27,6 @@ import { api } from "~/trpc/react";
 
 import { AddServiceSidebar } from "~/components/service/AddServiceSidebar";
 
-// Define interfaces for better type safety
-interface TableRow {
-  code: string;
-  description: string;
-}
-
 // Define form schema with consistent structure
 const formSchema = z.object({
   name: z.string().min(1, {
@@ -89,7 +83,15 @@ export default function AddServicePage() {
   });
 
   // tRPC
-  const createServiceCall = api.service.create.useMutation();
+  const createServiceCall = api.service.create.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: "Success!",
+        description: "Service created successfully",
+      });
+      router.push(`/service/${data.serviceId}/${data.versionId}`);
+    },
+  });
 
   // Add a tag
   const addTag = () => {
@@ -195,22 +197,13 @@ export default function AddServicePage() {
 
     try {
       setIsSubmitting(true);
-      
-      const service = await createServiceCall.mutateAsync({
+      await createServiceCall.mutateAsync({
         name: values.name,
         description: values.description,
         version: values.version,
         contents: values.contents,
         tags: values.tags,
       });
-
-      toast({
-        title: "Success!",
-        description: "Service created successfully",
-      });
-
-      // Navigate to the service page
-      router.push(`/service/${service.id}`);
     } catch (error) {
       console.error("Error creating service:", error);
       toast({
