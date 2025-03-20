@@ -1,6 +1,5 @@
 import { z } from "zod";
 import bcrypt, { hash } from "bcryptjs";
-import type { User } from "@prisma/client";
 import {
   createTRPCRouter,
   publicProcedure,
@@ -10,7 +9,6 @@ import { TRPCError } from "@trpc/server";
 import { createVerificationToken, verifyToken } from "~/lib/verification";
 import { sendVerificationEmail, sendPasswordResetEmail } from "~/lib/email";
 import { VerificationTokenType } from "@prisma/client";
-import type { PrismaClient } from "@prisma/client";
 
 export const userRouter = createTRPCRouter({
   update: protectedProcedure
