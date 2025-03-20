@@ -11,184 +11,181 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { Separator } from "~/components/ui/separator";
-import { Pencil, ChevronDown, Heart, HeartOff } from "lucide-react";
-
-import { ServiceSidebar } from "../../../components/service/ServiceSidebar";
+import {
+  Pencil,
+  ChevronDown,
+  Heart,
+  HeartOff,
+  Loader2,
+  MessageSquare,
+  AlertTriangle,
+} from "lucide-react";
+import { api } from "~/trpc/react";
+import { ServiceSidebar } from "~/components/service/ServiceSidebar";
+import { useToast } from "~/hooks/use-toast";
 
 export default function ServicePage() {
   const { data: session } = useSession();
-  const { serviceId } = useParams();
+  const params = useParams();
+  const serviceId = params.serviceId as string;
   const router = useRouter();
+  const { toast } = useToast();
 
   const [isSaved, setIsSaved] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState("");
 
-  // Dummy Data
-  const services = [
+  // Fetch service data from backend
+  const {
+    data: service,
+    isLoading: serviceLoading,
+    error: serviceError,
+  } = api.service.getInfoById.useQuery(serviceId, {
+    enabled: !!serviceId,
+    retry: 1,
+  });
+
+  // Tries to get latest version
+  useEffect(() => {
+    if (
+      service &&
+      !selectedVersion &&
+      service.versions &&
+      service.versions.length > 0
+    ) {
+      // Use the most recent version
+      const latestVersion =
+        service.versions[service.versions.length - 1]!.version;
+      setSelectedVersion(latestVersion);
+    }
+  }, [service, selectedVersion]);
+
+  // For fetching version documentation when a version is selected
+  const {
+    data: versionData,
+    isLoading: versionLoading,
+    error: versionError,
+  } = api.version.getDocumentation.useQuery(
     {
-      id: 1,
-      creatorId: "cm89i5ruw00005u9yqhg8hl03",
-      name: "Service 1",
-      versions: [
-        {
-          vid: "v0.0",
-          name: "Version 0.0",
-          description:
-            "starting with 0.0, this is the first version of the service",
-          details: [
-            {
-              title: "What is Lorem Ipsum?",
-              content: "nothing here yet",
-            },
-          ],
-          tags: ["meow"],
-        },
-        {
-          vid: "v1.0",
-          name: "Version 1.0",
-          description:
-            "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit...",
-          details: [
-            {
-              title: "What is Lorem Ipsum?",
-              content:
-                "Lorem ipsum odor amet, consectetuer adipiscing elit. Dui posuere adipiscing natoque parturient dapibus nunc orci mollis laoreet. Dolor risus sociosqu blandit tortor iaculis condimentum imperdiet. Dolor non fermentum curabitur maecenas consequat. Maecenas sollicitudin neque id pharetra fames risus turpis. Felis luctus hac habitant; conubia viverra et. Facilisis tincidunt sodales donec ultricies vehicula dapibus tristique. Finibus congue tristique sodales donec conubia. Mattis vehicula feugiat morbi sodales sit urna.",
-            },
-            {
-              title: "Where does it come from?",
-              content:
-                "Ad iaculis lectus senectus sapien nisl sem. Purus posuere montes rutrum dis; aptent consectetur molestie! Condimentum himenaeos nascetur bibendum nisl, odio ornare donec ullamcorper condimentum. Dictumst gravida aptent faucibus placerat vulputate taciti montes montes. Convallis ac sit nulla accumsan posuere vulputate nunc maecenas mollis. Rutrum curabitur euismod sagittis fusce at eros.",
-            },
-            {
-              title: "Code Table",
-              content: "Code Table Content",
-              table: [
-                { code: "Code 1", description: "Description 1" },
-                { code: "Code 2", description: "Description 2" },
-                { code: "Code 3", description: "Description 3" },
-              ],
-            },
-          ],
-          tags: ["meow", "woof", "fish"],
-        },
-        {
-          vid: "v1.1",
-          name: "Version 1.1 (latest)",
-          description:
-            "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit...",
-          details: [
-            {
-              title: "What is Lorem Ipsum?",
-              content:
-                "Lorem ipsum odor amet, consectetuer adipiscing elit. Dui posuere adipiscing natoque parturient dapibus nunc orci mollis laoreet. Dolor risus sociosqu blandit tortor iaculis condimentum imperdiet. Dolor non fermentum curabitur maecenas consequat. Maecenas sollicitudin neque id pharetra fames risus turpis. Felis luctus hac habitant; conubia viverra et. Facilisis tincidunt sodales donec ultricies vehicula dapibus tristique. Finibus congue tristique sodales donec conubia. Mattis vehicula feugiat morbi sodales sit urna.",
-            },
-            {
-              title: "Where does it come from?",
-              content:
-                "Ad iaculis lectus senectus sapien nisl sem. Purus posuere montes rutrum dis; aptent consectetur molestie! Condimentum himenaeos nascetur bibendum nisl, odio ornare donec ullamcorper condimentum. Dictumst gravida aptent faucibus placerat vulputate taciti montes montes. Convallis ac sit nulla accumsan posuere vulputate nunc maecenas mollis. Rutrum curabitur euismod sagittis fusce at eros.",
-            },
-            {
-              title: "Code Table",
-              content: "Code Table Content",
-              table: [
-                { code: "Code 1", description: "Description 1" },
-                { code: "Code 2", description: "Description 2" },
-                { code: "Code 3", description: "Description 3" },
-              ],
-            },
-            {
-              title: "Where does it come from?",
-              content:
-                "Ad iaculis lectus senectus sapien nisl sem. Purus posuere montes rutrum dis; aptent consectetur molestie! Condimentum himenaeos nascetur bibendum nisl, odio ornare donec ullamcorper condimentum. Dictumst gravida aptent faucibus placerat vulputate taciti montes montes. Convallis ac sit nulla accumsan posuere vulputate nunc maecenas mollis. Rutrum curabitur euismod sagittis fusce at eros.",
-            },
-            {
-              title: "Code Table 2",
-              content: "Code Table Content",
-              table: [
-                { code: "Code 4", description: "Description 4" },
-                { code: "Code 5", description: "Description 5" },
-                { code: "Code 6", description: "Description 6" },
-              ],
-            },
-          ],
-          tags: ["meow", "woof", "fish", "glizzy"],
-        },
-      ],
+      serviceId: serviceId,
+      serviceVersion: selectedVersion || "",
     },
     {
-      id: 2,
-      creatorId: "cm8851knr0000irdvgesgj94r",
-      name: "Service 2",
-      versions: [
-        {
-          vid: "v0.0",
-          name: "Version 0.0",
-          description:
-            "starting with 0.0, this is the first version of the service",
-          details: [
-            {
-              title: "What is Lorem Ipsum?",
-              content: "nothing here yet",
-            },
-          ],
-          tags: ["meow"],
-        },
-      ],
+      enabled: !!serviceId && !!selectedVersion,
+      retry: 1,
     },
-  ];
-
-  // State to track seletected version
-  const [selectedVersion, setSelectedVersion] = useState(
-    services[0]?.versions[0],
   );
 
-  const service = services.find((s) => s.id === parseInt(serviceId as string));
-  const versions = service?.versions || [];
-
-  useEffect(() => {
-    if (versions.length > 0) {
-      setSelectedVersion(versions[versions.length - 1]);
-    }
-  }, []);
-
-  const handleVersionSelect = (version: any) => {
+  // Handler for version selection
+  const handleVersionSelect = (version: string) => {
     setSelectedVersion(version);
   };
+
+  // Handle saving/favoriting service
+  const toggleSaveService = () => {
+    if (!session) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to save services",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Here you would call an API to save/unsave
+    setIsSaved(!isSaved);
+    toast({
+      title: isSaved ? "Removed from favorites" : "Added to favorites",
+      description: isSaved
+        ? "Service removed from your saved list"
+        : "Service added to your saved list",
+    });
+  };
+
+  // Show loading state
+  if (serviceLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (serviceError || !service) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="mx-auto h-12 w-12 text-destructive" />
+          <h2 className="mt-4 text-2xl font-bold text-destructive">
+            Service not found
+          </h2>
+          <p className="mt-2 text-muted-foreground">
+            The service you're looking for doesn't exist or you don't have
+            permission to view it.
+          </p>
+          <Button className="mt-4" onClick={() => router.push("/service")}>
+            Back to Services
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
       <ServiceSidebar />
-      <div className="flex h-full grow flex-col">
-        <div className="p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">{service?.name}</h1>
+      <div className="flex h-full grow flex-col overflow-y-auto">
+        <div className="p-6">
+          {/* Service Header with Name and Actions */}
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-3xl font-bold">{service.name}</h1>
             <div className="flex items-center gap-2">
-              <Button>Support</Button>
-              <Button size="icon" onClick={() => setIsSaved(!isSaved)}>
+              <Button variant="secondary">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Support
+              </Button>
+              <Button size="icon" variant="outline" onClick={toggleSaveService}>
                 {isSaved ? <HeartOff /> : <Heart />}
               </Button>
-              {session && session.user.id === service?.creatorId && (
+
+              {/* Only show edit button for service creator */}
+              {session && service.owners.includes(session.user.id) && (
                 <Button
                   variant="outline"
-                  onClick={() => router.push("/service/edit-service")}
+                  onClick={() =>
+                    router.push(`/service/edit-service?id=${serviceId}`)
+                  }
                 >
-                  Edit <Pencil className="ml-2 h-4 w-4" />
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
                 </Button>
               )}
+
+              {/* Version selector */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
-                    {selectedVersion?.name}{" "}
+                    {selectedVersion || "Select Version"}
                     <ChevronDown className="text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {versions.map((version) => (
+                  {service.versions.map((version) => (
                     <DropdownMenuItem
-                      key={version.vid}
-                      onClick={() => handleVersionSelect(version)}
+                      key={version.id}
+                      onClick={() => handleVersionSelect(version.version)}
                     >
-                      {version.name}
+                      {version.version}
+                      {version.version === selectedVersion && " (current)"}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -196,59 +193,173 @@ export default function ServicePage() {
             </div>
           </div>
 
-          <div className="mb-8 flex items-center gap-2">
-            {selectedVersion?.tags.map((tag: string) => (
-              <Badge key={tag} variant="outline">
+          {/* Tags */}
+          <div className="mb-6 flex flex-wrap gap-2">
+            {service.tags.map((tag, index) => (
+              <Badge key={index} variant="secondary">
                 {tag}
               </Badge>
             ))}
           </div>
 
-          <p>{selectedVersion?.description}</p>
-        </div>
+          {/* Last updated info */}
+          <div className="mb-4 text-sm text-muted-foreground">
+            Last updated: {new Date(service.updatedAt).toLocaleDateString()}
+          </div>
 
-        <Separator className="my-4" />
-
-        <div className="flex-grow p-4">
-          {selectedVersion?.details.map((detail: any, index: number) => (
-            <div key={index} className="mb-12">
-              <h2 className="mb-4 text-xl font-semibold">{detail.title}</h2>
-
-              {detail.table ? (
-                <div className="overflow-x-auto">
-                  <p className="mb-4">{detail.content}</p>
-                  <table className="min-w-full border">
-                    <thead>
-                      <tr>
-                        <th
-                          colSpan={2}
-                          className="border bg-gray-100 px-4 py-2 text-left"
-                        >
-                          Methods
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.table.map((row: any, idx: number) => (
-                        <tr key={idx}>
-                          <td className="w-1/4 border px-4 py-2">
-                            <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-                              {row.code}
-                            </code>
-                          </td>
-                          <td className="w-3/4 border px-4 py-2">
-                            {row.description}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          {/* Service description */}
+          <div className="mb-8">
+            {selectedVersion ? (
+              versionLoading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading version information...</span>
                 </div>
+              ) : versionData ? (
+                <p className="text-lg">{versionData.versionDescription}</p>
               ) : (
-                <p className="mb-4">{detail.content}</p>
-              )}
+                <p className="text-muted-foreground">
+                  No version description available
+                </p>
+              )
+            ) : (
+              <p className="text-muted-foreground">
+                Select a version to see details
+              </p>
+            )}
+          </div>
+
+          <Separator className="my-8" />
+
+          {/* Version Content */}
+          {selectedVersion ? (
+            versionLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : versionError ? (
+              <div className="rounded-md bg-destructive/10 p-4 text-center">
+                <p className="font-medium text-destructive">
+                  Error loading version content: {versionError.message}
+                </p>
+              </div>
+            ) : versionData && versionData.contents ? (
+              <div className="space-y-10">
+                {versionData.contents.map((content, index) => (
+                  <div key={content.id || index} className="mb-10">
+                    <h2 className="mb-4 text-2xl font-semibold">
+                      {content.title}
+                    </h2>
+
+                    {/* Content description */}
+                    <p className="mb-6 text-lg">{content.description}</p>
+
+                    {/* If content has table rows, display them */}
+                    {content.rows && content.rows.length > 0 && (
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-1/3">
+                                Method/Code
+                              </TableHead>
+                              <TableHead>Description</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {content.rows.map((row) => (
+                              <TableRow key={row.id}>
+                                <TableCell className="font-mono">
+                                  {row.routeName}
+                                </TableCell>
+                                <TableCell>{row.description}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+
+                    {index < versionData.contents.length - 1 && (
+                      <Separator className="mt-10" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-10 text-center">
+                <p className="text-muted-foreground">
+                  No content available for this version
+                </p>
+              </div>
+            )
+          ) : (
+            <div className="py-10 text-center">
+              <p className="text-muted-foreground">
+                Select a version to view content
+              </p>
             </div>
-          ))}
+          )}
+
+          {/* Ratings Section */}
+          {service.ratings && service.ratings.length > 0 && (
+            <>
+              <Separator className="my-8" />
+              <div className="mb-6">
+                <h2 className="mb-6 text-2xl font-bold">Customer Reviews</h2>
+                <div className="space-y-6">
+                  {service.ratings.map((rating, index) => (
+                    <div key={index} className="mb-6 rounded-lg border p-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <h3 className="text-lg font-semibold">
+                          {rating.consumerName}
+                        </h3>
+                        <div className="flex">
+                          {Array.from({ length: rating.starValue }).map(
+                            (_, i) => (
+                              <span key={i} className="text-yellow-500">
+                                ★
+                              </span>
+                            ),
+                          )}
+                          {Array.from({ length: 5 - rating.starValue }).map(
+                            (_, i) => (
+                              <span key={i} className="text-gray-300">
+                                ★
+                              </span>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(rating.createdAt).toLocaleDateString()}
+                      </div>
+                      <p className="mt-2">{rating.content}</p>
+
+                      {/* Owner replies */}
+                      {rating.comments && rating.comments.length > 0 && (
+                        <div className="mt-4 rounded-md bg-muted p-4">
+                          <p className="font-medium">
+                            {rating.comments[0].ownerName} (Owner)
+                          </p>
+                          <p className="mt-1">{rating.comments[0].content}</p>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            {new Date(
+                              rating.comments[0].createdAt,
+                            ).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
+
+                      {index < service.ratings.length - 1 && (
+                        <Separator className="my-4" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

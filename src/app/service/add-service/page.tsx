@@ -16,14 +16,16 @@ import {
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Badge } from "~/components/ui/badge";
-import { Plus, Trash2, X, PlusCircle } from "lucide-react";
+import { Plus, Trash2, X, PlusCircle, Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
+import { useToast } from "~/hooks/use-toast";
+import { api } from "~/trpc/react";
 
-import { AddServiceSidebar } from "../../../components/service/AddServiceSidebar";
+import { AddServiceSidebar } from "~/components/service/AddServiceSidebar";
 
 // Define interfaces for better type safety
 interface TableRow {
@@ -34,16 +36,16 @@ interface TableRow {
 interface DetailItem {
   title: string;
   content: string;
-  table: TableRow[]; // Always an array, never undefined
+  table: TableRow[];
 }
 
 // Define form schema with consistent structure
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Service name must be at least 2 characters.",
+  name: z.string().min(1, {
+    message: "Service name must be at least 1 characters.",
   }),
-  description: z.string().min(10, {
-    message: "Description must be at least 10 characters.",
+  description: z.string().min(1, {
+    message: "Description must be at least 1 characters.",
   }),
   version: z.string().min(1, {
     message: "Version is required (e.g. 1.0).",
@@ -53,7 +55,7 @@ const formSchema = z.object({
     .array(
       z.object({
         title: z.string().min(2),
-        content: z.string().default(""), // Always a string, never undefined
+        content: z.string().default(""),
         table: z
           .array(
             z.object({
@@ -61,7 +63,7 @@ const formSchema = z.object({
               description: z.string(),
             }),
           )
-          .default([]), // Always an array, never undefined
+          .default([]),
       }),
     )
     .default([]),
@@ -70,7 +72,9 @@ const formSchema = z.object({
 export default function AddServicePage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { toast } = useToast();
   const [tagInput, setTagInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize the form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -84,11 +88,15 @@ export default function AddServicePage() {
         {
           title: "",
           content: "",
-          table: [], // Empty array but guaranteed to exist
+          table: [],
         },
       ],
     },
   });
+
+  // tRPC mutations
+  const createService = api.service.create.useMutation();
+  const createVersion = api.version.create.useMutation();
 
   // Add a tag
   const addTag = () => {
@@ -120,7 +128,7 @@ export default function AddServicePage() {
         {
           title: "",
           content: "",
-          table: [{ code: "", description: "" }], // Initialize with one row
+          table: [{ code: "", description: "" }],
         },
       ]);
     } else {
@@ -129,7 +137,7 @@ export default function AddServicePage() {
         {
           title: "",
           content: "",
-          table: [], // Empty array by default
+          table: [],
         },
       ]);
     }
@@ -139,7 +147,7 @@ export default function AddServicePage() {
   const addTableRow = (detailIndex: number) => {
     const details = form.getValues("details");
     const detail = details[detailIndex] as any;
-    const currentTable = detail.table; // No need for type assertion now
+    const currentTable = detail.table;
 
     const updatedDetails = [...details];
     updatedDetails[detailIndex] = {
@@ -154,7 +162,7 @@ export default function AddServicePage() {
   const removeTableRow = (detailIndex: number, rowIndex: number) => {
     const details = form.getValues("details");
     const detail = details[detailIndex] as any;
-    const currentTable = detail.table; // No need for type assertion
+    const currentTable = detail.table;
 
     if (currentTable.length <= 1) return; // Keep at least one row
 
@@ -176,14 +184,79 @@ export default function AddServicePage() {
     );
   };
 
-  // Handle form submission
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // You would typically send this data to an API
-    console.log(values);
+  // Transform form data to match API format
+  const transformDataForAPI = (values: z.infer<typeof formSchema>) => {
+    // First create the contents array for the version API
+    const contents = values.details.map((detail) => {
+      // Convert table format to technical rows
+      const technicalRows = detail.table.map((row) => ({
+        routeName: row.code,
+        routeDocu: row.description,
+      }));
 
-    // For now, just log the values and navigate back
-    alert("Service created successfully!");
-    router.push("/service/services");
+      return {
+        title: detail.title,
+        nonTechnicalDocu: detail.content,
+        technicalRows: technicalRows,
+      };
+    });
+
+    return {
+      serviceName: values.name,
+      serviceDescription: values.description,
+      version: values.version,
+      tags: values.tags,
+      contents: contents,
+    };
+  };
+
+  // Handle form submission
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!session?.user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to create a service",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const transformedData = transformDataForAPI(values);
+
+      // Step 1: Create the service
+      const service = await createService.mutateAsync({
+        name: transformedData.serviceName,
+      });
+
+      // Step 2: Create the first version with all the documentation
+      await createVersion.mutateAsync({
+        serviceId: service.id,
+        newVersion: transformedData.version,
+        versionDescription: transformedData.serviceDescription,
+        contents: transformedData.contents,
+      });
+
+      toast({
+        title: "Success!",
+        description: "Service created successfully",
+      });
+
+      // Navigate to the service page
+      router.push(`/service/${service.id}`);
+    } catch (error) {
+      console.error("Error creating service:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to create service",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -461,11 +534,21 @@ export default function AddServicePage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push("/service/services")}
+                onClick={() => router.push("/service")}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit">Create Service</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Service"
+                )}
+              </Button>
             </div>
           </form>
         </Form>

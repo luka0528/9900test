@@ -168,6 +168,8 @@ export const serviceRouter = createTRPCRouter({
         versions: service.versions.map((version) => ({
           versionDescription: version.description,
           contents: version.contents,
+          version: version.version,
+          id: version.id,
         })),
         owners: [...ownerIdToName.values()],
         ratings: ratings,
