@@ -1,10 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
-import { Badge } from "~/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,16 +9,12 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Separator } from "~/components/ui/separator";
-import { Pencil, ChevronDown, Heart, HeartOff } from "lucide-react";
+import { Upload, UserPen } from "lucide-react";
 
-import { ServiceSidebar } from "../../../components/service/ServiceSidebar";
+import { AllServiceSidebar } from "../../../components/service/AllServiceSidebar";
 
-export default function ServicePage() {
+export default function SubscriptionsPage() {
   const { data: session } = useSession();
-  const { serviceId } = useParams();
-  const router = useRouter();
-
-  const [isSaved, setIsSaved] = useState(false);
 
   // Dummy Data
   const services = [
@@ -137,119 +130,17 @@ export default function ServicePage() {
     },
   ];
 
-  // State to track seletected version
-  const [selectedVersion, setSelectedVersion] = useState(
-    services[0]?.versions[0],
-  );
-
-  const service = services.find((s) => s.id === parseInt(serviceId as string));
-  const versions = service?.versions || [];
-
-  useEffect(() => {
-    if (versions.length > 0) {
-      setSelectedVersion(versions[versions.length - 1]);
-    }
-  }, []);
-
-  const handleVersionSelect = (version: any) => {
-    setSelectedVersion(version);
-  };
-
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
-      <ServiceSidebar />
+      <AllServiceSidebar />
       <div className="flex h-full grow flex-col">
-        <div className="p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">{service?.name}</h1>
-            <div className="flex items-center gap-2">
-              <Button>Support</Button>
-              <Button size="icon" onClick={() => setIsSaved(!isSaved)}>
-                {isSaved ? <HeartOff /> : <Heart />}
-              </Button>
-              {session && session.user.id === service?.creatorId && (
-                <Button
-                  variant="outline"
-                  onClick={() => router.push("/service/edit-service")}
-                >
-                  Edit <Pencil className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    {selectedVersion?.name}{" "}
-                    <ChevronDown className="text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {versions.map((version) => (
-                    <DropdownMenuItem
-                      key={version.vid}
-                      onClick={() => handleVersionSelect(version)}
-                    >
-                      {version.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
-          <div className="mb-8 flex items-center gap-2">
-            {selectedVersion?.tags.map((tag: string) => (
-              <Badge key={tag} variant="outline">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-
-          <p>{selectedVersion?.description}</p>
+        <div className="flex min-h-[5rem] items-center justify-between p-4">
+          <h1 className="text-2xl font-bold">Your Subscriptions</h1>
         </div>
 
         <Separator className="my-4" />
 
-        <div className="flex-grow p-4">
-          {selectedVersion?.details.map((detail: any, index: number) => (
-            <div key={index} className="mb-12">
-              <h2 className="mb-4 text-xl font-semibold">{detail.title}</h2>
-
-              {detail.table ? (
-                <div className="overflow-x-auto">
-                  <p className="mb-4">{detail.content}</p>
-                  <table className="min-w-full border">
-                    <thead>
-                      <tr>
-                        <th
-                          colSpan={2}
-                          className="border bg-gray-100 px-4 py-2 text-left"
-                        >
-                          Methods
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.table.map((row: any, idx: number) => (
-                        <tr key={idx}>
-                          <td className="w-1/4 border px-4 py-2">
-                            <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-                              {row.code}
-                            </code>
-                          </td>
-                          <td className="w-3/4 border px-4 py-2">
-                            {row.description}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="mb-4">{detail.content}</p>
-              )}
-            </div>
-          ))}
-        </div>
+        {/* CONTENT HERE */}
       </div>
     </div>
   );
