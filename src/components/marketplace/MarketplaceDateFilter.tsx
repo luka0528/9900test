@@ -4,6 +4,8 @@ import React from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Button } from "~/components/ui/button";
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
+import { useFilterReset } from "~/lib/hooks/useFilterReset";
+
 
 // The set of dates to filter by
 const startYear = 2020;
@@ -17,6 +19,8 @@ export const MarketplaceDateFilter = () => {
     const searchParams = useSearchParams();
     const pathname = usePathname();
     const { replace } = useRouter();
+
+    const reset = useFilterReset();
 
     const [selectedDates, setSelectedDates] = React.useState<Set<number>>(
         new Set(searchParams.get('dates')?.split(',').map(Number) ?? [])
@@ -36,14 +40,16 @@ export const MarketplaceDateFilter = () => {
 
     const handleApplyFilter = () => {
         const params = new URLSearchParams(searchParams);
-        if (selectedDates.size > 0) {
-            params.set('dates', Array.from(selectedDates).join(','));
-        } else {
-            params.delete('dates');
-        }
-
+        params.delete('dates');
+        selectedDates.forEach((date) => {
+            params.append('dates', date.toString());
+        });
         replace(`${pathname}?${params.toString()}`);
     }
+
+    React.useEffect(() => {
+        setSelectedDates(new Set());
+    }, [reset]);
     
     return (
         <div>
