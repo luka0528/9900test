@@ -77,6 +77,7 @@ export const serviceRouter = createTRPCRouter({
     });
 
     const res = services.map((service) => ({
+      id: service.id,
       name: service.name,
       owner: ctx.session.user.name,
       tags: service.tags.map((tag) => tag.name),
