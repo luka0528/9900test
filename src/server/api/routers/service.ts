@@ -60,7 +60,7 @@ export const serviceRouter = createTRPCRouter({
     const services = await ctx.db.service.findMany();
     return services;
   }),
-  
+
   editName: protectedProcedure
     .input(
       z.object({ serviceId: z.string().min(1), newName: z.string().min(1) }),
@@ -175,8 +175,8 @@ export const serviceRouter = createTRPCRouter({
         ratings: ratings,
       };
     }),
-  
-    addTag: protectedProcedure
+
+  addTag: protectedProcedure
     .input(z.object({ serviceId: z.string().min(1), tag: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const serviceValid = await ctx.db.service.findUnique({
@@ -228,4 +228,4 @@ export const serviceRouter = createTRPCRouter({
 
       return { success: true };
     }),
-  });
+});
