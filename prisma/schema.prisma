@@ -182,30 +182,31 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String?   @unique
-    emailVerified DateTime?
-    password      String?
-    image         String?
-    bio           String?
-    accounts      Account[]
-    sessions      Session[]
-    verificationTokens VerificationToken[]
-    role          UserRole  @default(USER)
+  id                  String    @id @default(cuid())
+  name                String?
+  email               String?   @unique
+  emailVerified       DateTime?
+  password            String?
+  image               String?
+  bio                 String?
+  stripeCustomerId    String?   // NEW: store Stripe customer ID here
+  accounts            Account[]
+  sessions            Session[]
+  verificationTokens  VerificationToken[]
+  role                UserRole  @default(USER)
 
-    subscriptions ServiceConsumer[]
-    ownerships    ServiceOwner[]
+  subscriptions       ServiceConsumer[]
+  ownerships          ServiceOwner[]
 
-    notifications Notification[] @relation("UserNotifications")
-    sentNotifications Notification[] @relation("UserSentNotifications")
+  notifications       Notification[] @relation("UserNotifications")
+  sentNotifications   Notification[] @relation("UserSentNotifications")
     
-    isSubscriptionsPublic Boolean @default(true)
-    isRatingsPublic Boolean @default(true)
-    isUserDataCollectionAllowed Boolean @default(true)
+  isSubscriptionsPublic         Boolean @default(true)
+  isRatingsPublic                 Boolean @default(true)
+  isUserDataCollectionAllowed     Boolean @default(true)
 
-    billingHistory BillingReceipt[]
-    paymentMethods PaymentMethod[]
+  billingHistory      BillingReceipt[]
+  paymentMethods      PaymentMethod[]
 }
 
 enum UserRole {
@@ -235,6 +236,7 @@ model BillingReceipt {
     id      String   @id @default(cuid())
     date   DateTime @default(now())
     paymentMethodId String?
+    paymentMethod       PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
     amount  Float
     description String
     from String
@@ -254,20 +256,12 @@ enum BillingStatus {
 }
 
 model PaymentMethod {
-    id      String   @id @default(cuid())
-    paymentType PaymentType
-    nameOnCard String
-    cardNumber String
-    expirationDate DateTime
-    cvv String
-    billingAddress String
-    userId  String
-    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
+  id              String   @id @default(cuid())
+  stripePaymentId String   @unique  // Stripe Payment Method ID
+  stripeCustomerId String  // Links to Stripe Customer
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-enum PaymentType {
-    CREDIT_CARD
-    PAYPAL
-    APPLE_PAY
-    GOOGLE_PAY
+  // elation to BillingReceipt
+  billingReceipts BillingReceipt[]
 }
