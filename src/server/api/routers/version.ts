@@ -9,7 +9,21 @@ export const versionRouter = createTRPCRouter({
       z.object({
         serviceId: z.string().min(1),
         serviceVersion: z.string().min(1),
-        newDocumentation: z.string().min(1),
+        versionDescription: z.string().min(1),
+        contents: z.array(
+          z.object({
+            contentId: z.string().min(1),
+            title: z.string().min(1),
+            nonTechnicalDocu: z.string().min(1),
+            technicalRows: z.array(
+              z.object({
+                rowId: z.string().min(1),
+                routeName: z.string().min(1),
+                routeDocu: z.string().min(1),
+              }),
+            ),
+          }),
+        ),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -43,7 +57,26 @@ export const versionRouter = createTRPCRouter({
           id: version.id,
         },
         data: {
-          description: input.newDocumentation,
+          description: input.versionDescription,
+          version: input.serviceVersion,
+          contents: {
+            update: input.contents.map((content) => ({
+              where: { id: content.contentId },
+              data: {
+                title: content.title,
+                description: content.nonTechnicalDocu,
+                rows: {
+                  update: content.technicalRows.map((row) => ({
+                    where: { id: row.rowId },
+                    data: {
+                      routeName: row.routeName,
+                      description: row.routeDocu,
+                    },
+                  })),
+                },
+              },
+            })),
+          },
         },
       });
 
