@@ -189,7 +189,6 @@ model User {
   password            String?
   image               String?
   bio                 String?
-  stripeCustomerId    String?   // NEW: store Stripe customer ID here
   accounts            Account[]
   sessions            Session[]
   verificationTokens  VerificationToken[]
@@ -205,8 +204,10 @@ model User {
   isRatingsPublic                 Boolean @default(true)
   isUserDataCollectionAllowed     Boolean @default(true)
 
-  billingHistory      BillingReceipt[]
+  stripeCustomerId    String?
   paymentMethods      PaymentMethod[]
+  billingHistory      BillingReceipt[]
+  
 }
 
 enum UserRole {
