@@ -176,18 +176,32 @@ export const versionRouter = createTRPCRouter({
           description: input.versionDescription,
           version: input.serviceVersion,
           contents: {
-            update: input.contents.map((content) => ({
+            upsert: input.contents.map((content) => ({
               where: { id: content.contentId },
-              data: {
+              update: {
                 title: content.title,
                 description: content.nonTechnicalDocu,
                 rows: {
-                  update: content.technicalRows.map((row) => ({
+                  upsert: content.technicalRows.map((row) => ({
                     where: { id: row.rowId },
-                    data: {
+                    update: {
                       routeName: row.routeName,
                       description: row.routeDocu,
                     },
+                    create: {
+                      routeName: row.routeName,
+                      description: row.routeDocu,
+                    },
+                  })),
+                },
+              },
+              create: {
+                title: content.title,
+                description: content.nonTechnicalDocu,
+                rows: {
+                  create: content.technicalRows.map((row) => ({
+                    routeName: row.routeName,
+                    description: row.routeDocu,
                   })),
                 },
               },

@@ -61,6 +61,31 @@ export const serviceRouter = createTRPCRouter({
     return services;
   }),
 
+  getAllByUserId: protectedProcedure.query(async ({ ctx }) => {
+    const services = await ctx.db.service.findMany({
+      where: {
+        owners: {
+          some: {
+            userId: ctx.session.user.id,
+          },
+        },
+      },
+      include: {
+        tags: true,
+        versions: true,
+      },
+    });
+
+    const res = services.map((service) => ({
+      name: service.name,
+      owner: ctx.session.user.name,
+      tags: service.tags.map((tag) => tag.name),
+      latestVersion: service.versions[service.versions.length - 1]!.version,
+    }));
+
+    return res;
+  }),
+
   editName: protectedProcedure
     .input(
       z.object({ serviceId: z.string().min(1), newName: z.string().min(1) }),
