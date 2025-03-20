@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
@@ -53,7 +53,6 @@ const formSchema = z.object({
 });
 
 export default function EditServicePage() {
-  const { data: session } = useSession();
   const router = useRouter();
   const { toast } = useToast();
   const { serviceId: serviceIdParam, versionId: versionIdParam } = useParams();
@@ -110,7 +109,7 @@ export default function EditServicePage() {
           versionId: versionId,
         });
       },
-      onError: (error) => {
+      onError: () => {
         toast({
           title: "Error!",
           description: "Failed to update service",

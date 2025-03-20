@@ -101,6 +101,8 @@ export const serviceRouter = createTRPCRouter({
           name: `Service ${id}`,
           createdAt: new Date(),
           updatedAt: new Date(),
+          price: 0,
+          views: 0,
         };
       });
 
