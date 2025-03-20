@@ -3,7 +3,7 @@
 
 generator client {
     provider = "prisma-client-js"
-    binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+    binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -56,10 +56,9 @@ enum ConsumerEventType {
 // Service Management
 model Tag {
     id        String   @id @default(cuid())
-    name      String
+    name      String   @unique
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-    value     String
 
     services  Service[]
 }
@@ -75,6 +74,8 @@ model Service {
     versions ServiceVersion[]
     owners ServiceOwner[]
     consumers ServiceConsumer[]
+    price     Float?
+    views     Int     @default(0)
 }
 
 model ServiceVersion {
@@ -82,7 +83,29 @@ model ServiceVersion {
     serviceId String
     service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
     description String
-    version String
+    version     String
+    contents    ServiceContent[]
+    createdAt DateTime @default(now())
+
+	@@unique([serviceId, version])
+}
+
+model ServiceContent {
+    id        String   @id @default(cuid())
+    versionId String
+    version   ServiceVersion  @relation(fields: [versionId], references: [id], onDelete: Cascade)
+    title     String
+    description String
+    rows ContentTableRow[]
+    createdAt DateTime @default(now())
+}
+
+model ContentTableRow {
+    id        String   @id @default(cuid())
+    contentId String
+    content   ServiceContent  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+    routeName     String
+    description String
     createdAt DateTime @default(now())
 }
 
@@ -159,23 +182,32 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String?   @unique
-    emailVerified DateTime?
-    password      String?
-    image         String?
-    bio           String?
-    accounts      Account[]
-    sessions      Session[]
-    verificationTokens VerificationToken[]
-    role          UserRole  @default(USER)
+  id                  String    @id @default(cuid())
+  name                String?
+  email               String?   @unique
+  emailVerified       DateTime?
+  password            String?
+  image               String?
+  bio                 String?
+  accounts            Account[]
+  sessions            Session[]
+  verificationTokens  VerificationToken[]
+  role                UserRole  @default(USER)
 
-    subscriptions ServiceConsumer[]
-    ownerships    ServiceOwner[]
+  subscriptions       ServiceConsumer[]
+  ownerships          ServiceOwner[]
 
-    notifications Notification[] @relation("UserNotifications")
-    sentNotifications Notification[] @relation("UserSentNotifications")
+  notifications       Notification[] @relation("UserNotifications")
+  sentNotifications   Notification[] @relation("UserSentNotifications")
+    
+  isSubscriptionsPublic         Boolean @default(true)
+  isRatingsPublic                 Boolean @default(true)
+  isUserDataCollectionAllowed     Boolean @default(true)
+
+  stripeCustomerId    String?
+  paymentMethods      PaymentMethod[]
+  billingHistory      BillingReceipt[]
+  
 }
 
 enum UserRole {
@@ -198,4 +230,37 @@ model VerificationToken {
 enum VerificationTokenType {
     EMAIL
     PASSWORD_RESET
+}
+
+
+model BillingReceipt {
+    id      String   @id @default(cuid())
+    date   DateTime @default(now())
+    paymentMethodId String?
+    paymentMethod       PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+    amount  Float
+    description String
+    from String
+    to String
+    status BillingStatus
+    automaticRenewal Boolean
+    automaticRenewalDate DateTime?
+    userId  String
+    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum BillingStatus {
+    PAID
+    PENDING
+    PROCESSING
+    FAILED
+}
+
+model PaymentMethod {
+  id              String   @id @default(cuid())
+  stripePaymentId String   @unique 
+  stripeCustomerId String
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billingReceipts BillingReceipt[]
 }
