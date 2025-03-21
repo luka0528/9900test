@@ -45,8 +45,8 @@ const items = [
 export const ServiceSidebar = () => {
   return (
     <div className="h-full max-w-60 border-r lg:min-w-60">
-      <SidebarProvider className="items-start">
-        <Sidebar collapsible="none" className="hidden md:flex">
+      <SidebarProvider className="items-start h-full">
+        <Sidebar collapsible="none" className="hidden h-full md:flex bg-white">
           <SidebarHeader>
             <SidebarMenu>
               <SidebarMenuItem>
