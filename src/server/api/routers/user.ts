@@ -12,20 +12,36 @@ import { VerificationTokenType } from "@prisma/client";
 
 export const userRouter = createTRPCRouter({
   update: protectedProcedure
-    .input(z.object({
-      name: z.string().min(1, "Name is required"),
-      email: z.string().email("Invalid email address"),
-      bio: z.string().optional(),
-      isSubscriptionsPublic: z.boolean().default(false),
-      isRatingsPublic: z.boolean().default(false),
-      isUserDataCollectionAllowed: z.boolean().default(false),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1, "Name is required"),
+        email: z.string().email("Invalid email address"),
+        bio: z.string().optional(),
+        isSubscriptionsPublic: z.boolean().default(false),
+        isRatingsPublic: z.boolean().default(false),
+        isUserDataCollectionAllowed: z.boolean().default(false),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      const { name, email, bio, isSubscriptionsPublic, isRatingsPublic, isUserDataCollectionAllowed } = input;
+      const {
+        name,
+        email,
+        bio,
+        isSubscriptionsPublic,
+        isRatingsPublic,
+        isUserDataCollectionAllowed,
+      } = input;
 
       const updatedUser = await ctx.db.user.update({
         where: { id: ctx.session.user.id },
-        data: { name, email, bio, isSubscriptionsPublic, isRatingsPublic, isUserDataCollectionAllowed },
+        data: {
+          name,
+          email,
+          bio,
+          isSubscriptionsPublic,
+          isRatingsPublic,
+          isUserDataCollectionAllowed,
+        },
       });
 
       return { success: true, user: updatedUser };
@@ -372,8 +388,6 @@ export const userRouter = createTRPCRouter({
       }
     }),
 
-  
-
   checkEmailExists: publicProcedure
     .input(
       z.object({
@@ -412,7 +426,6 @@ export const userRouter = createTRPCRouter({
 
       return { success: true };
     }),
-  
 
   validateCurrentPassword: protectedProcedure
     .input(

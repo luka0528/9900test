@@ -160,9 +160,7 @@ export default function ServicePage() {
                   <Button
                     variant="outline"
                     onClick={() =>
-                      router.push(
-                        `/service/${serviceId}/${versionId}/edit`,
-                      )
+                      router.push(`/service/${serviceId}/${versionId}/edit`)
                     }
                   >
                     <Pencil className="mr-2 h-4 w-4" />

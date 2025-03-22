@@ -199,7 +199,7 @@ export default function ResetPasswordPage() {
         <Form {...resetForm}>
           <form
             onSubmit={resetForm.handleSubmit(onResetSubmit)}
-            className="space-y-4 w-80"
+            className="w-80 space-y-4"
             key="reset-password-form"
           >
             <FormField
