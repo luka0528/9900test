@@ -13,7 +13,7 @@ export default function UserLayout({
         <HydrateClient>
           <NavBar />
         </HydrateClient>
-        <div className="min-h-0 flex-1 flex justify-center">{children}</div>
+        <div className="flex min-h-0 flex-1 justify-center">{children}</div>
       </div>
     </SessionProvider>
   );

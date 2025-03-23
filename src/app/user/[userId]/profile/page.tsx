@@ -62,8 +62,7 @@ const UserProfilePage = () => {
       { userId: userId as string },
       { enabled: !!userId },
     );
-  const { mutate: updateUser } =
-    api.user.update.useMutation();
+  const { mutate: updateUser } = api.user.update.useMutation();
   const updatePasswordMutation = api.user.updatePassword.useMutation();
   const validateCurrentPassword =
     api.user.validateCurrentPassword.useMutation();
