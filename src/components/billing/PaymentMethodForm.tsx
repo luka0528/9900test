@@ -270,10 +270,7 @@ const PaymentMethodForm: React.FC = () => {
   );
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mt-4 space-y-4 rounded-lg border border-gray-300 p-6 shadow-lg"
-    >
+    <form onSubmit={handleSubmit} className="mt-4 space-y-4 rounded-lg p-6">
       <div className="flex space-x-4">
         <Image
           src="/logos/visa-icon.svg"
