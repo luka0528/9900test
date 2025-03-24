@@ -201,8 +201,8 @@ model User {
   sentNotifications   Notification[] @relation("UserSentNotifications")
     
   isSubscriptionsPublic         Boolean @default(true)
-  isRatingsPublic                 Boolean @default(true)
-  isUserDataCollectionAllowed     Boolean @default(true)
+  isRatingsPublic               Boolean @default(true)
+  isUserDataCollectionAllowed   Boolean @default(true)
 
   stripeCustomerId    String?
   paymentMethods      PaymentMethod[]
@@ -234,19 +234,21 @@ enum VerificationTokenType {
 
 
 model BillingReceipt {
-    id      String   @id @default(cuid())
-    date   DateTime @default(now())
+    id              String   @id @default(cuid())
+    date            DateTime @default(now())
+    amount          Float
+    description     String
+    from            String
+    to              String
+    
+    status                  BillingStatus
+    automaticRenewal        Boolean
+    automaticRenewalDate    DateTime?
+
     paymentMethodId String?
-    paymentMethod       PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
-    amount  Float
-    description String
-    from String
-    to String
-    status BillingStatus
-    automaticRenewal Boolean
-    automaticRenewalDate DateTime?
-    userId  String
-    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId          String
+    paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+    user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum BillingStatus {
@@ -267,7 +269,15 @@ model PaymentMethod {
   expYear          Int?
   cardholderName   String?
 
+  addressLine1     String?
+  addressLine2     String?
+  city             String?
+  state            String?
+  postalCode       String?
+  country          String?
+
   userId           String
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   billingReceipts  BillingReceipt[]
 }
