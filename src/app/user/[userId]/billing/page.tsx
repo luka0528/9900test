@@ -1,19 +1,63 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
 import {
-  Elements,
   CardElement,
   useStripe,
   useElements,
+  Elements,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { api } from "~/trpc/react";
 
+// ShadCN UI imports (adjust paths as needed):
+import { Button } from "~/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "~/components/ui/card";
+
+import BillingHistory from "~/components/billing/BillingHistory"; // Your existing BillingHistory component
+
 // Load your Stripe public key from an environment variable.
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
+
+// 1) A small component to display saved payment methods
+const SavedPaymentMethods: React.FC = () => {
+  const {
+    data: paymentMethods,
+    isLoading,
+    error,
+  } = api.user.getPaymentMethods.useQuery();
+
+  if (isLoading) {
+    return <div>Loading saved payment methods...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">Error: {error.message}</div>;
+  }
+
+  if (!paymentMethods || paymentMethods.length === 0) {
+    return <div>No payment methods saved yet.</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {paymentMethods.map((method) => (
+        <div key={method.id} className="rounded-md border p-4">
+          <p className="font-medium">Method ID: {method.stripePaymentId}</p>
+          {/* You can display other info here, like brand or last4 digits if you store them. */}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const PaymentMethodForm: React.FC = () => {
   const stripe = useStripe();
@@ -41,19 +85,18 @@ const PaymentMethodForm: React.FC = () => {
 
       // 3. Confirm the card setup to get a PaymentMethod.
       const result = await stripe.confirmCardSetup(clientSecret, {
-        payment_method: {
-          card: cardElement,
-        },
+        payment_method: { card: cardElement },
       });
       if (result.error) {
         toast.error(result.error.message || "Failed to setup card");
         setLoading(false);
         return;
       }
+
       const paymentMethodId =
         typeof result.setupIntent.payment_method === "string"
           ? result.setupIntent.payment_method
-          : result.setupIntent.payment_method?.id; // Extract ID if it's an object
+          : result.setupIntent.payment_method?.id;
 
       if (!paymentMethodId) throw new Error("No payment method ID returned");
 
@@ -68,8 +111,8 @@ const PaymentMethodForm: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="rounded border p-4">
+    <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+      <div className="rounded-md border p-4">
         <CardElement options={{ hidePostalCode: true }} />
       </div>
       <Button type="submit" disabled={!stripe || loading}>
@@ -82,9 +125,57 @@ const PaymentMethodForm: React.FC = () => {
 const BillingPage: React.FC = () => {
   return (
     <Elements stripe={stripePromise}>
-      <div className="container mx-auto mt-12 max-w-2xl">
-        <h1 className="mb-6 text-3xl font-bold">Billing Settings</h1>
-        <PaymentMethodForm />
+      {/* 
+        2) We give the container a minimum height to extend the page. 
+        You can tweak min-h-[80vh] to suit your layout.
+      */}
+      <div className="container mx-auto mt-12 min-h-[80vh] max-w-7xl">
+        <Card className="h-full px-10 py-8">
+          <CardHeader>
+            <CardTitle className="text-4xl font-bold">
+              Billing Settings
+            </CardTitle>
+            <CardDescription>
+              Manage your payment methods and view your billing history.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="paymentMethods">
+              <TabsList className="mb-4">
+                <TabsTrigger value="paymentMethods">
+                  Payment Methods
+                </TabsTrigger>
+                <TabsTrigger value="billingHistory">
+                  Billing History
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Payment Methods Tab */}
+              <TabsContent value="paymentMethods">
+                {/* Show existing saved payment methods */}
+                <div className="mb-16">
+                  <h3 className="mb-2 text-lg font-semibold">
+                    Saved Payment Methods
+                  </h3>
+                  <SavedPaymentMethods />
+                </div>
+                <hr className="my-4" />
+                {/* Form to add a new payment method */}
+                <div className="mt-16">
+                  <h3 className="mb-2 text-lg font-semibold">
+                    Add a New Payment Method
+                  </h3>
+                  <PaymentMethodForm />
+                </div>
+              </TabsContent>
+
+              {/* Billing History Tab */}
+              <TabsContent value="billingHistory">
+                <BillingHistory />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
     </Elements>
   );

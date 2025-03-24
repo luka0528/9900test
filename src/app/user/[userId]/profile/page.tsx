@@ -292,7 +292,12 @@ const UserProfilePage = () => {
                       <FormItem>
                         <FormLabel>Current Password</FormLabel>
                         <FormControl>
-                          <Input type="password" {...field} className="w-1/2" />
+                          <Input
+                            type="password"
+                            autoComplete="new-password"
+                            {...field}
+                            className="w-1/2"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

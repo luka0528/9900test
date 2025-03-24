@@ -560,4 +560,12 @@ export const userRouter = createTRPCRouter({
     });
     return paymentMethods;
   }),
+
+  getBillingHistory: protectedProcedure.query(async ({ ctx }) => {
+    const receipts = await ctx.db.billingReceipt.findMany({
+      where: { userId: ctx.session.user.id },
+      orderBy: { date: "desc" }, // Optional: sort newest first
+    });
+    return receipts;
+  }),
 });
