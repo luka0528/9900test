@@ -4,8 +4,6 @@ import React from "react";
 import { api } from "~/trpc/react";
 import { CreditCard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
-// ShadCN UI imports
 import { Button } from "~/components/ui/button";
 import {
   AlertDialog,
@@ -18,6 +16,23 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "~/components/ui/alert-dialog";
+
+// Helper function: Returns true if card expires within 3 months
+function isExpiringSoon(expMonth: number, expYear: number) {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // 1-based
+  const currentYear = now.getFullYear();
+
+  // Convert both dates to an absolute "month count" (year*12 + month)
+  const currentTotalMonths = currentYear * 12 + currentMonth;
+  const cardTotalMonths = expYear * 12 + expMonth;
+
+  // The difference in months between now and the card's expiry
+  const diff = cardTotalMonths - currentTotalMonths;
+
+  // Show "Expiring soon" if 0 <= diff <= 3
+  return diff >= 0 && diff <= 3;
+}
 
 const SavedPaymentMethods: React.FC = () => {
   // Fetch saved payment methods
@@ -68,11 +83,14 @@ const SavedPaymentMethods: React.FC = () => {
                     ? `**** **** **** ${method.last4}`
                     : `Card ending in ${method.last4}`}
                 </p>
-                {/* Expiration date */}
+                {/* Expiration date + "Expiring soon" */}
                 {method.expMonth && method.expYear && (
                   <p className="text-sm text-gray-500">
                     Expires {String(method.expMonth).padStart(2, "0")}/
                     {String(method.expYear).slice(-2)}
+                    {isExpiringSoon(method.expMonth, method.expYear) && (
+                      <span className="ml-2 text-red-600">Expiring soon</span>
+                    )}
                   </p>
                 )}
                 {/* Cardholder name */}
