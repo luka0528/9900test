@@ -104,17 +104,15 @@ const SavedPaymentMethods: React.FC = () => {
                   <p className="text-sm text-gray-500">
                     {method.addressLine1}
                     {method.addressLine2 ? `, ${method.addressLine2}` : ""}
+                    {method.postalCode && `, ${method.postalCode}`}
                   </p>
                 )}
                 {(method.city ?? method.state ?? method.postalCode) && (
                   <p className="text-sm text-gray-500">
-                    {method.city && `${method.city}, `}
-                    {method.state && `${method.state} `}
-                    {method.postalCode && `${method.postalCode}`}
+                    {method.city && `${method.city}`}
+                    {method.state && `, ${method.state}`}
+                    {method.country && `, ${method.country}`}
                   </p>
-                )}
-                {method.country && (
-                  <p className="text-sm text-gray-500">{method.country}</p>
                 )}
               </div>
             </div>

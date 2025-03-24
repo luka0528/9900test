@@ -304,7 +304,7 @@ const PaymentMethodForm: React.FC = () => {
           type="text"
           id="cardName"
           value={cardName}
-          onChange={(e) => setCardName(e.target.value)}
+          onChange={(e) => setCardName(e.target.value.trim())}
           placeholder="John Doe"
           className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
           required
@@ -323,7 +323,7 @@ const PaymentMethodForm: React.FC = () => {
           type="text"
           id="addressLine1"
           value={addressLine1}
-          onChange={(e) => setAddressLine1(e.target.value)}
+          onChange={(e) => setAddressLine1(e.target.value.trim())}
           placeholder="123 Main St"
           className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
           required
@@ -342,7 +342,7 @@ const PaymentMethodForm: React.FC = () => {
           type="text"
           id="addressLine2"
           value={addressLine2}
-          onChange={(e) => setAddressLine2(e.target.value)}
+          onChange={(e) => setAddressLine2(e.target.value.trim())}
           placeholder="Apartment, suite, etc. (optional)"
           className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
         />
@@ -358,7 +358,7 @@ const PaymentMethodForm: React.FC = () => {
             type="text"
             id="city"
             value={city}
-            onChange={(e) => setCity(e.target.value)}
+            onChange={(e) => setCity(e.target.value.trim())}
             placeholder="Sydney"
             className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
             required
@@ -372,7 +372,7 @@ const PaymentMethodForm: React.FC = () => {
             type="text"
             id="state"
             value={state}
-            onChange={(e) => setState(e.target.value)}
+            onChange={(e) => setState(e.target.value.trim())}
             placeholder="NSW"
             className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
             required
@@ -389,7 +389,7 @@ const PaymentMethodForm: React.FC = () => {
           type="text"
           id="postalCode"
           value={postalCode}
-          onChange={(e) => setPostalCode(e.target.value)}
+          onChange={(e) => setPostalCode(e.target.value.trim())}
           placeholder="2000"
           className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
           required
