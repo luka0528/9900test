@@ -257,10 +257,17 @@ enum BillingStatus {
 }
 
 model PaymentMethod {
-  id              String   @id @default(cuid())
-  stripePaymentId String   @unique 
+  id               String   @id @default(cuid())
+  stripePaymentId  String   @unique
   stripeCustomerId String
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  billingReceipts BillingReceipt[]
+
+  cardBrand        String?
+  last4            String?
+  expMonth         Int?
+  expYear          Int?
+  cardholderName   String?
+
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billingReceipts  BillingReceipt[]
 }
