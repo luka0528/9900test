@@ -234,19 +234,22 @@ enum VerificationTokenType {
 
 
 model BillingReceipt {
-    id      String   @id @default(cuid())
-    date   DateTime @default(now())
+    id              String   @id @default(cuid())
+    date            DateTime @default(now())
+    amount          Float
+    description     String
+    from            String
+    to              String
+    
+    status                  BillingStatus
+    automaticRenewal        Boolean
+    automaticRenewalDate    DateTime?
+
     paymentMethodId String?
-    paymentMethod       PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
-    amount  Float
-    description String
-    from String
-    to String
-    status BillingStatus
-    automaticRenewal Boolean
-    automaticRenewalDate DateTime?
-    userId  String
-    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+    
+    userId          String
+    user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum BillingStatus {
@@ -266,6 +269,13 @@ model PaymentMethod {
   expMonth         Int?
   expYear          Int?
   cardholderName   String?
+
+  addressLine1     String?
+  addressLine2     String?
+  city             String?
+  state            String?
+  postalCode       String?
+  country          String?
 
   userId           String
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
