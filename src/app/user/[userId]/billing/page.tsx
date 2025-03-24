@@ -95,7 +95,7 @@ const BillingPage: React.FC = () => {
                   <>
                     <Button
                       variant={"outline"}
-                      className="border-red-200 text-red-600 hover:bg-red-500 hover:text-white"
+                      className="mt-4 border-red-200 text-red-600 hover:bg-red-500 hover:text-white"
                       onClick={() => setShowAddPaymentMethod(false)}
                     >
                       Cancel
