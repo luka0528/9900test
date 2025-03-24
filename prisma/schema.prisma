@@ -201,8 +201,8 @@ model User {
   sentNotifications   Notification[] @relation("UserSentNotifications")
     
   isSubscriptionsPublic         Boolean @default(true)
-  isRatingsPublic                 Boolean @default(true)
-  isUserDataCollectionAllowed     Boolean @default(true)
+  isRatingsPublic               Boolean @default(true)
+  isUserDataCollectionAllowed   Boolean @default(true)
 
   stripeCustomerId    String?
   paymentMethods      PaymentMethod[]
@@ -246,10 +246,9 @@ model BillingReceipt {
     automaticRenewalDate    DateTime?
 
     paymentMethodId String?
-    paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
-    
     userId          String
-    user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+    user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum BillingStatus {
@@ -279,5 +278,6 @@ model PaymentMethod {
 
   userId           String
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   billingReceipts  BillingReceipt[]
 }
