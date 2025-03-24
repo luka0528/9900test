@@ -84,7 +84,10 @@ const BillingPage: React.FC = () => {
 
                 {/* Button to reveal the Add Payment Method form */}
                 {!showAddPaymentMethod ? (
-                  <Button onClick={() => setShowAddPaymentMethod(true)}>
+                  <Button
+                    onClick={() => setShowAddPaymentMethod(true)}
+                    className="mt-4"
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     Add Payment Method
                   </Button>
