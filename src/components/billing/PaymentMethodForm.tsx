@@ -11,12 +11,164 @@ import {
 } from "@stripe/react-stripe-js";
 import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
+import Select from "react-select";
+import Image from "next/image";
 
-// Example list of countries. You can localize or fetch dynamically.
-const COUNTRY_OPTIONS = [
-  { code: "AU", name: "Australia" },
-  { code: "US", name: "United States" },
-  { code: "GB", name: "United Kingdom" },
+// Define country options (add more if needed)
+const countryOptions = [
+  { value: "AF", label: "Afghanistan" },
+  { value: "AL", label: "Albania" },
+  { value: "DZ", label: "Algeria" },
+  { value: "AO", label: "Angola" },
+  { value: "AR", label: "Argentina" },
+  { value: "AM", label: "Armenia" },
+  { value: "AU", label: "Australia" },
+  { value: "AT", label: "Austria" },
+  { value: "AZ", label: "Azerbaijan" },
+  { value: "BD", label: "Bangladesh" },
+  { value: "BY", label: "Belarus" },
+  { value: "BE", label: "Belgium" },
+  { value: "BJ", label: "Benin" },
+  { value: "BO", label: "Bolivia" },
+  { value: "BA", label: "Bosnia and Herzegovina" },
+  { value: "BW", label: "Botswana" },
+  { value: "BR", label: "Brazil" },
+  { value: "BG", label: "Bulgaria" },
+  { value: "BF", label: "Burkina Faso" },
+  { value: "BI", label: "Burundi" },
+  { value: "KH", label: "Cambodia" },
+  { value: "CM", label: "Cameroon" },
+  { value: "CA", label: "Canada" },
+  { value: "CF", label: "Central African Republic" },
+  { value: "TD", label: "Chad" },
+  { value: "CL", label: "Chile" },
+  { value: "CN", label: "China" },
+  { value: "CO", label: "Colombia" },
+  { value: "CD", label: "Congo (Democratic Republic)" },
+  { value: "CG", label: "Congo (Republic)" },
+  { value: "CR", label: "Costa Rica" },
+  { value: "HR", label: "Croatia" },
+  { value: "CU", label: "Cuba" },
+  { value: "CY", label: "Cyprus" },
+  { value: "CZ", label: "Czech Republic" },
+  { value: "DK", label: "Denmark" },
+  { value: "DJ", label: "Djibouti" },
+  { value: "DO", label: "Dominican Republic" },
+  { value: "EC", label: "Ecuador" },
+  { value: "EG", label: "Egypt" },
+  { value: "SV", label: "El Salvador" },
+  { value: "GQ", label: "Equatorial Guinea" },
+  { value: "EE", label: "Estonia" },
+  { value: "ET", label: "Ethiopia" },
+  { value: "FI", label: "Finland" },
+  { value: "FR", label: "France" },
+  { value: "GA", label: "Gabon" },
+  { value: "GM", label: "Gambia" },
+  { value: "GE", label: "Georgia" },
+  { value: "DE", label: "Germany" },
+  { value: "GH", label: "Ghana" },
+  { value: "GR", label: "Greece" },
+  { value: "GT", label: "Guatemala" },
+  { value: "GN", label: "Guinea" },
+  { value: "GW", label: "Guinea-Bissau" },
+  { value: "HT", label: "Haiti" },
+  { value: "HN", label: "Honduras" },
+  { value: "HU", label: "Hungary" },
+  { value: "IS", label: "Iceland" },
+  { value: "IN", label: "India" },
+  { value: "ID", label: "Indonesia" },
+  { value: "IR", label: "Iran" },
+  { value: "IQ", label: "Iraq" },
+  { value: "IE", label: "Ireland" },
+  { value: "IL", label: "Israel" },
+  { value: "IT", label: "Italy" },
+  { value: "CI", label: "Ivory Coast" },
+  { value: "JM", label: "Jamaica" },
+  { value: "JP", label: "Japan" },
+  { value: "JO", label: "Jordan" },
+  { value: "KZ", label: "Kazakhstan" },
+  { value: "KE", label: "Kenya" },
+  { value: "KP", label: "North Korea" },
+  { value: "KR", label: "South Korea" },
+  { value: "KW", label: "Kuwait" },
+  { value: "KG", label: "Kyrgyzstan" },
+  { value: "LA", label: "Laos" },
+  { value: "LV", label: "Latvia" },
+  { value: "LB", label: "Lebanon" },
+  { value: "LS", label: "Lesotho" },
+  { value: "LR", label: "Liberia" },
+  { value: "LY", label: "Libya" },
+  { value: "LT", label: "Lithuania" },
+  { value: "LU", label: "Luxembourg" },
+  { value: "MG", label: "Madagascar" },
+  { value: "MW", label: "Malawi" },
+  { value: "MY", label: "Malaysia" },
+  { value: "ML", label: "Mali" },
+  { value: "MR", label: "Mauritania" },
+  { value: "MX", label: "Mexico" },
+  { value: "MD", label: "Moldova" },
+  { value: "MN", label: "Mongolia" },
+  { value: "ME", label: "Montenegro" },
+  { value: "MA", label: "Morocco" },
+  { value: "MZ", label: "Mozambique" },
+  { value: "MM", label: "Myanmar" },
+  { value: "NA", label: "Namibia" },
+  { value: "NP", label: "Nepal" },
+  { value: "NL", label: "Netherlands" },
+  { value: "NZ", label: "New Zealand" },
+  { value: "NI", label: "Nicaragua" },
+  { value: "NE", label: "Niger" },
+  { value: "NG", label: "Nigeria" },
+  { value: "MK", label: "North Macedonia" },
+  { value: "NO", label: "Norway" },
+  { value: "OM", label: "Oman" },
+  { value: "PK", label: "Pakistan" },
+  { value: "PA", label: "Panama" },
+  { value: "PY", label: "Paraguay" },
+  { value: "PE", label: "Peru" },
+  { value: "PH", label: "Philippines" },
+  { value: "PL", label: "Poland" },
+  { value: "PT", label: "Portugal" },
+  { value: "QA", label: "Qatar" },
+  { value: "RO", label: "Romania" },
+  { value: "RU", label: "Russia" },
+  { value: "RW", label: "Rwanda" },
+  { value: "SA", label: "Saudi Arabia" },
+  { value: "SN", label: "Senegal" },
+  { value: "RS", label: "Serbia" },
+  { value: "SL", label: "Sierra Leone" },
+  { value: "SG", label: "Singapore" },
+  { value: "SK", label: "Slovakia" },
+  { value: "SI", label: "Slovenia" },
+  { value: "SO", label: "Somalia" },
+  { value: "ZA", label: "South Africa" },
+  { value: "SS", label: "South Sudan" },
+  { value: "ES", label: "Spain" },
+  { value: "LK", label: "Sri Lanka" },
+  { value: "SD", label: "Sudan" },
+  { value: "SE", label: "Sweden" },
+  { value: "CH", label: "Switzerland" },
+  { value: "SY", label: "Syria" },
+  { value: "TW", label: "Taiwan" },
+  { value: "TJ", label: "Tajikistan" },
+  { value: "TZ", label: "Tanzania" },
+  { value: "TH", label: "Thailand" },
+  { value: "TG", label: "Togo" },
+  { value: "TN", label: "Tunisia" },
+  { value: "TR", label: "Turkey" },
+  { value: "TM", label: "Turkmenistan" },
+  { value: "UG", label: "Uganda" },
+  { value: "UA", label: "Ukraine" },
+  { value: "AE", label: "United Arab Emirates" },
+  { value: "GB", label: "United Kingdom" },
+  { value: "US", label: "United States" },
+  { value: "UY", label: "Uruguay" },
+  { value: "UZ", label: "Uzbekistan" },
+  { value: "VE", label: "Venezuela" },
+  { value: "VN", label: "Vietnam" },
+  { value: "YE", label: "Yemen" },
+  { value: "ZM", label: "Zambia" },
+  { value: "ZW", label: "Zimbabwe" },
 ];
 
 const PaymentMethodForm: React.FC = () => {
@@ -24,10 +176,17 @@ const PaymentMethodForm: React.FC = () => {
   const elements = useElements();
 
   const [loading, setLoading] = useState(false);
+
+  // Card + address fields
   const [cardName, setCardName] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("AU"); // default to Australia
 
-  // tRPC context to invalidate queries on success
+  // tRPC context for invalidating queries on success
   const utils = api.useContext();
 
   // TRPC mutations
@@ -54,21 +213,26 @@ const PaymentMethodForm: React.FC = () => {
       const cardNumberElement = elements.getElement(CardNumberElement);
       if (!cardNumberElement) throw new Error("Card number element not found");
 
-      // 3. Confirm the card setup with name + country
+      // 3. Confirm the card setup with full billing details
       const result = await stripe.confirmCardSetup(clientSecret, {
         payment_method: {
           card: cardNumberElement,
           billing_details: {
             name: cardName,
             address: {
-              country, // pass the 2-letter country code
+              line1: addressLine1,
+              line2: addressLine2,
+              city,
+              state,
+              postal_code: postalCode,
+              country,
             },
           },
         },
       });
 
       if (result.error) {
-        toast.error(result.error.message || "Failed to set up card");
+        toast.error(result.error.message ?? "Failed to set up card");
         setLoading(false);
         return;
       }
@@ -82,30 +246,56 @@ const PaymentMethodForm: React.FC = () => {
         throw new Error("No payment method ID returned");
       }
 
-      // 4. Save the PaymentMethod ID in your database
-      await savePaymentMethodMutation.mutateAsync({ paymentMethodId });
+      // 4. Save the PaymentMethod + address in your DB
+      await savePaymentMethodMutation.mutateAsync({
+        paymentMethodId,
+        addressLine1,
+        addressLine2,
+        city,
+        state,
+        postalCode,
+        country,
+      });
+
       toast.success("Payment method added successfully");
-    } catch (err: any) {
-      console.error(err);
+    } catch {
       toast.error("Failed to add payment method");
     }
     setLoading(false);
   };
 
+  // Find the selected country option based on the country state
+  const selectedCountryOption = countryOptions.find(
+    (option) => option.value === country,
+  );
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-4 space-y-6 rounded-lg border p-6 shadow-lg"
+      className="mt-4 space-y-4 rounded-lg border border-gray-300 p-6 shadow-lg"
     >
-      {/* Brand icons row */}
       <div className="flex space-x-4">
-        <img src="/logos/visa-icon.svg" alt="Visa" className="h-6" />
-        <img
-          src="/logos/mastercard-icon.svg"
-          alt="Mastercard"
+        <Image
+          src="/logos/visa-icon.svg"
+          alt="Visa"
+          width={24}
+          height={24}
           className="h-6"
         />
-        <img src="/logos/amex-icon.svg" alt="Amex" className="h-6" />
+        <Image
+          src="/logos/mastercard-icon.svg"
+          alt="Mastercard"
+          width={24}
+          height={24}
+          className="h-6"
+        />
+        <Image
+          src="/logos/amex-icon.svg"
+          alt="Amex"
+          width={24}
+          height={24}
+          className="h-6"
+        />
       </div>
 
       {/* Name on Card */}
@@ -119,28 +309,137 @@ const PaymentMethodForm: React.FC = () => {
           value={cardName}
           onChange={(e) => setCardName(e.target.value)}
           placeholder="John Doe"
-          className="block w-full rounded-md border px-3 py-2 shadow-sm"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
           required
+        />
+      </div>
+
+      {/* Address Line 1 */}
+      <div>
+        <label
+          htmlFor="addressLine1"
+          className="mb-1 block text-sm font-medium"
+        >
+          Address Line 1
+        </label>
+        <input
+          type="text"
+          id="addressLine1"
+          value={addressLine1}
+          onChange={(e) => setAddressLine1(e.target.value)}
+          placeholder="123 Main St"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+          required
+        />
+      </div>
+
+      {/* Address Line 2 */}
+      <div>
+        <label
+          htmlFor="addressLine2"
+          className="mb-1 block text-sm font-medium"
+        >
+          Address Line 2
+        </label>
+        <input
+          type="text"
+          id="addressLine2"
+          value={addressLine2}
+          onChange={(e) => setAddressLine2(e.target.value)}
+          placeholder="Apartment, suite, etc. (optional)"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+        />
+      </div>
+
+      {/* City + State */}
+      <div className="flex space-x-4">
+        <div className="flex-1">
+          <label htmlFor="city" className="mb-1 block text-sm font-medium">
+            City
+          </label>
+          <input
+            type="text"
+            id="city"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="Sydney"
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+            required
+          />
+        </div>
+        <div className="flex-1">
+          <label htmlFor="state" className="mb-1 block text-sm font-medium">
+            State
+          </label>
+          <input
+            type="text"
+            id="state"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            placeholder="NSW"
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+            required
+          />
+        </div>
+      </div>
+
+      {/* Postal Code */}
+      <div>
+        <label htmlFor="postalCode" className="mb-1 block text-sm font-medium">
+          Postal/ZIP Code
+        </label>
+        <input
+          type="text"
+          id="postalCode"
+          value={postalCode}
+          onChange={(e) => setPostalCode(e.target.value)}
+          placeholder="2000"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+          required
+        />
+      </div>
+
+      {/* Country using react-select */}
+      <div>
+        <label className="mb-1 block text-sm font-medium">Country</label>
+        <Select
+          instanceId="country-select-instance"
+          options={countryOptions}
+          value={selectedCountryOption}
+          onChange={(option) => setCountry(option?.value ?? "")}
+          styles={{
+            menu: (provided) => ({
+              ...provided,
+              maxHeight: "200px",
+              overflowY: "auto",
+            }),
+            control: (provided) => ({
+              ...provided,
+              cursor: "pointer",
+            }),
+          }}
+          className="w-full"
+          placeholder="Select country..."
         />
       </div>
 
       {/* Card Number */}
       <div>
         <label className="mb-1 block text-sm font-medium">Card number</label>
-        <div className="rounded-md border p-3 shadow-sm">
+        <div className="rounded-md border border-gray-300 p-3 shadow-sm">
           <CardNumberElement
             options={{
               showIcon: true,
               style: {
                 base: {
                   fontSize: "16px",
-                  color: "#1f2937", // text-gray-800
+                  color: "#1f2937",
                   "::placeholder": {
-                    color: "#9ca3af", // text-gray-400
+                    color: "#9ca3af",
                   },
                 },
                 invalid: {
-                  color: "#ef4444", // red
+                  color: "#ef4444",
                 },
               },
             }}
@@ -148,14 +447,13 @@ const PaymentMethodForm: React.FC = () => {
         </div>
       </div>
 
-      {/* Expiration + CVC in one row */}
+      {/* Expiration + CVC */}
       <div className="flex space-x-4">
-        {/* Expiration date */}
         <div className="flex-1">
           <label className="mb-1 block text-sm font-medium">
             Expiration date
           </label>
-          <div className="rounded-md border p-3 shadow-sm">
+          <div className="rounded-md border border-gray-300 p-3 shadow-sm">
             <CardExpiryElement
               options={{
                 style: {
@@ -174,13 +472,11 @@ const PaymentMethodForm: React.FC = () => {
             />
           </div>
         </div>
-
-        {/* Security code */}
         <div className="flex-1">
           <label className="mb-1 block text-sm font-medium">
             Security code
           </label>
-          <div className="rounded-md border p-3 shadow-sm">
+          <div className="rounded-md border border-gray-300 p-3 shadow-sm">
             <CardCvcElement
               options={{
                 style: {
@@ -199,22 +495,6 @@ const PaymentMethodForm: React.FC = () => {
             />
           </div>
         </div>
-      </div>
-
-      {/* Country */}
-      <div>
-        <label className="mb-1 block text-sm font-medium">Country</label>
-        <select
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          className="block w-full rounded-md border bg-white px-3 py-2 shadow-sm hover:cursor-pointer"
-        >
-          {COUNTRY_OPTIONS.map((opt) => (
-            <option key={opt.code} value={opt.code}>
-              {opt.name}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* Submit button */}

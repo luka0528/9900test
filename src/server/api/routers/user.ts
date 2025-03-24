@@ -521,40 +521,41 @@ export const userRouter = createTRPCRouter({
     .input(
       z.object({
         paymentMethodId: z.string(), // Stripe PaymentMethod ID (pm_xxx)
+        addressLine1: z.string().optional(),
+        addressLine2: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        postalCode: z.string().optional(),
+        country: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Get the user and their Stripe customer ID
+      // 1. Fetch the user
       const user = await ctx.db.user.findUnique({
         where: { id: ctx.session.user.id },
       });
-
-      if (!user || !user.stripeCustomerId) {
+      if (!user?.stripeCustomerId) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "User or Stripe customer ID not found",
         });
       }
 
-      // Attach the payment method to the user's Stripe customer account
+      // 2. Attach the payment method to Stripe (so it's linked to this customer)
       await stripe.paymentMethods.attach(input.paymentMethodId, {
         customer: user.stripeCustomerId,
       });
 
-      // Retrieve the payment method from Stripe to get brand, last4, expiry, etc.
+      // 3. Retrieve card details from Stripe
       const pm = await stripe.paymentMethods.retrieve(input.paymentMethodId);
-
-      // If it's a card-type payment method
       const card = pm.card;
       const cardBrand = card?.brand ?? null;
       const last4 = card?.last4 ?? null;
       const expMonth = card?.exp_month ?? null;
       const expYear = card?.exp_year ?? null;
-
-      // This is the name on card you passed in billing_details
       const cardholderName = pm.billing_details?.name ?? null;
 
-      // Save the payment method in the database
+      // 4. Save the payment method + address in the DB
       await ctx.db.paymentMethod.create({
         data: {
           userId: user.id,
@@ -565,6 +566,14 @@ export const userRouter = createTRPCRouter({
           expMonth,
           expYear,
           cardholderName,
+
+          // Address fields from the input
+          addressLine1: input.addressLine1 ?? null,
+          addressLine2: input.addressLine2 ?? null,
+          city: input.city ?? null,
+          state: input.state ?? null,
+          postalCode: input.postalCode ?? null,
+          country: input.country ?? null,
         },
       });
 
@@ -594,8 +603,7 @@ export const userRouter = createTRPCRouter({
         });
       }
 
-      // 3. Detach from Stripe (optional but recommended)
-      // This disassociates the PM from the Stripe customer, so it’s truly gone.
+      // 3. Detach from Stripe
       await stripe.paymentMethods.detach(pm.stripePaymentId);
 
       // 4. Delete from the database
@@ -617,7 +625,7 @@ export const userRouter = createTRPCRouter({
   getBillingHistory: protectedProcedure.query(async ({ ctx }) => {
     const receipts = await ctx.db.billingReceipt.findMany({
       where: { userId: ctx.session.user.id },
-      orderBy: { date: "desc" }, // Optional: sort newest first
+      orderBy: { date: "desc" },
     });
     return receipts;
   }),

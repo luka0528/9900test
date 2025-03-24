@@ -19,9 +19,6 @@ import {
   AlertDialogCancel,
 } from "~/components/ui/alert-dialog";
 
-const capitalize = (str: string) =>
-  str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-
 const SavedPaymentMethods: React.FC = () => {
   // Fetch saved payment methods
   const {
@@ -65,27 +62,53 @@ const SavedPaymentMethods: React.FC = () => {
             <div className="flex items-center space-x-4">
               <CreditCard className="h-6 w-6 text-gray-600" />
               <div className="flex flex-col">
+                {/* Card brand & last 4 */}
                 <p className="font-medium">
                   {method.cardBrand
                     ? `**** **** **** ${method.last4}`
                     : `Card ending in ${method.last4}`}
                 </p>
+                {/* Expiration date */}
                 {method.expMonth && method.expYear && (
                   <p className="text-sm text-gray-500">
-                    Expires {method.expMonth}/{method.expYear}
+                    Expires {String(method.expMonth).padStart(2, "0")}/
+                    {String(method.expYear).slice(-2)}
                   </p>
                 )}
+                {/* Cardholder name */}
                 {method.cardholderName && (
                   <p className="text-sm text-gray-500">
                     Cardholder: {method.cardholderName}
                   </p>
+                )}
+                {/* Address fields */}
+                {(method.addressLine1 ?? method.addressLine2) && (
+                  <p className="text-sm text-gray-500">
+                    {method.addressLine1}
+                    {method.addressLine2 ? `, ${method.addressLine2}` : ""}
+                  </p>
+                )}
+                {(method.city ?? method.state ?? method.postalCode) && (
+                  <p className="text-sm text-gray-500">
+                    {method.city && `${method.city}, `}
+                    {method.state && `${method.state} `}
+                    {method.postalCode && `${method.postalCode}`}
+                  </p>
+                )}
+                {method.country && (
+                  <p className="text-sm text-gray-500">{method.country}</p>
                 )}
               </div>
             </div>
 
             {/* Right side: Delete button triggers the AlertDialog */}
             <AlertDialogTrigger asChild>
-              <Button variant="destructive">Delete</Button>
+              <Button
+                variant="outline"
+                className="border-red-200 text-red-600 hover:bg-red-500 hover:text-white"
+              >
+                Delete
+              </Button>
             </AlertDialogTrigger>
           </div>
 

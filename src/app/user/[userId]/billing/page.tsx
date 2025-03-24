@@ -1,18 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import { toast } from "sonner";
-import {
-  CardElement,
-  useStripe,
-  useElements,
-  Elements,
-} from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
-import { api } from "~/trpc/react";
+import React from "react";
 
-// ShadCN UI imports (adjust paths as needed):
-import { Button } from "~/components/ui/button";
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import {
   Card,
@@ -25,7 +17,6 @@ import {
 import BillingHistory from "~/components/billing/BillingHistory"; // Your existing BillingHistory component
 import SavedPaymentMethods from "~/components/billing/SavedPaymentMethods";
 import PaymentMethodForm from "~/components/billing/PaymentMethodForm";
-import { CreditCard } from "lucide-react";
 
 // Load your Stripe public key from an environment variable.
 const stripePromise = loadStripe(

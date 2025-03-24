@@ -1,12 +1,37 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import React from "react";
-import { api } from "~/trpc/react"; // Adjust path as needed
+import { api } from "~/trpc/react";
+import { Loader2 } from "lucide-react";
+import { Badge } from "~/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 
-// A small display component for billing history.
+// Helper to map billing status to a badge variant
+function getStatusVariant(
+  status: string,
+): "default" | "destructive" | "secondary" | "outline" {
+  switch (status) {
+    case "PAID":
+      return "default"; // or "secondary"
+    case "FAILED":
+      return "destructive";
+    case "PENDING":
+      return "secondary";
+    case "PROCESSING":
+      return "outline";
+    default:
+      return "default";
+  }
+}
+
 const BillingHistory: React.FC = () => {
-  // Fetch the billing receipts from the server.
   const { data, isLoading, error } = api.user.getBillingHistory.useQuery();
 
   if (isLoading) {
@@ -22,31 +47,47 @@ const BillingHistory: React.FC = () => {
     return <div className="text-red-500">Error: {error.message}</div>;
   }
 
-  // If there's no data or an empty array, show a placeholder message.
   if (!data || data.length === 0) {
     return <div>No billing history found.</div>;
   }
 
   return (
-    <div className="space-y-4">
-      {data.map((receipt) => (
-        <div key={receipt.id} className="rounded border p-4">
-          <p>
-            <strong>Date:</strong> {new Date(receipt.date).toLocaleString()}
-          </p>
-          <p>
-            <strong>Amount:</strong> {receipt.amount}
-          </p>
-          <p>
-            <strong>Description:</strong> {receipt.description}
-          </p>
-          <p>
-            <strong>Status:</strong> {receipt.status}
-          </p>
-          {/* Add any other fields you want to display from BillingReceipt */}
-        </div>
-      ))}
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Date</TableHead>
+          <TableHead>From</TableHead>
+          <TableHead>To</TableHead>
+          <TableHead>Amount</TableHead>
+          <TableHead>Description</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Auto Renewal</TableHead>
+          <TableHead>Renewal Date</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((receipt) => (
+          <TableRow key={receipt.id}>
+            <TableCell>{new Date(receipt.date).toLocaleString()}</TableCell>
+            <TableCell>{receipt.from || "-"}</TableCell>
+            <TableCell>{receipt.to || "-"}</TableCell>
+            <TableCell>{`$${receipt.amount}`}</TableCell>
+            <TableCell>{receipt.description}</TableCell>
+            <TableCell>
+              <Badge variant={getStatusVariant(receipt.status)}>
+                {receipt.status}
+              </Badge>
+            </TableCell>
+            <TableCell>{receipt.automaticRenewal ? "Yes" : "No"}</TableCell>
+            <TableCell>
+              {receipt.automaticRenewalDate
+                ? new Date(receipt.automaticRenewalDate).toLocaleString()
+                : "-"}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 };
 
