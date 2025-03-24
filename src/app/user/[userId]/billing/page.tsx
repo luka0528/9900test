@@ -23,7 +23,8 @@ import { Button } from "~/components/ui/button";
 import { Plus } from "lucide-react"; // Lucide icon
 
 const BillingPage: React.FC = () => {
-  const { userId } = useParams();
+  const params = useParams();
+  const userId = params.userId as string;
   const router = useRouter();
   const sessionId = useSession().data?.user?.id;
 
