@@ -1,6 +1,5 @@
 import { z } from "zod";
 import bcrypt, { hash } from "bcryptjs";
-import type { User } from "@prisma/client";
 import {
   createTRPCRouter,
   publicProcedure,
@@ -10,6 +9,7 @@ import { TRPCError } from "@trpc/server";
 import { createVerificationToken, verifyToken } from "~/lib/verification";
 import { sendVerificationEmail, sendPasswordResetEmail } from "~/lib/email";
 import { VerificationTokenType } from "@prisma/client";
+<<<<<<< HEAD
 import type { PrismaClient } from "@prisma/client";
 import Stripe from "stripe";
 
@@ -46,10 +46,48 @@ const updateUserField = async <K extends keyof User>(
     });
   }
 };
+=======
+>>>>>>> dev
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export const userRouter = createTRPCRouter({
+  update: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(1, "Name is required"),
+        email: z.string().email("Invalid email address"),
+        bio: z.string().optional(),
+        isSubscriptionsPublic: z.boolean().default(false),
+        isRatingsPublic: z.boolean().default(false),
+        isUserDataCollectionAllowed: z.boolean().default(false),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const {
+        name,
+        email,
+        bio,
+        isSubscriptionsPublic,
+        isRatingsPublic,
+        isUserDataCollectionAllowed,
+      } = input;
+
+      const updatedUser = await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data: {
+          name,
+          email,
+          bio,
+          isSubscriptionsPublic,
+          isRatingsPublic,
+          isUserDataCollectionAllowed,
+        },
+      });
+
+      return { success: true, user: updatedUser };
+    }),
+
   register: publicProcedure
     .input(
       z.object({
@@ -391,69 +429,6 @@ export const userRouter = createTRPCRouter({
       }
     }),
 
-  /* 
-  Updating USER FIELDS
-  */
-  updateName: protectedProcedure
-    .input(z.object({ name: z.string().min(1, "Name cannot be empty") }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const update = await updateUserField(ctx, "name", input.name);
-        return { success: true, name: update };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateEmail: protectedProcedure
-    .input(z.object({ email: z.string().email("Invalid email format") }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const update = await updateUserField(ctx, "email", input.email);
-        return { success: true, email: update };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateBio: protectedProcedure
-    .input(z.object({ bio: z.string().optional() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const update = await updateUserField(ctx, "bio", input.bio ?? "");
-        return { success: true, bio: update };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateImage: protectedProcedure
-    .input(z.object({ image: z.string().url("Invalid image URL") }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const update = await updateUserField(ctx, "image", input.image);
-        return { success: true, image: update };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updatePassword: protectedProcedure
-    .input(
-      z.object({
-        password: z.string().min(8, "Password must be at least 8 characters"),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const hashedPassword = await hash(input.password, 12);
-        const update = await updateUserField(ctx, "password", hashedPassword);
-        return { success: true, password: update };
-      } catch {
-        return { success: false };
-      }
-    }),
-
   checkEmailExists: publicProcedure
     .input(
       z.object({
@@ -472,9 +447,27 @@ export const userRouter = createTRPCRouter({
       }
     }),
 
-  /* 
-    Checking if email already exists in database
-  */
+  updatePassword: protectedProcedure
+    .input(
+      z.object({
+        password: z.string().min(8, "Password must be at least 8 characters"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { password } = input;
+
+      // Hash the new password
+      const hashedPassword = await hash(password, 12);
+
+      // Update user's password
+      await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data: { password: hashedPassword },
+      });
+
+      return { success: true };
+    }),
+
   validateCurrentPassword: protectedProcedure
     .input(
       z.object({
@@ -503,157 +496,4 @@ export const userRouter = createTRPCRouter({
         return { success: false };
       }
     }),
-
-  updateIsUserSubscriptionsPublic: protectedProcedure
-    .input(z.object({ isSubscriptionsPublic: z.boolean() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const res = await updateUserField(
-          ctx,
-          "isSubscriptionsPublic",
-          input.isSubscriptionsPublic,
-        );
-        return {
-          success: true,
-          isSubscriptionsPublic: res.isSubscriptionsPublic,
-        };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateIsUserRatingsPublic: protectedProcedure
-    .input(z.object({ isRatingsPublic: z.boolean() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const res = await updateUserField(
-          ctx,
-          "isRatingsPublic",
-          input.isRatingsPublic,
-        );
-        return { success: true, isRatingsPublic: res.isRatingsPublic };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  updateIsUserDataCollectionAllowed: protectedProcedure
-    .input(z.object({ isUserDataCollectionAllowed: z.boolean() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const res = await updateUserField(
-          ctx,
-          "isUserDataCollectionAllowed",
-          input.isUserDataCollectionAllowed,
-        );
-        return {
-          success: true,
-          isUserDataCollectionAllowed: res.isUserDataCollectionAllowed,
-        };
-      } catch {
-        return { success: false };
-      }
-    }),
-
-  initializeSetupIntent: protectedProcedure.mutation(async ({ ctx }) => {
-    // Fetch the current user from the database.
-    const user = await ctx.db.user.findUnique({
-      where: { id: ctx.session.user.id },
-    });
-    if (!user) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "User not found",
-      });
-    }
-
-    if (!user.email) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message:
-          "Email is required to create a Stripe customer. Fix this in your profile settings.",
-      });
-    }
-
-    if (!user.name) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message:
-          "A name is required to create a Stripe customer. Fix this in your profile settings.",
-      });
-    }
-
-    let stripeCustomerId = user.stripeCustomerId;
-    // If the user does not already have a Stripe customer ID, create one.
-    if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        name: user.name,
-      });
-      stripeCustomerId = customer.id;
-      await ctx.db.user.update({
-        where: { id: user.id },
-        data: { stripeCustomerId },
-      });
-    }
-
-    // Create a SetupIntent associated with the Stripe customer.
-    const setupIntent = await stripe.setupIntents.create({
-      customer: stripeCustomerId,
-    });
-
-    if (!setupIntent.client_secret) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to create SetupIntent",
-      });
-    }
-
-    return { clientSecret: setupIntent.client_secret };
-  }),
-
-  // Procedure to save the PaymentMethod returned by Stripe.
-  savePaymentMethod: protectedProcedure
-    .input(
-      z.object({
-        paymentMethodId: z.string(), // Stripe PaymentMethod ID (pm_xxx)
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Get the user and their Stripe customer ID
-      const user = await ctx.db.user.findUnique({
-        where: { id: ctx.session.user.id },
-      });
-
-      if (!user || !user.stripeCustomerId) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "User or Stripe customer ID not found",
-        });
-      }
-
-      // Attach the payment method to the user's Stripe customer account
-      await stripe.paymentMethods.attach(input.paymentMethodId, {
-        customer: user.stripeCustomerId,
-      });
-
-      // Save the payment method in the database
-      await ctx.db.paymentMethod.create({
-        data: {
-          userId: user.id,
-          stripeCustomerId: user.stripeCustomerId,
-          stripePaymentId: input.paymentMethodId,
-        },
-      });
-
-      return { success: true };
-    }),
-
-  getPaymentMethods: protectedProcedure.query(async ({ ctx }) => {
-    // Fetch payment methods associated with the current user
-    const paymentMethods = await ctx.db.paymentMethod.findMany({
-      where: { userId: ctx.session.user.id },
-    });
-    return paymentMethods;
-  }),
 });

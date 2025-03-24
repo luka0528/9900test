@@ -30,12 +30,7 @@ export const AzureIcon = () => {
 
 export const GithubIcon = () => {
   return (
-    <Image
-      src="/logos/github-icon.svg"
-      alt="GitHub"
-      width={20}
-      height={20}
-    />
+    <Image src="/logos/github-icon.svg" alt="GitHub" width={20} height={20} />
   );
 };
 
@@ -75,7 +70,9 @@ export function getKollmannLogo(size: "sm" | "md" | "lg") {
   return (
     <h1 className="font-trajan text-foreground">
       <span className={`text-primary text-${remSize}rem`}>K</span>
-      <span className={`text-foreground text-${remSize - 0.5}rem`}>OLLMANN</span>
+      <span className={`text-foreground text-${remSize - 0.5}rem`}>
+        OLLMANN
+      </span>
     </h1>
   );
 }

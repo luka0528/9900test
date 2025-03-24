@@ -32,8 +32,8 @@ export const AllServiceSidebar = () => {
 
   return (
     <div className="h-full max-w-60 border-r lg:min-w-60">
-      <SidebarProvider className="items-start">
-        <Sidebar collapsible="none" className="hidden md:flex">
+      <SidebarProvider className="h-full items-start">
+        <Sidebar collapsible="none" className="hidden h-full bg-white md:flex">
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupContent>

@@ -13,11 +13,11 @@ export const versionRouter = createTRPCRouter({
         contents: z.array(
           z.object({
             title: z.string().min(1),
-            nonTechnicalDocu: z.string(),
-            technicalRows: z.array(
+            description: z.string(),
+            rows: z.array(
               z.object({
                 routeName: z.string().min(1),
-                routeDocu: z.string().min(1),
+                description: z.string().min(1),
               }),
             ),
           }),
@@ -68,11 +68,11 @@ export const versionRouter = createTRPCRouter({
           contents: {
             create: input.contents.map((content) => ({
               title: content.title,
-              description: content.nonTechnicalDocu,
+              description: content.description,
               rows: {
-                create: content.technicalRows.map((row) => ({
+                create: content.rows.map((row) => ({
                   routeName: row.routeName,
-                  description: row.routeDocu,
+                  description: row.description,
                 })),
               },
             })),
@@ -83,25 +83,38 @@ export const versionRouter = createTRPCRouter({
       return createdVersion;
     }),
 
-  getDocumentation: publicProcedure
+  getDocumentationByVersionId: publicProcedure
     .input(
       z.object({
-        serviceId: z.string().min(1),
-        serviceVersion: z.string().min(1),
+        versionId: z.string().min(1),
       }),
     )
     .query(async ({ ctx, input }) => {
       const version = await ctx.db.serviceVersion.findUnique({
         where: {
-          serviceId_version: {
-            serviceId: input.serviceId,
-            version: input.serviceVersion,
-          },
+          // TODO: Make this a unique lookup with serviceId_versionId
+          id: input.versionId,
         },
-        include: {
+        select: {
+          description: true,
+          version: true,
+          createdAt: true,
           contents: {
-            include: {
-              rows: true,
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              createdAt: true,
+              versionId: true,
+              rows: {
+                select: {
+                  contentId: true,
+                  createdAt: true,
+                  id: true,
+                  routeName: true,
+                  description: true,
+                },
+              },
             },
           },
         },
@@ -110,32 +123,28 @@ export const versionRouter = createTRPCRouter({
       if (!version) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Service version not found",
+          message: "Version not found",
         });
       }
 
-      return {
-        versionDescription: version.description,
-        contents: version.contents,
-      };
+      return version;
     }),
 
-  editDocumentation: protectedProcedure
+  editVersion: protectedProcedure
     .input(
       z.object({
-        serviceId: z.string().min(1),
-        serviceVersion: z.string().min(1),
-        versionDescription: z.string().min(1),
+        versionId: z.string().min(1),
+        newDescription: z.string().min(1),
         contents: z.array(
           z.object({
-            contentId: z.string().min(1),
+            id: z.string().min(1),
             title: z.string().min(1),
-            nonTechnicalDocu: z.string(),
-            technicalRows: z.array(
+            description: z.string().min(1),
+            rows: z.array(
               z.object({
-                rowId: z.string(),
-                routeName: z.string(),
-                routeDocu: z.string(),
+                id: z.string().min(1),
+                routeName: z.string().min(1),
+                description: z.string().min(1),
               }),
             ),
           }),
@@ -143,13 +152,9 @@ export const versionRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Check that user owns this service and that this version exists
       const version = await ctx.db.serviceVersion.findUnique({
         where: {
-          serviceId_version: {
-            serviceId: input.serviceId,
-            version: input.serviceVersion,
-          },
+          id: input.versionId,
           service: {
             owners: {
               some: {
@@ -163,53 +168,58 @@ export const versionRouter = createTRPCRouter({
       if (!version) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Service or specified version not found",
+          message: "Version not found or you do not have permission to edit it",
         });
       }
 
-      // Edit the documentation
-      await ctx.db.serviceVersion.update({
+      return await ctx.db.serviceVersion.update({
         where: {
-          id: version.id,
+          id: input.versionId,
         },
         data: {
-          description: input.versionDescription,
-          version: input.serviceVersion,
+          description: input.newDescription,
+          // CONTENTS
           contents: {
+            deleteMany: {
+              id: {
+                notIn: input.contents.map((content) => content.id),
+              },
+            },
             upsert: input.contents.map((content) => ({
-              where: { id: content.contentId },
+              where: { id: content.id },
               update: {
                 title: content.title,
-                description: content.nonTechnicalDocu,
+                description: content.description,
+                // ROWS
                 rows: {
-                  upsert: content.technicalRows.map((row) => ({
-                    where: { id: row.rowId },
+                  deleteMany: {
+                    id: {
+                      notIn: content.rows.map((row) => row.id),
+                    },
+                  },
+                  upsert: content.rows.map((row) => ({
+                    where: { id: row.id },
                     update: {
                       routeName: row.routeName,
-                      description: row.routeDocu,
+                      description: row.description,
                     },
                     create: {
                       routeName: row.routeName,
-                      description: row.routeDocu,
+                      description: row.description,
                     },
                   })),
                 },
               },
               create: {
                 title: content.title,
-                description: content.nonTechnicalDocu,
+                description: content.description,
                 rows: {
-                  create: content.technicalRows.map((row) => ({
-                    routeName: row.routeName,
-                    description: row.routeDocu,
-                  })),
+                  create: content.rows,
                 },
               },
             })),
           },
         },
       });
-
-      return { success: true };
     }),
 });

@@ -20,7 +20,6 @@ import { Button } from "~/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
-
 // Form schema
 const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -65,7 +64,8 @@ export default function ForgotPasswordPage() {
       <div className="flex flex-col items-center gap-2">
         <h1 className="text-2xl font-bold">Reset your password</h1>
         <p className="text-sm text-muted-foreground">
-          Enter your email address and we&apos;ll send you a code to reset your password
+          Enter your email address and we&apos;ll send you a code to reset your
+          password
         </p>
       </div>
       <Form {...form}>

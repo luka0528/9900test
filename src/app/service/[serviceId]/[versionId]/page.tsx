@@ -37,6 +37,7 @@ export default function ServicePage() {
   const { data: session } = useSession();
   const params = useParams();
   const serviceId = params.serviceId as string;
+  const versionId = params.versionId as string;
   const router = useRouter();
   const { toast } = useToast();
 
@@ -48,8 +49,15 @@ export default function ServicePage() {
     data: service,
     isLoading: serviceLoading,
     error: serviceError,
-  } = api.service.getInfoById.useQuery(serviceId, {
-    enabled: !!serviceId,
+  } = api.service.getServiceMetadataById.useQuery({ serviceId });
+
+  // Fetch version data from backend
+  const {
+    data: versionData,
+    isLoading: versionLoading,
+    error: versionError,
+  } = api.version.getDocumentationByVersionId.useQuery({
+    versionId,
   });
 
   // Tries to get latest version
@@ -66,21 +74,6 @@ export default function ServicePage() {
       setSelectedVersion(latestVersion);
     }
   }, [service, selectedVersion]);
-
-  // For fetching version documentation when a version is selected
-  const {
-    data: versionData,
-    isLoading: versionLoading,
-    error: versionError,
-  } = api.version.getDocumentation.useQuery(
-    {
-      serviceId: serviceId,
-      serviceVersion: selectedVersion || "",
-    },
-    {
-      enabled: !!serviceId && !!selectedVersion,
-    },
-  );
 
   // Handler for version selection
   const handleVersionSelect = (version: string) => {
@@ -127,8 +120,8 @@ export default function ServicePage() {
             Service not found
           </h2>
           <p className="mt-2 text-muted-foreground">
-            The service you're looking for doesn't exist or you don't have
-            permission to view it.
+            The service you&apos;re looking for doesn&apos;t exist or you
+            don&apos;t have permission to view it.
           </p>
           <Button className="mt-4" onClick={() => router.push("/service")}>
             Back to Services
@@ -160,17 +153,20 @@ export default function ServicePage() {
               </Button>
 
               {/* Only show edit button for service creator */}
-              {session && service.ownerUserIds.includes(session.user.id) && (
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    router.push(`/service/edit-service?id=${serviceId}`)
-                  }
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              )}
+              {session &&
+                service.owners.some(
+                  (owner) => owner.user.id === session.user.id,
+                ) && (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      router.push(`/service/${serviceId}/${versionId}/edit`)
+                    }
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                )}
 
               {/* Version selector */}
               <DropdownMenu>
@@ -183,7 +179,7 @@ export default function ServicePage() {
                 <DropdownMenuContent align="end">
                   {service.versions.map((version) => (
                     <DropdownMenuItem
-                      key={version.id}
+                      key={version.version}
                       onClick={() => handleVersionSelect(version.version)}
                     >
                       {version.version}
@@ -197,16 +193,19 @@ export default function ServicePage() {
 
           {/* Tags */}
           <div className="mb-6 flex flex-wrap gap-2">
-            {service.tags.map((tag, index) => (
-              <Badge key={index} variant="secondary">
-                {tag}
+            {service.tags.map((tag) => (
+              <Badge key={tag.id} variant="secondary">
+                {tag.name}
               </Badge>
             ))}
           </div>
 
           {/* Last updated info */}
           <div className="mb-4 text-sm text-muted-foreground">
-            Last updated: {new Date(service.updatedAt).toLocaleDateString()}
+            Last updated:{" "}
+            {versionData?.createdAt
+              ? new Date(versionData.createdAt).toLocaleDateString()
+              : "N/A"}
           </div>
 
           {/* Service description */}
@@ -218,7 +217,7 @@ export default function ServicePage() {
                   <span>Loading version information...</span>
                 </div>
               ) : versionData ? (
-                <p>{versionData.versionDescription}</p>
+                <p>{versionData.description}</p>
               ) : (
                 <p className="text-muted-foreground">
                   No version description available
@@ -245,10 +244,10 @@ export default function ServicePage() {
                   Error loading version content: {versionError.message}
                 </p>
               </div>
-            ) : versionData && versionData.contents ? (
+            ) : versionData?.contents ? (
               <div className="space-y-10">
                 {versionData.contents.map((content, index) => (
-                  <div key={content.id || index} className="mb-10">
+                  <div key={index} className="mb-10">
                     <h2 className="mb-4 text-xl font-semibold">
                       {content.title}
                     </h2>

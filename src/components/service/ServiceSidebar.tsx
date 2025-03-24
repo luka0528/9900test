@@ -45,21 +45,18 @@ const items = [
 export const ServiceSidebar = () => {
   return (
     <div className="h-full max-w-60 border-r lg:min-w-60">
-      <SidebarProvider className="items-start">
-        <Sidebar collapsible="none" className="hidden md:flex">
+      <SidebarProvider className="h-full items-start">
+        <Sidebar collapsible="none" className="hidden h-full bg-white md:flex">
           <SidebarHeader>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" asChild>
-                  <Link href="/service/services">
+                  <Link href="/service/owned">
                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                       <ChevronLeft className="size-4" />
                     </div>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">
-                        Your Services
-                      </span>
-                      <span className="truncate text-xs">Blow me</span>
+                    <div className="grid flex-1 text-left font-semibold">
+                      Your Services
                     </div>
                   </Link>
                 </SidebarMenuButton>
