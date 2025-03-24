@@ -541,13 +541,66 @@ export const userRouter = createTRPCRouter({
         customer: user.stripeCustomerId,
       });
 
+      // Retrieve the payment method from Stripe to get brand, last4, expiry, etc.
+      const pm = await stripe.paymentMethods.retrieve(input.paymentMethodId);
+
+      // If it's a card-type payment method
+      const card = pm.card;
+      const cardBrand = card?.brand ?? null;
+      const last4 = card?.last4 ?? null;
+      const expMonth = card?.exp_month ?? null;
+      const expYear = card?.exp_year ?? null;
+
+      // This is the name on card you passed in billing_details
+      const cardholderName = pm.billing_details?.name ?? null;
+
       // Save the payment method in the database
       await ctx.db.paymentMethod.create({
         data: {
           userId: user.id,
           stripeCustomerId: user.stripeCustomerId,
           stripePaymentId: input.paymentMethodId,
+          cardBrand,
+          last4,
+          expMonth,
+          expYear,
+          cardholderName,
         },
+      });
+
+      return { success: true };
+    }),
+
+  deletePaymentMethod: protectedProcedure
+    .input(z.object({ paymentMethodId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // 1. Find the payment method in the DB
+      const pm = await ctx.db.paymentMethod.findUnique({
+        where: { id: input.paymentMethodId },
+      });
+
+      if (!pm) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Payment method not found.",
+        });
+      }
+
+      // 2. Ensure the user owns this payment method
+      if (pm.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to delete this payment method.",
+        });
+      }
+
+      // 3. Detach from Stripe (optional but recommended)
+      // This disassociates the PM from the Stripe customer, so it’s truly gone.
+      await stripe.paymentMethods.detach(pm.stripePaymentId);
+
+      // 4. Delete from the database
+      await ctx.db.paymentMethod.delete({
+        where: { id: input.paymentMethodId },
       });
 
       return { success: true };
