@@ -3,8 +3,8 @@
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { SidebarProvider } from "~/components/ui/sidebar";
-import type { SidebarItem } from "~/components/sidebar/SideBar";
-import { SideBar } from "~/components/sidebar/SideBar";
+import type { SidebarItem } from "~/components/sidebar/DefaultSideBar";
+import { DefaultSideBar } from "~/components/sidebar/DefaultSideBar";
 import { Package, Settings, Bell, PlusSquare } from "lucide-react";
 import type { BreadCrumbItem } from "~/components/sidebar/BreadCrumb";
 
@@ -35,36 +35,10 @@ export default function ProfileLayout({
           { title: "User Services", url: `/services`, icon: Package },
         ];
 
-  // Example breadcrumb items (adjust as needed)
-  const breadCrumbItems: BreadCrumbItem[] = [
-    { href: `/`, label: "Home" },
-    { href: `/user/${String(userId)}`, label: "User" },
-    {
-      href: `/user/${String(userId)}/services`,
-      label: sessionId === userId ? "My Services" : "Services",
-    },
-    {
-      href: `/user/${String(userId)}/profile`,
-      label: sessionId === userId ? "My Profile" : "Profile",
-    },
-  ];
-
   return (
-    <SidebarProvider>
-      {/* This flex container ensures sidebar and main content are side by side */}
-      <div className="flex min-h-screen w-full">
-        {/* Sidebar (fixed width) */}
-        <SideBar
-          sideBarItems={sideBarItems}
-          baseUrl={`/user/${String(userId)}`}
-          breadCrumbItems={breadCrumbItems}
-        />
-
-        {/* Main content expands to fill remaining space */}
-        <main className="flex-1 overflow-hidden bg-gray-100 p-0">
-          {children}
-        </main>
-      </div>
-    </SidebarProvider>
+    <div className="flex h-full w-full xl:max-w-[96rem]">
+      <DefaultSideBar items={sideBarItems} />
+      <main className="flex-1 h-full overflow-hidden p-0">{children}</main>
+    </div>
   );
 }

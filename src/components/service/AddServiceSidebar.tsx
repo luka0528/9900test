@@ -33,7 +33,7 @@ export const AddServiceSidebar = () => {
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarHeader>
-          <SidebarContent>
+          {/* <SidebarContent>
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -48,7 +48,7 @@ export const AddServiceSidebar = () => {
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
-          </SidebarContent>
+          </SidebarContent> */}
         </Sidebar>
       </SidebarProvider>
     </div>

@@ -14,20 +14,17 @@ import {
   SidebarProvider,
 } from "~/components/ui/sidebar";
 
-const items = [
-  {
-    title: "Your Services",
-    url: "/service/owned",
-    icon: ChevronRight,
-  },
-  {
-    title: "Your Subscriptions",
-    url: "/service/subscriptions",
-    icon: ChevronRight, 
-  },
-];
+interface DefaultSideBarProps {
+  items: SidebarItem[];
+}
 
-export const AllServiceSidebar = () => {
+export interface SidebarItem {
+  title: string;
+  url: string;
+  icon: React.ElementType;
+}
+
+export const DefaultSideBar = ({ items }: DefaultSideBarProps) => {
   const pathname = usePathname();
 
   return (
