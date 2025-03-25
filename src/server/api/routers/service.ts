@@ -251,6 +251,7 @@ export const serviceRouter = createTRPCRouter({
           id: input,
         },
         include: {
+          subscriptionTiers: true,
           tags: true,
           versions: {
             include: {
@@ -298,7 +299,6 @@ export const serviceRouter = createTRPCRouter({
           message: "Service not found",
         });
       }
-
       return service;
     }),
 
@@ -571,5 +571,44 @@ export const serviceRouter = createTRPCRouter({
 
       const nextCursor = services.length > limit ? services.pop()?.id : null;
       return { services, nextCursor };
+    }),
+
+  subscribeToTier: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string(),
+        tierId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+      });
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // Check the tier
+      const tier = await ctx.db.subscriptionTier.findUnique({
+        where: { id: input.tierId },
+      });
+      if (!tier || tier.serviceId !== service.id) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid tier" });
+      }
+
+      // Example: create a ServiceConsumer record or update existing
+      await ctx.db.serviceConsumer.create({
+        data: {
+          userId: ctx.session.user.id,
+          subscriptionTierId: tier.id,
+        },
+      });
+
+      // (Optional) create a BillingReceipt, charge the user, etc.
+
+      return { success: true };
     }),
 });
