@@ -8,6 +8,7 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import type { Query } from "~/components/marketplace/MarketplaceQuery";
+import { BillingStatus } from "@prisma/client";
 
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";
@@ -578,11 +579,19 @@ export const serviceRouter = createTRPCRouter({
       z.object({
         serviceId: z.string(),
         tierId: z.string(),
+        paymentMethodId: z.string().optional(),
+        autoRenewal: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const { serviceId, tierId, paymentMethodId, autoRenewal } = input;
+
+      // 1. Validate the service
       const service = await ctx.db.service.findUnique({
-        where: { id: input.serviceId },
+        where: { id: serviceId },
+        include: {
+          subscriptionTiers: true,
+        },
       });
       if (!service) {
         throw new TRPCError({
@@ -591,23 +600,79 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      // Check the tier
+      // 2. Validate the tier
       const tier = await ctx.db.subscriptionTier.findUnique({
-        where: { id: input.tierId },
+        where: { id: tierId },
       });
       if (!tier || tier.serviceId !== service.id) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid tier" });
       }
 
-      // Example: create a ServiceConsumer record or update existing
-      await ctx.db.serviceConsumer.create({
-        data: {
+      // 3. Check if user is already subscribed
+      //    e.g., find an existing ServiceConsumer record for this user + service
+      const existingSubscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
           userId: ctx.session.user.id,
-          subscriptionTierId: tier.id,
+          subscriptionTier: {
+            serviceId: serviceId,
+          },
         },
       });
 
-      // (Optional) create a BillingReceipt, charge the user, etc.
+      if (existingSubscription) {
+        // Option A: Throw an error if the user is already subscribed to any tier of this service
+        // throw new TRPCError({
+        //   code: "CONFLICT",
+        //   message: "User already subscribed to this service",
+        // });
+
+        // Option B: Update the existing subscription to the new tier
+        await ctx.db.serviceConsumer.update({
+          where: { id: existingSubscription.id },
+          data: {
+            subscriptionTierId: tier.id,
+          },
+        });
+      } else {
+        // 4. Create a new subscription record
+        await ctx.db.serviceConsumer.create({
+          data: {
+            userId: ctx.session.user.id,
+            subscriptionTierId: tier.id,
+          },
+        });
+      }
+
+      // 5. If a paymentMethodId is provided, handle payment/charge logic
+      if (paymentMethodId) {
+        // a) Verify the payment method belongs to the user
+        const paymentMethod = await ctx.db.paymentMethod.findUnique({
+          where: { id: paymentMethodId },
+        });
+        if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Payment method not found or doesn't belong to user",
+          });
+        }
+
+        // b) (Optional) Actually charge the user with Stripe here if you want a real charge
+        //    e.g., stripe.paymentIntents.create(...) or something similar
+        //    For demonstration, we'll skip that and just create a billing receipt.
+
+        await ctx.db.billingReceipt.create({
+          data: {
+            userId: ctx.session.user.id,
+            paymentMethodId: paymentMethod.id,
+            amount: tier.price,
+            description: `Subscription to ${tier.name}`,
+            from: service.name,
+            to: ctx.session.user.name ?? "", // or something
+            status: BillingStatus.PAID, // or PENDING if you want to finalize later
+            automaticRenewal: autoRenewal, // set to true if you plan to auto-renew
+          },
+        });
+      }
 
       return { success: true };
     }),

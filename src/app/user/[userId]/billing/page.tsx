@@ -101,7 +101,7 @@ const BillingPage: React.FC = () => {
                       Cancel
                     </Button>
                     {showAddPaymentMethod && (
-                      <div className="mt-4 rounded-md border p-4">
+                      <div className="mt-4 rounded-md border border-gray-300 bg-gray-50 p-4">
                         <h3 className="mb-2 pl-2 text-lg font-semibold">
                           Add a New Payment Method
                         </h3>
