@@ -77,7 +77,7 @@ export default function ServicesPage() {
               <Package className="mb-2 h-12 w-12 text-muted-foreground" />
               <h3 className="text-lg font-semibold">No services found</h3>
               <p className="text-muted-foreground">
-                You haven&apost created any services yet.
+                You haven&apos;t created any services yet.
               </p>
             </div>
           ) : (

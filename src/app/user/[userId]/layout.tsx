@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { SidebarProvider } from "~/components/ui/sidebar";
 import type { SidebarItem } from "~/components/sidebar/SideBar";
 import { SideBar } from "~/components/sidebar/SideBar";
-import { Package, Settings, Bell, PlusSquare } from "lucide-react";
+import { Package, Settings, Bell, PlusSquare, Receipt } from "lucide-react";
 import type { BreadCrumbItem } from "~/components/sidebar/BreadCrumb";
 
 export default function ProfileLayout({
@@ -29,6 +29,11 @@ export default function ProfileLayout({
             url: `/subscriptions`,
             icon: PlusSquare,
           },
+          {
+            title: "Personal Billing",
+            url: `/billing`,
+            icon: Receipt,
+          },
         ]
       : [
           { title: "View Profile", url: `/profile`, icon: Settings },
@@ -45,7 +50,15 @@ export default function ProfileLayout({
     },
     {
       href: `/user/${String(userId)}/profile`,
-      label: sessionId === userId ? "My Profile" : "Profile",
+      label: "Profile",
+    },
+    {
+      href: `/user/${String(userId)}/subscriptions`,
+      label: "Subscriptions",
+    },
+    {
+      href: `/user/${String(userId)}/billing`,
+      label: "Billing",
     },
   ];
 

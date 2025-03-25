@@ -9,23 +9,42 @@ import { TRPCError } from "@trpc/server";
 import { createVerificationToken, verifyToken } from "~/lib/verification";
 import { sendVerificationEmail, sendPasswordResetEmail } from "~/lib/email";
 import { VerificationTokenType } from "@prisma/client";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export const userRouter = createTRPCRouter({
   update: protectedProcedure
-    .input(z.object({
-      name: z.string().min(1, "Name is required"),
-      email: z.string().email("Invalid email address"),
-      bio: z.string().optional(),
-      isSubscriptionsPublic: z.boolean().default(false),
-      isRatingsPublic: z.boolean().default(false),
-      isUserDataCollectionAllowed: z.boolean().default(false),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1, "Name is required"),
+        email: z.string().email("Invalid email address"),
+        bio: z.string().optional(),
+        isSubscriptionsPublic: z.boolean().default(false),
+        isRatingsPublic: z.boolean().default(false),
+        isUserDataCollectionAllowed: z.boolean().default(false),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      const { name, email, bio, isSubscriptionsPublic, isRatingsPublic, isUserDataCollectionAllowed } = input;
+      const {
+        name,
+        email,
+        bio,
+        isSubscriptionsPublic,
+        isRatingsPublic,
+        isUserDataCollectionAllowed,
+      } = input;
 
       const updatedUser = await ctx.db.user.update({
         where: { id: ctx.session.user.id },
-        data: { name, email, bio, isSubscriptionsPublic, isRatingsPublic, isUserDataCollectionAllowed },
+        data: {
+          name,
+          email,
+          bio,
+          isSubscriptionsPublic,
+          isRatingsPublic,
+          isUserDataCollectionAllowed,
+        },
       });
 
       return { success: true, user: updatedUser };
@@ -372,8 +391,6 @@ export const userRouter = createTRPCRouter({
       }
     }),
 
-  
-
   checkEmailExists: publicProcedure
     .input(
       z.object({
@@ -412,7 +429,6 @@ export const userRouter = createTRPCRouter({
 
       return { success: true };
     }),
-  
 
   validateCurrentPassword: protectedProcedure
     .input(
@@ -442,4 +458,175 @@ export const userRouter = createTRPCRouter({
         return { success: false };
       }
     }),
+
+  initializeSetupIntent: protectedProcedure.mutation(async ({ ctx }) => {
+    // Fetch the current user from the database.
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.session.user.id },
+    });
+    if (!user) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    if (!user.email) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          "Email is required to create a Stripe customer. Fix this in your profile settings.",
+      });
+    }
+
+    if (!user.name) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          "A name is required to create a Stripe customer. Fix this in your profile settings.",
+      });
+    }
+
+    let stripeCustomerId = user.stripeCustomerId;
+    // If the user does not already have a Stripe customer ID, create one.
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.name,
+      });
+      stripeCustomerId = customer.id;
+      await ctx.db.user.update({
+        where: { id: user.id },
+        data: { stripeCustomerId },
+      });
+    }
+
+    // Create a SetupIntent associated with the Stripe customer.
+    const setupIntent = await stripe.setupIntents.create({
+      customer: stripeCustomerId,
+    });
+
+    if (!setupIntent.client_secret) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to create SetupIntent",
+      });
+    }
+
+    return { clientSecret: setupIntent.client_secret };
+  }),
+
+  // Procedure to save the PaymentMethod returned by Stripe.
+  savePaymentMethod: protectedProcedure
+    .input(
+      z.object({
+        paymentMethodId: z.string(), // Stripe PaymentMethod ID (pm_xxx)
+        addressLine1: z.string().optional(),
+        addressLine2: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        postalCode: z.string().optional(),
+        country: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // 1. Fetch the user
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+      });
+      if (!user?.stripeCustomerId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User or Stripe customer ID not found",
+        });
+      }
+
+      // 2. Attach the payment method to Stripe (so it's linked to this customer)
+      await stripe.paymentMethods.attach(input.paymentMethodId, {
+        customer: user.stripeCustomerId,
+      });
+
+      // 3. Retrieve card details from Stripe
+      const pm = await stripe.paymentMethods.retrieve(input.paymentMethodId);
+      const card = pm.card;
+      const cardBrand = card?.brand ?? null;
+      const last4 = card?.last4 ?? null;
+      const expMonth = card?.exp_month ?? null;
+      const expYear = card?.exp_year ?? null;
+      const cardholderName = pm.billing_details?.name ?? null;
+
+      // 4. Save the payment method + address in the DB
+      await ctx.db.paymentMethod.create({
+        data: {
+          userId: user.id,
+          stripeCustomerId: user.stripeCustomerId,
+          stripePaymentId: input.paymentMethodId,
+          cardBrand,
+          last4,
+          expMonth,
+          expYear,
+          cardholderName,
+
+          // Address fields from the input
+          addressLine1: input.addressLine1 ?? null,
+          addressLine2: input.addressLine2 ?? null,
+          city: input.city ?? null,
+          state: input.state ?? null,
+          postalCode: input.postalCode ?? null,
+          country: input.country ?? null,
+        },
+      });
+
+      return { success: true };
+    }),
+
+  deletePaymentMethod: protectedProcedure
+    .input(z.object({ paymentMethodId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // 1. Find the payment method in the DB
+      const pm = await ctx.db.paymentMethod.findUnique({
+        where: { id: input.paymentMethodId },
+      });
+
+      if (!pm) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Payment method not found.",
+        });
+      }
+
+      // 2. Ensure the user owns this payment method
+      if (pm.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to delete this payment method.",
+        });
+      }
+
+      // 3. Detach from Stripe
+      await stripe.paymentMethods.detach(pm.stripePaymentId);
+
+      // 4. Delete from the database
+      await ctx.db.paymentMethod.delete({
+        where: { id: input.paymentMethodId },
+      });
+
+      return { success: true };
+    }),
+
+  getPaymentMethods: protectedProcedure.query(async ({ ctx }) => {
+    // Fetch payment methods associated with the current user
+    const paymentMethods = await ctx.db.paymentMethod.findMany({
+      where: { userId: ctx.session.user.id },
+    });
+    return paymentMethods;
+  }),
+
+  getBillingHistory: protectedProcedure.query(async ({ ctx }) => {
+    const receipts = await ctx.db.billingReceipt.findMany({
+      where: { userId: ctx.session.user.id },
+      orderBy: { date: "desc" },
+    });
+    return receipts;
+  }),
 });
