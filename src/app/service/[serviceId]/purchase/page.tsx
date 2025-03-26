@@ -47,7 +47,7 @@ const PurchasePage: React.FC = () => {
 
   // Local state
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
-  const [autoRenew, setAutoRenew] = useState(false);
+  const [autoRenew, setAutoRenew] = useState(true);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     string | null
   >(null);
