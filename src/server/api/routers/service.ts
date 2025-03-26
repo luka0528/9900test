@@ -578,13 +578,20 @@ export const serviceRouter = createTRPCRouter({
     .input(
       z.object({
         serviceId: z.string(),
-        tierId: z.string(),
+        newTierId: z.string(),
+        currentTierId: z.string().optional(), // used if changing tiers
         paymentMethodId: z.string().optional(),
         autoRenewal: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { serviceId, tierId, paymentMethodId, autoRenewal } = input;
+      const {
+        serviceId,
+        newTierId,
+        currentTierId,
+        paymentMethodId,
+        autoRenewal,
+      } = input;
 
       // 1. Validate the service
       const service = await ctx.db.service.findUnique({
@@ -600,45 +607,62 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      // 2. Validate the tier
-      const tier = await ctx.db.subscriptionTier.findUnique({
-        where: { id: tierId },
+      // 2. Validate the new tier
+      const newTier = await ctx.db.subscriptionTier.findUnique({
+        where: { id: newTierId },
       });
-      if (!tier || tier.serviceId !== service.id) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid tier" });
+      if (!newTier || newTier.serviceId !== service.id) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid tier for this service",
+        });
       }
 
-      // 3. Check if user is already subscribed
-      //    e.g., find an existing ServiceConsumer record for this user + service
-      const existingSubscription = await ctx.db.serviceConsumer.findFirst({
-        where: {
-          userId: ctx.session.user.id,
-          subscriptionTier: {
-            serviceId: serviceId,
-          },
-        },
-      });
-
-      if (existingSubscription) {
-        // Option A: Throw an error if the user is already subscribed to any tier of this service
-        // throw new TRPCError({
-        //   code: "CONFLICT",
-        //   message: "User already subscribed to this service",
-        // });
-
-        // Option B: Update the existing subscription to the new tier
-        await ctx.db.serviceConsumer.update({
-          where: { id: existingSubscription.id },
-          data: {
-            subscriptionTierId: tier.id,
+      // 3. If currentTierId is provided, remove (or update) the old subscription
+      if (currentTierId) {
+        if (currentTierId === newTier.id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Current tier and new tier are the same",
+          });
+        }
+        const oldSubscription = await ctx.db.serviceConsumer.findFirst({
+          where: {
+            userId: ctx.session.user.id,
+            subscriptionTierId: currentTierId,
           },
         });
+
+        if (!oldSubscription) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No existing subscription found for currentTierId",
+          });
+        }
+
+        await ctx.db.serviceConsumer.update({
+          where: { id: oldSubscription.id },
+          data: { subscriptionTierId: newTier.id },
+        });
       } else {
-        // 4. Create a new subscription record
+        const existingSubscriptionToNewTier =
+          await ctx.db.serviceConsumer.findFirst({
+            where: {
+              userId: ctx.session.user.id,
+              subscriptionTierId: newTier.id,
+            },
+          });
+        if (existingSubscriptionToNewTier) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "User already subscribed to the new tier",
+          });
+        }
+
         await ctx.db.serviceConsumer.create({
           data: {
             userId: ctx.session.user.id,
-            subscriptionTierId: tier.id,
+            subscriptionTierId: newTier.id,
           },
         });
       }
@@ -656,20 +680,19 @@ export const serviceRouter = createTRPCRouter({
           });
         }
 
-        // b) (Optional) Actually charge the user with Stripe here if you want a real charge
-        //    e.g., stripe.paymentIntents.create(...) or something similar
-        //    For demonstration, we'll skip that and just create a billing receipt.
+        // b) TODO: Call Stripe
 
+        // c) Create a billing receipt
         await ctx.db.billingReceipt.create({
           data: {
             userId: ctx.session.user.id,
             paymentMethodId: paymentMethod.id,
-            amount: tier.price,
-            description: `Subscription to ${tier.name}`,
+            amount: newTier.price,
+            description: `Subscription to ${newTier.name}`,
             from: service.name,
-            to: ctx.session.user.name ?? "", // or something
-            status: BillingStatus.PAID, // or PENDING if you want to finalize later
-            automaticRenewal: autoRenewal, // set to true if you plan to auto-renew
+            to: ctx.session.user.name ?? "",
+            status: BillingStatus.PAID,
+            automaticRenewal: autoRenewal,
           },
         });
       }

@@ -629,4 +629,39 @@ export const userRouter = createTRPCRouter({
     });
     return receipts;
   }),
+
+  isUserSubscribedToService: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { serviceId } = input;
+
+      // 1) Find the user and their subscriptions, filtered by the requested serviceId
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        include: {
+          subscriptions: {
+            where: {
+              subscriptionTier: {
+                serviceId: serviceId,
+              },
+            },
+          },
+        },
+      });
+
+      // 2) If we find any matching subscriptions, user is subscribed
+      const isSubscribed = (user?.subscriptions.length ?? 0) > 0;
+
+      // 3) If subscribed, get the tier ID from the first subscription
+      let subscriptionTierId: string | null = null;
+      if (isSubscribed) {
+        subscriptionTierId = user?.subscriptions[0]?.subscriptionTierId ?? null;
+      }
+
+      return { isSubscribed, subscriptionTierId };
+    }),
 });
