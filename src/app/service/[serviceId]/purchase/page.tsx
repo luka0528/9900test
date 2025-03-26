@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeftIcon } from "lucide-react";
 
 import {
   Card,
@@ -124,9 +124,16 @@ const PurchasePage: React.FC = () => {
 
   return (
     <div className="container mx-auto mt-12 max-w-5xl">
-      <Card className="shadow-sm">
+      <Card className="shadow-md">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold">{service.name}</CardTitle>
+          <div className="flex items-center space-x-4">
+            <ArrowLeftIcon
+              className="cursor-pointer"
+              onClick={() => router.push(`/service/${serviceId}`)}
+            />
+            <CardTitle className="text-3xl font-bold">{service.name}</CardTitle>
+          </div>
+
           <CardDescription>
             {/* Example description: can be replaced with real data from service */}
             <p className="text-sm text-gray-600">
