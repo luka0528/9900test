@@ -50,7 +50,7 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="min-h-[60vh] max-w-6xl space-y-6 p-6">
+      <AlertDialogContent className="min-h-[60vh] max-w-4xl space-y-6 p-6">
         <AlertDialogHeader>
           <AlertDialogTitle className="mb-2 text-center text-2xl font-bold">
             {isSubscribed
@@ -67,10 +67,13 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
         <div className="space-y-4">
           {paymentMethods.length > 0 ? (
             <div className="flex w-full flex-col space-y-3">
+              <h3 className="text-lg font-semibold">
+                Select a payment method:
+              </h3>
               {paymentMethods.map((pm: any) => (
                 <label
                   key={pm.id}
-                  className="flex items-center space-x-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                  className="flex items-center space-x-3 rounded-md border border-gray-300 bg-white p-4 shadow-md transition-shadow hover:shadow-md"
                 >
                   <input
                     type="radio"

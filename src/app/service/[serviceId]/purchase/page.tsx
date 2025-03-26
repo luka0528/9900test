@@ -39,7 +39,8 @@ const PurchasePage: React.FC = () => {
   } = api.user.isUserSubscribedToService.useQuery({ serviceId });
 
   // 3. Fetch payment methods
-  const { data: paymentMethodsData } = api.user.getPaymentMethods.useQuery();
+  const { data: paymentMethodsData, isLoading: isPaymentDataLoading } =
+    api.user.getPaymentMethods.useQuery();
 
   // 4. Mutation to subscribe/update subscription
   const subscribeMutation = api.service.subscribeToTier.useMutation();
@@ -63,6 +64,12 @@ const PurchasePage: React.FC = () => {
       setCurrentTierId(null);
     }
   }, [subscriptionStatus]);
+
+  useEffect(() => {
+    if (!isPaymentDataLoading && paymentMethodsData && paymentMethodsData[0]) {
+      setSelectedPaymentMethod(paymentMethodsData[0].id);
+    }
+  }, [isPaymentDataLoading, paymentMethodsData]);
 
   // 5. The purchase/update flow
   const handlePurchase = async () => {

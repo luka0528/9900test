@@ -623,7 +623,7 @@ export const serviceRouter = createTRPCRouter({
         if (currentTierId === newTier.id) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Current tier and new tier are the same",
+            message: "Cannot subscribe to the same tier",
           });
         }
         const oldSubscription = await ctx.db.serviceConsumer.findFirst({
