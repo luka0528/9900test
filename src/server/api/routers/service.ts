@@ -114,35 +114,6 @@ export const serviceRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  getInfiniteServices: publicProcedure
-    .input(
-      z.object({
-        query: z.custom<Query>(),
-        cursor: z.number().nullish(),
-      }),
-    )
-    .query(async ({ input }) => {
-      const cursor = input.cursor ?? 0;
-      const limit = 12;
-
-      // Generates fake services as mock data.
-      const services: Service[] = Array.from({ length: limit }, (_, i) => {
-        const id = cursor + i;
-        return {
-          id: id.toString(),
-          name: `Service ${id}`,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          price: 0,
-          views: 0,
-        };
-      });
-
-      const nextCursor = services.length ? cursor + limit : null;
-
-      return { services, nextCursor };
-    }),
-
   getAll: publicProcedure.query(async ({ ctx }) => {
     const services = await ctx.db.service.findMany();
     return services;
@@ -563,4 +534,43 @@ export const serviceRouter = createTRPCRouter({
       const nextCursor = services.length > limit ? services.pop()?.id : null;
       return { services, nextCursor };
     }),
+
+	getRelatedServices: publicProcedure
+		.input(
+			z.object({
+				currentServiceId: z.string(), 
+				tags: z.array(z.string()).default([]),
+				limit: z.number().default(6),
+			}),
+		)
+		.query(async ({ input, ctx }) => {
+			const { currentServiceId, tags, limit } = input;
+			if (tags.length == 0) {
+				return {
+					relatedServices: [],
+					foundRelated: false,
+					message: "Cannot find similar services due to current service having no tags"
+				}
+			}
+			const services = await ctx.db.service.findMany({
+				where: {
+					id: {
+						not: currentServiceId,
+					},
+					tags: {
+						some: {
+							name: {
+								in: tags,
+							},
+						},
+					}
+				}
+			})
+			return {
+				relatedServices: services,
+				foundRelated: services.length > 0,
+				message: services.length > 0 ? "Found related services" : "No related services found"
+			}
+		})
+		
 });
