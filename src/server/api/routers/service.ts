@@ -540,7 +540,7 @@ export const serviceRouter = createTRPCRouter({
         take: limit,
       });
 
-      console.log(services);
+      console.log(JSON.stringify(services));
 
       const nextCursor = services.length > limit ? services.pop()?.id : null;
       return { services, nextCursor };

@@ -28,6 +28,7 @@ import {
   Loader2,
   MessageSquare,
   AlertTriangle,
+  Link as LinkIcon,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
@@ -50,6 +51,18 @@ export default function ServicePage() {
     isLoading: serviceLoading,
     error: serviceError,
   } = api.service.getServiceMetadataById.useQuery({ serviceId });
+
+  // Fetch related services
+  const {
+    data: relatedServicesData,
+    isLoading: relatedServicesLoading,
+  } = api.service.getRelatedServices.useQuery({
+    currentServiceId: serviceId,
+    tags: service?.tags.map((tag) => tag.name) || [],
+    limit: 6,
+  }, {
+    enabled: !!service, // Only run query when service data is available
+  });
 
   // Fetch version data from backend
   const {
@@ -295,6 +308,44 @@ export default function ServicePage() {
               <p className="text-muted-foreground">
                 Select a version to view content
               </p>
+            </div>
+          )}
+        </div>
+
+        {/* Related Services Section */}
+        <div className="p-6">
+          <Separator className="mb-8" />
+          <h2 className="mb-6 text-2xl font-bold">Related Services</h2>
+          
+          {relatedServicesLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : relatedServicesData?.foundRelated ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {relatedServicesData.relatedServices.map((relatedService) => (
+                <div 
+                  key={relatedService.id} 
+                  className="rounded-lg border p-4 hover:bg-accent/10 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold">{relatedService.name}</h3>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => router.push(`/service/${relatedService.id}`)}
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              <p>{relatedServicesData?.message || "No related services found"}</p>
             </div>
           )}
         </div>
