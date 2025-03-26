@@ -426,12 +426,23 @@ export const serviceRouter = createTRPCRouter({
           : [dates]
         : [];
       console.log(processTags);
-      let orderBy: Prisma.ServiceOrderByWithRelationInput = { views: "desc" };
+      let orderBy: Prisma.ServiceOrderByWithRelationInput = {
+        consumerEvents: {
+          _count: "desc",
+        },
+      };
       if (sort == "Price-Desc") {
-        orderBy = { price: "desc" } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = {
+          subscriptionTiers: {
+            price: "desc",
+          },
+        } as Prisma.ServiceOrderByWithRelationInput;
       } else if (sort == "Price-Asc") {
-        orderBy = { price: "asc" } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort == "New-to-Old") {
+        orderBy = {
+          subscriptionTiers: {
+            price: "asc",
+          },
+        } as Prisma.ServiceOrderByWithRelationInput;
         orderBy = {
           createdAt: "asc",
         } as Prisma.ServiceOrderByWithRelationInput;
