@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Separator } from "~/components/ui/separator";
-import { Upload, UserPen, Loader2, Package, ChevronRight } from "lucide-react";
+import { Upload, UserPen, Loader2, Package } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceCard } from "~/components/service/ServiceCard";
 import Link from "next/link";
