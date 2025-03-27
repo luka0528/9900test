@@ -27,6 +27,8 @@ export interface SidebarItem {
 export const DefaultSideBar = ({ items }: DefaultSideBarProps) => {
   const pathname = usePathname();
 
+  console.log(pathname);
+
   return (
     <div className="h-full max-w-60 border-r lg:min-w-60">
       <SidebarProvider className="h-full items-start">
@@ -35,24 +37,21 @@ export const DefaultSideBar = ({ items }: DefaultSideBarProps) => {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {items.map((item) => {
-                    const isActive = pathname === item.url;
-                    return (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          asChild
-                          className={isActive ? "bg-primary/10" : ""}
+                  {items.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                          className={pathname === item.url ? "bg-primary/10" : ""}
                         >
                           <Link href={item.url}>
                             <span>{item.title}</span>
                             <item.icon
-                              className={isActive ? "text-primary" : ""}
+                              className={pathname === item.url ? "text-primary" : ""}
                             />
                           </Link>
                         </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
+                    </SidebarMenuItem>
+                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

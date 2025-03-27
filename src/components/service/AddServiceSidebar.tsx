@@ -1,9 +1,6 @@
 import { ChevronLeft, FileText } from "lucide-react";
 import {
   Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -33,22 +30,6 @@ export const AddServiceSidebar = () => {
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarHeader>
-          {/* <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem key={"add-api-service"}>
-                    <SidebarMenuButton asChild className="bg-primary/10">
-                      <div>
-                        <FileText />
-                        <span>Add API Service</span>
-                      </div>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent> */}
         </Sidebar>
       </SidebarProvider>
     </div>
