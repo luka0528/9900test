@@ -58,7 +58,7 @@ export default function ServicePage() {
     isLoading: relatedServicesLoading,
   } = api.service.getRelatedServices.useQuery({
     currentServiceId: serviceId,
-    tags: service?.tags.map((tag) => tag.name) || [],
+    tags: service?.tags.map((tag) => tag.name) ?? [],
     limit: 6,
   }, {
     enabled: !!service, // Only run query when service data is available
@@ -124,7 +124,7 @@ export default function ServicePage() {
   }
 
   // Show error state
-  if (serviceError || !service) {
+  if (serviceError ?? !service) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="text-center">
@@ -185,7 +185,7 @@ export default function ServicePage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
-                    {selectedVersion || "Select Version"}
+                    {selectedVersion ?? "Select Version"}
                     <ChevronDown className="text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -339,7 +339,7 @@ export default function ServicePage() {
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              <p>{relatedServicesData?.message || "No related services found"}</p>
+              <p>{relatedServicesData?.message ?? "No related services found"}</p>
             </div>
           )}
         </div>

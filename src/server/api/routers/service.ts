@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import type { Prisma, Service } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import {
@@ -7,7 +7,6 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import type { Query } from "~/components/marketplace/MarketplaceQuery";
 
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";

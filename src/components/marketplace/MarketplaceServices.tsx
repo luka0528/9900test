@@ -8,7 +8,6 @@ import { MarketplaceService } from "./MarketplaceService";
 import { MarketplaceServicesSkeleton } from "./MarketplaceServicesSkeleton";
 import { MarketplaceServicesNoResults } from "./MarketplaceServicesNoResults";
 
-import { Loader2 } from "lucide-react";
 
 import type { Query } from "./MarketplaceQuery";
 
