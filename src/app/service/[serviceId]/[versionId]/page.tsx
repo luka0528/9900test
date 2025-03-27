@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
+import { ServiceCard } from "~/components/service/ServiceCard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +29,6 @@ import {
   Loader2,
   MessageSquare,
   AlertTriangle,
-  Link as LinkIcon,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
@@ -324,23 +324,17 @@ export default function ServicePage() {
           ) : relatedServicesData?.foundRelated ? (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {relatedServicesData.relatedServices.map((relatedService) => (
-                <div 
-                  key={relatedService.id} 
-                  className="rounded-lg border p-4 hover:bg-accent/10 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold">{relatedService.name}</h3>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => router.push(`/service/${relatedService.id}`)}
-                    >
-                      <LinkIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                  </div>
-                </div>
+                <ServiceCard
+                  key={relatedService.id}
+                  service={{
+                    id: relatedService.id,
+                    name: relatedService.name,
+                    owner: "Chill",
+                    tags: ["Chill"],
+                    latestVersionId: "Chill",
+                    latestVersion: "Chill",
+                  }}
+                />
               ))}
             </div>
           ) : (
