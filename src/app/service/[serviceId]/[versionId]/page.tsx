@@ -324,17 +324,17 @@ export default function ServicePage() {
           ) : relatedServicesData?.foundRelated ? (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {relatedServicesData.relatedServices.map((relatedService) => (
-                <ServiceCard
-                  key={relatedService.id}
-                  service={{
-                    id: relatedService.id,
-                    name: relatedService.name,
-                    owner: "Chill",
-                    tags: ["Chill"],
-                    latestVersionId: "Chill",
-                    latestVersion: "Chill",
-                  }}
-                />
+              <ServiceCard
+                key={relatedService.id}
+                service={{
+                id: relatedService.id,
+                name: relatedService.name,
+                owner: relatedService.owners[0]?.user.name ?? "",
+                tags: relatedService.tags.map((tag) => tag.name),
+                latestVersionId: relatedService.versions[0]?.id ?? "",
+                latestVersion: relatedService.versions[0]?.version ?? "",
+                }}
+              />
               ))}
             </div>
           ) : (

@@ -546,42 +546,62 @@ export const serviceRouter = createTRPCRouter({
       return { services, nextCursor };
     }),
 
-	getRelatedServices: publicProcedure
-		.input(
-			z.object({
-				currentServiceId: z.string(), 
-				tags: z.array(z.string()).default([]),
-				limit: z.number().default(6),
-			}),
-		)
-		.query(async ({ input, ctx }) => {
-			const { currentServiceId, tags, limit } = input;
-			if (tags.length == 0) {
-				return {
-					relatedServices: [],
-					foundRelated: false,
-					message: "Cannot find similar services due to current service having no tags"
-				}
-			}
-			const services = await ctx.db.service.findMany({
-				where: {
-					id: {
-						not: currentServiceId,
-					},
-					tags: {
-						some: {
-							name: {
-								in: tags,
-							},
-						},
-					}
-				}
-			})
-			return {
-				relatedServices: services,
-				foundRelated: services.length > 0,
-				message: services.length > 0 ? "Found related services" : "No related services found"
-			}
-		})
-		
+    getRelatedServices: publicProcedure
+    .input(
+      z.object({
+        currentServiceId: z.string(),
+        tags: z.array(z.string()).default([]),
+        limit: z.number().default(6),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const { currentServiceId, tags, limit } = input;
+      
+      if (tags.length === 0) {
+        return {
+          relatedServices: [],
+          foundRelated: false,
+          message: "Cannot find similar services due to current service having no tags"
+        };
+      }
+      
+      const services = await ctx.db.service.findMany({
+        where: {
+          id: { 
+            not: currentServiceId 
+          },
+          tags: { 
+            some: { 
+              name: { 
+                in: tags 
+              } 
+            } 
+          }
+        },
+        include: {
+          versions: {
+            orderBy: { 
+              createdAt: 'desc' 
+            },
+            take: 1
+          },
+          owners: {
+            include: {
+              user: true
+            }
+          },
+          tags: true
+        },
+        take: limit,
+        orderBy: {
+          updatedAt: 'desc'
+        }
+      });
+      
+      return {
+        relatedServices: services,
+        foundRelated: services.length > 0,
+        message: services.length > 0 ? "Found related services" : "No related services found"
+      };
+    })
 });
