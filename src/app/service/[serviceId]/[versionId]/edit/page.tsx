@@ -23,8 +23,7 @@ import { Separator } from "~/components/ui/separator";
 import { useToast } from "~/hooks/use-toast";
 import { api } from "~/trpc/react";
 import { createId } from "@paralleldrive/cuid2";
-
-import { AddServiceSidebar } from "~/components/service/AddServiceSidebar";
+import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
 
 // Define form schema with consistent structure
 const formSchema = z.object({
@@ -207,7 +206,7 @@ export default function EditServicePage() {
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
-      <AddServiceSidebar />
+      <GoBackSideBar />
       <div className="flex h-full grow flex-col overflow-y-auto p-6">
         <h1 className="mb-6 text-2xl font-bold">Edit Service</h1>
 

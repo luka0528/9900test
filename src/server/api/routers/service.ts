@@ -458,12 +458,14 @@ export const serviceRouter = createTRPCRouter({
           _count: "desc",
         },
       };
+      // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
       if (sort == "Price-Desc") {
         orderBy = {
           subscriptionTiers: {
             price: "desc",
           },
         } as Prisma.ServiceOrderByWithRelationInput;
+        // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
       } else if (sort == "Price-Asc") {
         orderBy = {
           subscriptionTiers: {
@@ -522,6 +524,7 @@ export const serviceRouter = createTRPCRouter({
               },
             },
           }),
+        // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
         ...(price &&
           price.length == 2 && {
             price: {
