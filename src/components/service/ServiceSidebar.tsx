@@ -8,7 +8,6 @@ import { DefaultSideBar, type SidebarItem } from "../sidebar/DefaultSideBar";
 
 // Menu items.
 
-
 export const ServiceSidebar = ({
   serviceId,
   versionId,

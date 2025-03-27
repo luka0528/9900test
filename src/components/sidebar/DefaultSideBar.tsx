@@ -40,15 +40,17 @@ export const DefaultSideBar = ({ items }: DefaultSideBarProps) => {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         asChild
-                          className={pathname === item.url ? "bg-primary/10" : ""}
-                        >
-                          <Link href={item.url}>
-                            <span>{item.title}</span>
-                            <item.icon
-                              className={pathname === item.url ? "text-primary" : ""}
-                            />
-                          </Link>
-                        </SidebarMenuButton>
+                        className={pathname === item.url ? "bg-primary/10" : ""}
+                      >
+                        <Link href={item.url}>
+                          <span>{item.title}</span>
+                          <item.icon
+                            className={
+                              pathname === item.url ? "text-primary" : ""
+                            }
+                          />
+                        </Link>
+                      </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>

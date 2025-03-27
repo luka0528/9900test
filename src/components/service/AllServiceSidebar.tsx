@@ -1,5 +1,8 @@
 import { ChevronRight } from "lucide-react";
-import { DefaultSideBar, type SidebarItem } from "~/components/sidebar/DefaultSideBar";
+import {
+  DefaultSideBar,
+  type SidebarItem,
+} from "~/components/sidebar/DefaultSideBar";
 
 const items: SidebarItem[] = [
   {
@@ -10,7 +13,7 @@ const items: SidebarItem[] = [
   {
     title: "Your Subscriptions",
     url: "/service/subscriptions",
-    icon: ChevronRight, 
+    icon: ChevronRight,
   },
 ];
 
