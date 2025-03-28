@@ -157,6 +157,7 @@ model ServiceConsumer {
     events ConsumerEvent[]
 
     paymentMethodId    String?
+    paymentMethod     PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
 }
 
 // Notifications
@@ -306,4 +307,5 @@ model PaymentMethod {
     user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     
     billingReceipts  BillingReceipt[]
+    serviceConsumers ServiceConsumer[]
 }
