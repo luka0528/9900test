@@ -28,11 +28,10 @@ import {
   Loader2,
   MessageSquare,
   AlertTriangle,
-  Loader,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
-import { useToast } from "~/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function ServicePage() {
   const { data: session } = useSession();
@@ -40,7 +39,6 @@ export default function ServicePage() {
   const serviceId = params.serviceId as string;
   const versionId = params.versionId as string;
   const router = useRouter();
-  const { toast } = useToast();
 
   const [isSaved, setIsSaved] = useState(false);
 
@@ -63,22 +61,13 @@ export default function ServicePage() {
   // Handle saving/favoriting service
   const toggleSaveService = () => {
     if (!session) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to save services",
-        variant: "destructive",
-      });
+      toast.error("Please log in to save services");
       return;
     }
 
     // Here you would call an API to save/unsave
     setIsSaved(!isSaved);
-    toast({
-      title: isSaved ? "Removed from favorites" : "Added to favorites",
-      description: isSaved
-        ? "Service removed from your saved list"
-        : "Service added to your saved list",
-    });
+    toast.success(isSaved ? "Removed from favorites" : "Added to favorites");
   };
 
   // Show loading state

@@ -22,7 +22,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
-import { useToast } from "~/hooks/use-toast";
+import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
 
@@ -59,7 +59,6 @@ const formSchema = z.object({
 export default function AddServicePage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const { toast } = useToast();
   const [tagInput, setTagInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -84,10 +83,7 @@ export default function AddServicePage() {
   // tRPC
   const createServiceCall = api.service.create.useMutation({
     onSuccess: (data) => {
-      toast({
-        title: "Success!",
-        description: "Service created successfully",
-      });
+      toast.success("Service created successfully");
       router.push(`/service/${data.serviceId}/${data.versionId}`);
     },
   });
@@ -186,11 +182,7 @@ export default function AddServicePage() {
   // Handle form submission
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!session?.user) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to create a service",
-        variant: "destructive",
-      });
+      toast.error("You must be logged in to create a service");
       return;
     }
 
@@ -205,12 +197,9 @@ export default function AddServicePage() {
       });
     } catch (error) {
       console.error("Error creating service:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to create service",
-        variant: "destructive",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create service",
+      );
     } finally {
       setIsSubmitting(false);
     }
