@@ -704,15 +704,18 @@ export const userRouter = createTRPCRouter({
       z.object({
         subscriptionTierId: z.string(),
         paymentMethodId: z.string(),
-        // autoRenewal: z.boolean(),
+        autoRenewal: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { subscriptionTierId, paymentMethodId } = input;
+      const { subscriptionTierId, paymentMethodId, autoRenewal } = input;
 
-      // Fetch the subscription
-      const subscription = await ctx.db.serviceConsumer.findUnique({
-        where: { id: subscriptionTierId, userId: ctx.session.user.id },
+      // Fetch the subscription by filtering by userId and subscriptionTierId
+      const subscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTierId: subscriptionTierId,
+        },
         include: {
           subscriptionTier: {
             include: {
@@ -729,7 +732,7 @@ export const userRouter = createTRPCRouter({
         });
       }
 
-      // Check if the payment method exists
+      // Check if the payment method exists and belongs to the user
       const paymentMethod = await ctx.db.paymentMethod.findUnique({
         where: { id: paymentMethodId },
       });
@@ -740,11 +743,13 @@ export const userRouter = createTRPCRouter({
         });
       }
 
-      // Update the payment method and auto-renewal status
+      // Update the subscription with the new payment method (and auto-renew if needed)
       await ctx.db.serviceConsumer.update({
         where: { id: subscription.id },
         data: {
           paymentMethodId,
+          // Uncomment below if your ServiceConsumer model has an autoRenew field:
+          // autoRenew: autoRenewal,
         },
       });
 

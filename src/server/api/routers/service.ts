@@ -804,4 +804,48 @@ export const serviceRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  switchTier: protectedProcedure
+    .input(
+      z.object({
+        oldTierId: z.string(),
+        newTierId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { oldTierId, newTierId } = input;
+
+      // 1) Find the user's subscription
+      const subscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTierId: oldTierId,
+        },
+      });
+      if (!subscription) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Subscription not found for the given tier",
+        });
+      }
+
+      // 2) Validate the new tier
+      const newTier = await ctx.db.subscriptionTier.findUnique({
+        where: { id: newTierId },
+      });
+      if (!newTier) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "New tier not found",
+        });
+      }
+
+      // 3) Update the subscription with the new tier
+      await ctx.db.serviceConsumer.update({
+        where: { id: subscription.id },
+        data: { subscriptionTierId: newTier.id },
+      });
+
+      return { success: true };
+    }),
 });
