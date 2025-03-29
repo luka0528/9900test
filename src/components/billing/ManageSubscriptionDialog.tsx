@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, {
+  Dispatch,
+  SetStateAction,
+  use,
+  useEffect,
+  useState,
+} from "react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -15,21 +21,18 @@ import { Button } from "~/components/ui/button";
 import { CreditCard, Edit, Trash, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
+
+// Import your PaymentMethodDialog and TiersGrid components
 import PaymentMethodDialog from "./PaymentMethodDialog";
-import ChangeTierDialog from "./ChangeTierDialog";
+import TiersGrid from "./TiersGrid";
 
-// Import Prisma types
-import {
-  SubscriptionTier,
-  PaymentMethod,
-  ServiceConsumer,
-} from "@prisma/client";
+// Import Prisma types (adjust as needed)
+import { SubscriptionTier, PaymentMethod } from "@prisma/client";
 
-// Create a composite type for subscription details
 interface ManageSubscriptionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  subscriptionTier: SubscriptionTier;
+  subscriptionTier: SubscriptionTier; // The currently subscribed tier
   refetchSubscriptions: () => void;
 }
 
@@ -39,26 +42,24 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   subscriptionTier,
   refetchSubscriptions,
 }) => {
-  // Sub-dialog states
+  // Local states
   const [showPaymentDialog, setShowPaymentDialog] = useState<boolean>(false);
   const [showTierDialog, setShowTierDialog] = useState<boolean>(false);
-  const [autoRenew, setAutoRenew] = useState(false);
+  const [autoRenew, setAutoRenew] = useState<boolean>(true);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     string | null
   >(null);
+  const [selectedNewTier, setSelectedNewTier] = useState<string | null>(null);
+
+  // Query service details for this subscription
   const {
     data: service,
     isLoading: serviceLoading,
     error: serviceError,
   } = api.service.getServiceById.useQuery(subscriptionTier.serviceId);
 
-  // Local state for current subscription tier
-  const [currentTierId, setCurrentTierId] = useState<string | null>(
-    subscriptionTier.id,
-  );
-
-  // Fetch saved payment methods
+  // Query saved payment methods
   const { data: paymentMethodsData, status: getPaymentMethodsStatus } =
     api.user.getPaymentMethods.useQuery();
 
@@ -69,45 +70,80 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   }, [getPaymentMethodsStatus, paymentMethodsData]);
 
   useEffect(() => {
-    // setAutoRenew(subscription.autoRenew);
-    setCurrentTierId(subscriptionTier.id);
-  }, [subscriptionTier, paymentMethods]);
+    if (service) {
+      setSelectedNewTier(subscriptionTier.id);
+    }
+  }, [service, subscriptionTier]);
 
+  // Mutation for updating payment method
   const updatePaymentMethodMutation =
     api.user.updateSubscriptionPaymentMethod.useMutation();
-
+  // Mutation for switching tiers
+  const switchTierMutation = api.service.switchTier.useMutation();
+  // Mutation for unsubscribing
   const unsubscribeMutation = api.service.unsubscribeToTier.useMutation();
 
+  // Handler for updating the payment method
   const handlePaymentMethodUpdate = async () => {
     if (!selectedPaymentMethod) {
       toast.error("Please select a payment method.");
-      return;
-    }
-    if (!subscriptionTier.id) {
-      toast.error("No subscription tier found.");
       return;
     }
     try {
       await updatePaymentMethodMutation.mutateAsync({
         subscriptionTierId: subscriptionTier.id,
         paymentMethodId: selectedPaymentMethod,
-        // autoRenewal: autoRenew,
+        // autoRenewal: autoRenew, // Uncomment if your mutation accepts autoRenewal
       });
       toast.success("Payment method updated successfully.");
       refetchSubscriptions();
+      setShowPaymentDialog(false);
     } catch {
       toast.error("Failed to update payment method.");
     }
   };
-  if (serviceLoading) {
-    return <div>Loading...</div>;
-  }
-  if (serviceError) {
-    return <div>Error: {serviceError.message}</div>;
-  }
+
+  // Handler for switching tiers
+  const handleSwitchTier = async () => {
+    if (!selectedNewTier) {
+      toast.error("Please select a new tier.");
+      return;
+    }
+    try {
+      await switchTierMutation.mutateAsync({
+        oldTierId: subscriptionTier.id,
+        newTierId: selectedNewTier,
+      });
+      toast.success("Subscription tier updated successfully.");
+      refetchSubscriptions();
+      setShowTierDialog(false);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update subscription tier.");
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    try {
+      await unsubscribeMutation.mutateAsync({
+        subscriptionTierId: subscriptionTier.id,
+      });
+      toast.success("Subscription cancelled successfully.");
+      refetchSubscriptions();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to cancel subscription.");
+    }
+  };
+
+  if (serviceLoading) return <div>Loading...</div>;
+  if (serviceError) return <div>Error: {serviceError.message}</div>;
 
   return (
     <>
+      {/* Main Manage Subscription Dialog */}
       <AlertDialog open={isOpen} onOpenChange={onClose}>
         <AlertDialogContent className="min-h-[40vh] max-w-2xl space-y-6 p-6">
           <AlertDialogHeader>
@@ -116,11 +152,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-gray-500">
               Subscription for <strong>{subscriptionTier.name}</strong> at $
-              {subscriptionTier.price.toFixed(2)}. Next billing date: {" TBA"}
-              {/* {subscription.nextBillingDate
-                ? new Date(subscription.nextBillingDate).toLocaleDateString()
-                : "TBA"} */}
-              .
+              {subscriptionTier.price.toFixed(2)}. Next billing date: TBA.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -141,14 +173,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
             </Button>
 
             {/* Cancel Subscription */}
-            <Button
-              variant="destructive"
-              onClick={() =>
-                unsubscribeMutation.mutateAsync({
-                  subscriptionTierId: subscriptionTier.id,
-                })
-              }
-            >
+            <Button variant="destructive" onClick={handleCancelSubscription}>
               <Trash className="mr-2 h-4 w-4" />
               Cancel Subscription
             </Button>
@@ -162,7 +187,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       </AlertDialog>
 
       {/* Payment Method Dialog */}
-      {showPaymentDialog && (
+      {showPaymentDialog && service && (
         <PaymentMethodDialog
           isOpen={showPaymentDialog}
           onClose={() => setShowPaymentDialog(false)}
@@ -176,19 +201,43 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
           setAutoRenew={setAutoRenew}
           onConfirm={handlePaymentMethodUpdate}
           isPending={updatePaymentMethodMutation.isPending}
-          title="Update Subscription"
-          description="Update your subscription details below."
+          title="Update Payment Method"
+          description="Select a new payment method for your subscription."
         />
       )}
 
-      {/* Tier Change Dialog */}
-      {showTierDialog && (
-        <ChangeTierDialog
-          isOpen={showTierDialog}
-          onClose={() => setShowTierDialog(false)}
-          subscriptionTier={subscriptionTier}
-          refetchSubscriptions={refetchSubscriptions}
-        />
+      {/* Tier Change Modal using TiersGrid */}
+      {showTierDialog && service && (
+        <AlertDialog open={showTierDialog} onOpenChange={setShowTierDialog}>
+          <AlertDialogContent className="min-h-[55vh] max-w-4xl space-y-6 p-12">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-center text-2xl font-bold">
+                Change Subscription Tier
+              </AlertDialogTitle>
+              <AlertDialogDescription className="mx-auto max-w-md text-center text-sm text-gray-500">
+                Select a new tier below to switch your subscription.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-4">
+              <TiersGrid
+                service={service}
+                isSubscribed={true}
+                currentTierId={selectedNewTier}
+                onSelectTier={(tierId: string) => {
+                  setSelectedNewTier(tierId);
+                }}
+              />
+            </div>
+            <AlertDialogFooter className="flex justify-end space-x-2 pt-2">
+              <AlertDialogCancel onClick={() => setShowTierDialog(false)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleSwitchTier}>
+                Switch Tier
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </>
   );

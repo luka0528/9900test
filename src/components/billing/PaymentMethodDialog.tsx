@@ -13,6 +13,9 @@ import {
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
 import { CreditCard, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 interface PaymentMethodDialogProps {
   isOpen: boolean;
@@ -47,6 +50,9 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
   title,
   description,
 }) => {
+  const router = useRouter();
+  const { data: session } = useSession();
+
   // Find the selected tier object for price display
   const tier = service.subscriptionTiers.find(
     (t: any) => t.id === selectedTier,
@@ -73,7 +79,7 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
               {paymentMethods.map((pm: any) => (
                 <label
                   key={pm.id}
-                  className={`flex items-center space-x-3 rounded-md border p-4 shadow-md transition-shadow hover:cursor-pointer hover:shadow-md ${
+                  className={`flex items-center space-x-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:cursor-pointer hover:shadow-md ${
                     selectedPaymentMethod === pm.id
                       ? "border-gray-300 bg-gray-100"
                       : "border-gray-300 bg-white"
@@ -108,7 +114,14 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
               {/* Add Payment Method */}
               <Button
                 variant="default"
-                onClick={/* your link logic */ undefined}
+                onClick={() => {
+                  if (session?.user?.id) {
+                    router.push(`/user/${session.user.id}/billing`);
+                  } else {
+                    // Optionally, handle if the session is missing
+                    toast.error("User not authenticated");
+                  }
+                }}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Payment Method
@@ -119,7 +132,13 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
               <span>No saved payment methods found.</span>
               <Button
                 variant="default"
-                onClick={/* your link logic */ undefined}
+                onClick={() => {
+                  if (session?.user?.id) {
+                    router.push(`/user/${session.user.id}/billing`);
+                  } else {
+                    toast.error("User not authenticated");
+                  }
+                }}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Payment Method
@@ -127,8 +146,10 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
             </div>
           )}
         </div>
+
         {/* Separator for price & auto-renew */}
         <hr className="my-2 border-gray-200" />
+
         {/* Price & auto-renew row */}
         <div className="flex flex-col items-end space-y-2 sm:flex-row sm:justify-between sm:space-y-0">
           {/* Price */}
@@ -150,6 +171,7 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
             <span className="text-sm text-gray-700">Auto Renewal</span>
           </label>
         </div>
+
         {/* Footer: confirm/cancel buttons */}
         <AlertDialogFooter className="flex w-full justify-end space-x-2 pt-2">
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
