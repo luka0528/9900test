@@ -180,6 +180,12 @@ const PurchasePage: React.FC = () => {
           setAutoRenew={setAutoRenew}
           onConfirm={handlePurchase}
           isPending={subscribeMutation.isPending}
+          title={isSubscribed ? "Update Subscription" : "Purchase Subscription"}
+          description={
+            isSubscribed
+              ? "Update your subscription details below."
+              : "Select a payment method and confirm your purchase."
+          }
         />
       )}
     </div>

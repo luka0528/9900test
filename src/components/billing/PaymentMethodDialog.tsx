@@ -22,11 +22,13 @@ interface PaymentMethodDialogProps {
   service: any; // or your typed Service
   paymentMethods: any[]; // or typed PaymentMethod[]
   selectedPaymentMethod: string | null;
-  setSelectedPaymentMethod: (id: string) => void;
+  setSelectedPaymentMethod: React.Dispatch<React.SetStateAction<string | null>>;
   autoRenew: boolean;
   setAutoRenew: (val: boolean) => void;
   onConfirm: () => void;
   isPending: boolean;
+  title: string;
+  description: string;
 }
 
 const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
@@ -42,6 +44,8 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
   setAutoRenew,
   onConfirm,
   isPending,
+  title,
+  description,
 }) => {
   // Find the selected tier object for price display
   const tier = service.subscriptionTiers.find(
@@ -53,14 +57,10 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
       <AlertDialogContent className="min-h-[60vh] max-w-4xl space-y-6 p-6">
         <AlertDialogHeader>
           <AlertDialogTitle className="mb-2 text-center text-2xl font-bold">
-            {isSubscribed
-              ? `Change Subscription Tier for ${service.name}: ${tier?.name}`
-              : `Purchase ${service.name}: ${tier?.name}`}
+            {title}
           </AlertDialogTitle>
           <AlertDialogDescription className="mx-auto max-w-md text-center text-sm text-gray-500">
-            {isSubscribed
-              ? "You are already subscribed to this service. You will be changing to a new subscription tier."
-              : "Select one of your saved payment methods or add a new one below."}
+            {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {/* Payment Methods */}
@@ -73,7 +73,11 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
               {paymentMethods.map((pm: any) => (
                 <label
                   key={pm.id}
-                  className="flex items-center space-x-3 rounded-md border border-gray-300 bg-white p-4 shadow-md transition-shadow hover:shadow-md"
+                  className={`flex items-center space-x-3 rounded-md border p-4 shadow-md transition-shadow hover:cursor-pointer hover:shadow-md ${
+                    selectedPaymentMethod === pm.id
+                      ? "border-gray-300 bg-gray-100"
+                      : "border-gray-300 bg-white"
+                  }`}
                 >
                   <input
                     type="radio"
@@ -130,7 +134,9 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
           {/* Price */}
           <p className="text-lg font-bold text-gray-700 sm:mr-4">
             Price:{" "}
-            <span className="font-medium">${tier?.price?.toFixed(2)}</span>
+            <span className="font-medium">
+              {tier?.price === 0 ? `$${tier?.price?.toFixed(2)}` : "Free"}
+            </span>
           </p>
 
           {/* Auto-renew checkbox */}

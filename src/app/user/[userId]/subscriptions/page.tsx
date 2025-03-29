@@ -19,11 +19,13 @@ import {
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
+import { SubscriptionTier } from "@prisma/client";
 
 const SubscriptionsManagementPage: React.FC = () => {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
-  const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
+  const [selectedSubscription, setSelectedSubscription] =
+    useState<SubscriptionTier | null>(null);
   const [showManageDialog, setShowManageDialog] = useState(false);
 
   // Redirect if not logged in
@@ -79,27 +81,23 @@ const SubscriptionsManagementPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {subscriptionsData.subscriptions.map((sub: any) => (
-                <TableRow key={sub.id}>
+              {subscriptionsData.subscriptions.map((subscription) => (
+                <TableRow key={subscription.subscriptionTier.id}>
                   <TableCell>
-                    {sub.subscriptionTier.service?.name || "N/A"}
+                    {subscription.subscriptionTier.service.name || "N/A"}
                   </TableCell>
-                  <TableCell>{sub.subscriptionTier.name}</TableCell>
+                  <TableCell>{subscription.subscriptionTier.name}</TableCell>
                   <TableCell>
-                    ${sub.subscriptionTier.price.toFixed(2)}
+                    ${subscription.subscriptionTier.price.toFixed(2)}
                   </TableCell>
                   <TableCell>
-                    {sub.paymentMethod
-                      ? sub.paymentMethod.cardBrand
-                        ? `**** **** **** ${sub.paymentMethod.last4}`
-                        : sub.paymentMethod.stripePaymentId
+                    {subscription.paymentMethod
+                      ? subscription.paymentMethod.cardBrand
+                        ? `**** **** **** ${subscription.paymentMethod.last4}`
+                        : subscription.paymentMethod.stripePaymentId
                       : "N/A"}
                   </TableCell>
-                  <TableCell>
-                    {sub.nextBillingDate
-                      ? new Date(sub.nextBillingDate).toLocaleDateString()
-                      : "TBA"}
-                  </TableCell>
+                  <TableCell>{"TBA"}</TableCell>
                   <TableCell>
                     {/* For simplicity, assume active if a subscription exists */}
                     Active
@@ -109,7 +107,7 @@ const SubscriptionsManagementPage: React.FC = () => {
                       variant="default"
                       size="sm"
                       onClick={() => {
-                        setSelectedSubscription(sub);
+                        setSelectedSubscription(subscription.subscriptionTier);
                         setShowManageDialog(true);
                       }}
                     >
@@ -127,7 +125,7 @@ const SubscriptionsManagementPage: React.FC = () => {
         <ManageSubscriptionDialog
           isOpen={showManageDialog}
           onClose={() => setShowManageDialog(false)}
-          subscription={selectedSubscription}
+          subscriptionTier={selectedSubscription}
           refetchSubscriptions={refetch}
         />
       )}

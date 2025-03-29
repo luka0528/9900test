@@ -666,7 +666,7 @@ export const userRouter = createTRPCRouter({
     }),
 
   getUserSubscriptions: protectedProcedure.query(async ({ ctx }) => {
-    // Check if a user is available in the session (should be since the route is protected)
+    // Ensure the user is authenticated
     if (!ctx.session?.user?.id) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
@@ -675,14 +675,19 @@ export const userRouter = createTRPCRouter({
     }
 
     try {
+      // Fetch the user's subscriptions
       const subscriptions = await ctx.db.serviceConsumer.findMany({
         where: { userId: ctx.session.user.id },
-        // Optionally, include related data:
         include: {
-          subscriptionTier: true,
+          subscriptionTier: {
+            include: {
+              service: true,
+            },
+          },
           paymentMethod: true,
         },
       });
+
       return { success: true, subscriptions };
     } catch (error) {
       console.error("Error fetching subscriptions:", error);
@@ -693,4 +698,56 @@ export const userRouter = createTRPCRouter({
       });
     }
   }),
+
+  updateSubscriptionPaymentMethod: protectedProcedure
+    .input(
+      z.object({
+        subscriptionTierId: z.string(),
+        paymentMethodId: z.string(),
+        // autoRenewal: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { subscriptionTierId, paymentMethodId } = input;
+
+      // Fetch the subscription
+      const subscription = await ctx.db.serviceConsumer.findUnique({
+        where: { id: subscriptionTierId, userId: ctx.session.user.id },
+        include: {
+          subscriptionTier: {
+            include: {
+              service: true,
+            },
+          },
+        },
+      });
+
+      if (!subscription) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Subscription not found",
+        });
+      }
+
+      // Check if the payment method exists
+      const paymentMethod = await ctx.db.paymentMethod.findUnique({
+        where: { id: paymentMethodId },
+      });
+      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Payment method not found or does not belong to user",
+        });
+      }
+
+      // Update the payment method and auto-renewal status
+      await ctx.db.serviceConsumer.update({
+        where: { id: subscription.id },
+        data: {
+          paymentMethodId,
+        },
+      });
+
+      return { success: true };
+    }),
 });

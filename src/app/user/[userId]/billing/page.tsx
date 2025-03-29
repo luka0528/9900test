@@ -32,11 +32,11 @@ const BillingPage: React.FC = () => {
   const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false);
 
   // Ensure user is authenticated & is viewing their own billing page
-  useEffect(() => {
-    if (sessionId && userId && sessionId !== userId) {
-      router.push(`/user/${userId}/profile`);
-    }
-  }, [sessionId, userId, router]);
+  // useEffect(() => {
+  //   if (sessionId && userId && sessionId !== userId) {
+  //     router.push(`/user/${userId}/profile`);
+  //   }
+  // }, [sessionId, userId, router]);
 
   // If not authorized or still loading session
   if (!sessionId || !userId || sessionId !== userId) {
