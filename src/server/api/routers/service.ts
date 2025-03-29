@@ -157,7 +157,11 @@ export const serviceRouter = createTRPCRouter({
       },
       include: {
         tags: true,
-        versions: true,
+        versions: {
+          orderBy: {
+            version: "desc",
+          },
+        },
       },
     });
 
@@ -166,7 +170,7 @@ export const serviceRouter = createTRPCRouter({
       name: service.name,
       owner: ctx.session.user.name,
       tags: service.tags.map((tag) => tag.name),
-      latestVersion: service.versions[service.versions.length - 1]!,
+      latestVersion: service.versions[0]!,
     }));
 
     return res;
@@ -220,7 +224,11 @@ export const serviceRouter = createTRPCRouter({
           versions: {
             select: {
               version: true,
+              id: true,
               description: true,
+            },
+            orderBy: {
+              version: "desc",
             },
           },
           owners: {

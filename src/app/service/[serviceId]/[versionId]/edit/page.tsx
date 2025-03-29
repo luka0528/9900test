@@ -20,7 +20,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
-import { useToast } from "~/hooks/use-toast";
+import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { createId } from "@paralleldrive/cuid2";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
@@ -52,7 +52,6 @@ const formSchema = z.object({
 
 export default function EditServicePage() {
   const router = useRouter();
-  const { toast } = useToast();
   const { serviceId: serviceIdParam, versionId: versionIdParam } = useParams();
   const versionId = versionIdParam as string;
   const serviceId = serviceIdParam as string;
@@ -95,23 +94,17 @@ export default function EditServicePage() {
     }
   }, [versionData, form]);
 
-  // tRPC
   const { mutate: editVersion, isPending: isEditing } =
     api.version.editVersion.useMutation({
       onSuccess: () => {
-        toast({
-          title: "Success!",
-          description: "Service updated successfully",
-        });
+        toast.success("Your changes have been saved");
         void utils.version.getDocumentationByVersionId.invalidate({
           versionId: versionId,
         });
       },
       onError: () => {
-        toast({
-          title: "Error!",
-          description: "Failed to update service",
-          variant: "destructive",
+        toast.error("Failed to update service", {
+          description: "There was an error updating your service.",
         });
       },
     });
