@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import {
   Card,
@@ -12,20 +11,17 @@ import {
   CardDescription,
   CardContent,
 } from "~/components/ui/card";
-
 import BillingHistory from "~/components/billing/BillingHistory";
 import SavedPaymentMethods from "~/components/billing/SavedPaymentMethods";
 import PaymentMethodForm from "~/components/billing/PaymentMethodForm";
-
 import { useSession } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Plus } from "lucide-react"; // Lucide icon
 
 const BillingPage: React.FC = () => {
   const params = useParams();
   const userId = params.userId as string;
-  const router = useRouter();
   const sessionId = useSession().data?.user?.id;
 
   // Show/hide the "Add Payment Method" form

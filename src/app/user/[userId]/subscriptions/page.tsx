@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { api } from "~/trpc/react";
 
 // ShadCN UI imports
@@ -19,7 +18,7 @@ import {
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
-import { SubscriptionTier } from "@prisma/client";
+import type { SubscriptionTier } from "@prisma/client";
 
 const SubscriptionsManagementPage: React.FC = () => {
   const { status } = useSession();

@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  Dispatch,
-  SetStateAction,
-  use,
-  useEffect,
-  useState,
-} from "react";
+import React, { useEffect, useState } from "react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -18,16 +12,12 @@ import {
   AlertDialogAction,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
-import { CreditCard, Edit, Trash, Plus } from "lucide-react";
+import { CreditCard, Edit, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
-
-// Import your PaymentMethodDialog and TiersGrid components
 import PaymentMethodDialog from "./PaymentMethodDialog";
 import TiersGrid from "./TiersGrid";
-
-// Import Prisma types (adjust as needed)
-import { SubscriptionTier, PaymentMethod } from "@prisma/client";
+import type { SubscriptionTier, PaymentMethod } from "@prisma/client";
 
 interface ManageSubscriptionDialogProps {
   isOpen: boolean;

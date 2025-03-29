@@ -19,7 +19,7 @@ import TiersGrid from "~/components/billing/TiersGrid";
 import PaymentMethodDialog from "~/components/billing/PaymentMethodDialog";
 
 const PurchasePage: React.FC = () => {
-  const { data: session } = useSession();
+  const { status } = useSession();
   const params = useParams();
   const router = useRouter();
   const serviceId = params.serviceId as string;
@@ -66,7 +66,7 @@ const PurchasePage: React.FC = () => {
   }, [subscriptionStatus]);
 
   useEffect(() => {
-    if (!isPaymentDataLoading && paymentMethodsData && paymentMethodsData[0]) {
+    if (!isPaymentDataLoading && paymentMethodsData?.[0]) {
       setSelectedPaymentMethod(paymentMethodsData[0].id);
     }
   }, [isPaymentDataLoading, paymentMethodsData]);
@@ -103,6 +103,10 @@ const PurchasePage: React.FC = () => {
       toast.error("Error subscribing to service.");
     }
   };
+
+  if (!status || status === "unauthenticated") {
+    router.push(`/service/${serviceId}`);
+  }
 
   // 6. Loading & error states
   if (serviceLoading || subscriptionLoading) {

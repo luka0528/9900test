@@ -1,10 +1,11 @@
 "use client";
 
+import type { Service, SubscriptionTier } from "@prisma/client";
 import React from "react";
 import { Button } from "~/components/ui/button";
 
 interface TiersGridProps {
-  service: any; // or your typed Service
+  service: Service & { subscriptionTiers: SubscriptionTier[] };
   isSubscribed?: boolean;
   currentTierId: string | null;
   onSelectTier: (tierId: string) => void;
@@ -35,8 +36,8 @@ const TiersGrid: React.FC<TiersGridProps> = ({
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {service.subscriptionTiers
           .slice()
-          .sort((a: any, b: any) => a.price - b.price)
-          .map((tier: any) => {
+          .sort((a: SubscriptionTier, b: SubscriptionTier) => a.price - b.price)
+          .map((tier: SubscriptionTier) => {
             const isCurrent = currentTierId === tier.id;
             return (
               <div

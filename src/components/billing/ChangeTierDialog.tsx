@@ -11,11 +11,10 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "~/components/ui/alert-dialog";
-import { Button } from "~/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
-import { SubscriptionTier } from "@prisma/client";
+import type { PaymentMethod, SubscriptionTier } from "@prisma/client";
 
 interface ChangeTierDialogProps {
   isOpen: boolean;
@@ -49,17 +48,7 @@ const ChangeTierDialog: React.FC<ChangeTierDialogProps> = ({
   const { data: paymentMethods } = api.user.getPaymentMethods.useQuery();
 
   // 3) Mutation for changing the tier
-  const subscribeMutation = api.service.subscribeToTier.useMutation({
-    onSuccess: () => {
-      toast.success("Subscription tier changed.");
-      refetchSubscriptions();
-      onClose();
-    },
-    onError: (err: any) => {
-      console.error(err);
-      toast.error("Failed to change tier.");
-    },
-  });
+  const subscribeMutation = api.service.subscribeToTier.useMutation({});
 
   // Local state for chosen tier + paymentMethod
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
@@ -72,7 +61,7 @@ const ChangeTierDialog: React.FC<ChangeTierDialogProps> = ({
     try {
       // Find the new tier
       const newTier = service?.subscriptionTiers.find(
-        (t: any) => t.id === selectedTierId,
+        (t: SubscriptionTier) => t.id === selectedTierId,
       );
       if (!newTier) return;
 
@@ -87,8 +76,13 @@ const ChangeTierDialog: React.FC<ChangeTierDialogProps> = ({
         paymentMethodId: paymentMethodId ?? undefined,
         autoRenewal: false, // or true if you want
       });
+
+      toast.success("Subscription tier changed.");
+      refetchSubscriptions();
+      onClose();
     } catch (err) {
       console.error(err);
+      toast.error("Failed to change subscription tier.");
     }
   };
 
@@ -121,8 +115,11 @@ const ChangeTierDialog: React.FC<ChangeTierDialogProps> = ({
               <h4 className="text-sm font-semibold">Select a Tier:</h4>
               {service.subscriptionTiers
                 .slice()
-                .sort((a: any, b: any) => a.price - b.price)
-                .map((tier: any) => (
+                .sort(
+                  (a: SubscriptionTier, b: SubscriptionTier) =>
+                    a.price - b.price,
+                )
+                .map((tier: SubscriptionTier) => (
                   <label
                     key={tier.id}
                     className="flex items-center space-x-3 rounded border p-2"
@@ -145,7 +142,7 @@ const ChangeTierDialog: React.FC<ChangeTierDialogProps> = ({
             {selectedTierId &&
               (() => {
                 const newTier = service.subscriptionTiers.find(
-                  (t: any) => t.id === selectedTierId,
+                  (t: SubscriptionTier) => t.id === selectedTierId,
                 );
                 if (newTier && newTier.price > 0) {
                   return (
@@ -154,7 +151,7 @@ const ChangeTierDialog: React.FC<ChangeTierDialogProps> = ({
                         Select a Payment Method:
                       </h4>
                       {paymentMethods && paymentMethods.length > 0 ? (
-                        paymentMethods.map((pm: any) => (
+                        paymentMethods.map((pm: PaymentMethod) => (
                           <label
                             key={pm.id}
                             className="flex items-center space-x-3 rounded border p-2"
@@ -197,7 +194,7 @@ const ChangeTierDialog: React.FC<ChangeTierDialogProps> = ({
               (() => {
                 if (!service || !selectedTierId) return true;
                 const newTier = service.subscriptionTiers.find(
-                  (t: any) => t.id === selectedTierId,
+                  (t: SubscriptionTier) => t.id === selectedTierId,
                 );
                 if (!newTier) return true;
                 return newTier.price > 0 && !selectedPaymentMethod;

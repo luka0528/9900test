@@ -16,14 +16,15 @@ import { CreditCard, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import type { PaymentMethod, Service, SubscriptionTier } from "@prisma/client";
 
 interface PaymentMethodDialogProps {
   isOpen: boolean;
   onClose: () => void;
   isSubscribed?: boolean;
   selectedTier: string | null;
-  service: any; // or your typed Service
-  paymentMethods: any[]; // or typed PaymentMethod[]
+  service: Service & { subscriptionTiers: SubscriptionTier[] };
+  paymentMethods: PaymentMethod[]; // or typed PaymentMethod[]
   selectedPaymentMethod: string | null;
   setSelectedPaymentMethod: React.Dispatch<React.SetStateAction<string | null>>;
   autoRenew: boolean;
@@ -55,7 +56,7 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
 
   // Find the selected tier object for price display
   const tier = service.subscriptionTiers.find(
-    (t: any) => t.id === selectedTier,
+    (t: SubscriptionTier) => t.id === selectedTier,
   );
 
   return (
@@ -76,7 +77,7 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
               <h3 className="text-lg font-semibold">
                 Select a payment method:
               </h3>
-              {paymentMethods.map((pm: any) => (
+              {paymentMethods.map((pm: PaymentMethod) => (
                 <label
                   key={pm.id}
                   className={`flex items-center space-x-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:cursor-pointer hover:shadow-md ${

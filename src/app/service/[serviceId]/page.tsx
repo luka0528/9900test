@@ -20,12 +20,16 @@ const ServicePage = ({ params }: { params: { serviceId: string } }) => {
   // 2) Once we have the service, find the "latestVersion" and redirect
   useEffect(() => {
     if (!isLoading && service) {
-      const latestVersion = service.versions.reduce(
-        (prev: any, current: any) =>
-          new Date(prev.createdAt) > new Date(current.createdAt)
-            ? prev
-            : current,
-      );
+      const latestVersion = service?.versions.length
+        ? service.versions.reduce(
+            (prev, current) =>
+              new Date(current.createdAt).getTime() >
+              new Date(prev?.createdAt ?? 0).getTime()
+                ? current
+                : prev,
+            service.versions[0],
+          )
+        : undefined;
       if (latestVersion) {
         router.replace(`/service/${serviceId}/${latestVersion.id}`);
       }

@@ -708,7 +708,11 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { subscriptionTierId, paymentMethodId, autoRenewal } = input;
+      const {
+        subscriptionTierId,
+        paymentMethodId,
+        // autoRenewal
+      } = input;
 
       // Fetch the subscription by filtering by userId and subscriptionTierId
       const subscription = await ctx.db.serviceConsumer.findFirst({
