@@ -57,16 +57,25 @@ enum ConsumerEventType {
 
 // Service Pricing
 
-model SubscriptionTier {
-    id        String   @id @default(cuid())
-    serviceId String
-    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-    name      String   @unique
-    price     Float
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
 
-    consumers ServiceConsumer[]
+model SubscriptionTier {
+  id          String         @id @default(cuid())
+  serviceId   String
+  service     Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  name        String         @unique
+  price       Float
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  consumers   ServiceConsumer[]
+  features    TierFeature[]
+}
+
+model TierFeature {
+  id                String          @id @default(cuid())
+  subscriptionTierId String
+  subscriptionTier   SubscriptionTier @relation(fields: [subscriptionTierId], references: [id], onDelete: Cascade)
+  feature            String
 }
 
 // Service Management
@@ -146,6 +155,9 @@ model ServiceConsumer {
 
     ratings ServiceRating[]
     events ConsumerEvent[]
+
+    paymentMethodId    String?
+    paymentMethod     PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
 }
 
 // Notifications
@@ -295,4 +307,5 @@ model PaymentMethod {
     user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     
     billingReceipts  BillingReceipt[]
+    serviceConsumers ServiceConsumer[]
 }
