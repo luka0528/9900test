@@ -29,12 +29,35 @@ export const versionRouter = createTRPCRouter({
         where: {
           id: input.serviceId,
         },
+        include: {
+          owners: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!service) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Service does not exist",
+        });
+      }
+
+      // Check the user is an owner of the service
+      const isOwner = service.owners.some(
+        (owner) => owner.user.id === ctx.session.user.id,
+      );
+
+      if (!isOwner) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You are not an owner of the service",
         });
       }
 
