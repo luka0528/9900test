@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import {
@@ -15,7 +13,6 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { Badge } from "~/components/ui/badge";
 import { Plus, Trash2, X, PlusCircle, Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
