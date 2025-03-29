@@ -664,4 +664,33 @@ export const userRouter = createTRPCRouter({
 
       return { isSubscribed, subscriptionTierId };
     }),
+
+  getUserSubscriptions: protectedProcedure.query(async ({ ctx }) => {
+    // Check if a user is available in the session (should be since the route is protected)
+    if (!ctx.session?.user?.id) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User not authenticated",
+      });
+    }
+
+    try {
+      const subscriptions = await ctx.db.serviceConsumer.findMany({
+        where: { userId: ctx.session.user.id },
+        // Optionally, include related data:
+        include: {
+          subscriptionTier: true,
+          paymentMethod: true,
+        },
+      });
+      return { success: true, subscriptions };
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch subscriptions",
+        cause: error,
+      });
+    }
+  }),
 });

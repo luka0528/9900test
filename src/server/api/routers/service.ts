@@ -621,6 +621,42 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
+      // 5. If a paymentMethodId is provided, handle payment/charge logic
+      if (newTier.price != 0) {
+        // a) Check if the payment method is valid
+        if (!paymentMethodId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Payment method is required for this subscription",
+          });
+        }
+        // a) Verify the payment method belongs to the user
+        const paymentMethod = await ctx.db.paymentMethod.findUnique({
+          where: { id: paymentMethodId },
+        });
+        if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Payment method not found or doesn't belong to user",
+          });
+        }
+        // b) TODO: Call Stripe
+
+        // c) Create a billing receipt
+        await ctx.db.billingReceipt.create({
+          data: {
+            userId: ctx.session.user.id,
+            paymentMethodId: paymentMethod.id,
+            amount: newTier.price,
+            description: `Subscription to ${newTier.name}`,
+            from: service.name,
+            to: ctx.session.user.name ?? "",
+            status: BillingStatus.PAID,
+            automaticRenewal: autoRenewal,
+          },
+        });
+      }
+
       // 3. If currentTierId is provided, remove (or update) the old subscription
       if (currentTierId) {
         if (currentTierId === newTier.id) {
@@ -645,7 +681,10 @@ export const serviceRouter = createTRPCRouter({
 
         await ctx.db.serviceConsumer.update({
           where: { id: oldSubscription.id },
-          data: { subscriptionTierId: newTier.id },
+          data: {
+            subscriptionTierId: newTier.id,
+            paymentMethodId: newTier.price ? paymentMethodId : undefined,
+          },
         });
       } else {
         const existingSubscriptionToNewTier =
@@ -666,36 +705,7 @@ export const serviceRouter = createTRPCRouter({
           data: {
             userId: ctx.session.user.id,
             subscriptionTierId: newTier.id,
-          },
-        });
-      }
-
-      // 5. If a paymentMethodId is provided, handle payment/charge logic
-      if (paymentMethodId) {
-        // a) Verify the payment method belongs to the user
-        const paymentMethod = await ctx.db.paymentMethod.findUnique({
-          where: { id: paymentMethodId },
-        });
-        if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Payment method not found or doesn't belong to user",
-          });
-        }
-
-        // b) TODO: Call Stripe
-
-        // c) Create a billing receipt
-        await ctx.db.billingReceipt.create({
-          data: {
-            userId: ctx.session.user.id,
-            paymentMethodId: paymentMethod.id,
-            amount: newTier.price,
-            description: `Subscription to ${newTier.name}`,
-            from: service.name,
-            to: ctx.session.user.name ?? "",
-            status: BillingStatus.PAID,
-            automaticRenewal: autoRenewal,
+            paymentMethodId: newTier.price ? paymentMethodId : undefined,
           },
         });
       }
