@@ -11,9 +11,9 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { Upload, UserPen, Loader2, Package } from "lucide-react";
 import { api } from "~/trpc/react";
-import { AllServiceSidebar } from "~/components/service/AllServiceSidebar";
 import { ServiceCard } from "~/components/service/ServiceCard";
 import Link from "next/link";
+import { AllServiceSidebar } from "~/components/service/AllServiceSidebar";
 
 export default function ServicesPage() {
   const { data: session } = useSession();
