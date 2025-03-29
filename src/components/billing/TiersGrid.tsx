@@ -32,14 +32,8 @@ const TiersGrid: React.FC<TiersGridProps> = ({
           : "Choose a Subscription Tier:"}
       </h3>
 
-      {/* 
-        1) "items-stretch" ensures columns match height
-        2) Each card uses "min-h-[60vh]" to force at least 60% of viewport height
-        3) "flex flex-col h-full justify-between" anchors the button at bottom
-      */}
-      <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {service.subscriptionTiers
-          // Optional: sort by ascending price
           .slice()
           .sort((a: any, b: any) => a.price - b.price)
           .map((tier: any) => {
@@ -47,8 +41,8 @@ const TiersGrid: React.FC<TiersGridProps> = ({
             return (
               <div
                 key={tier.id}
-                className={`flex h-full min-h-[60vh] flex-col rounded-lg border p-6 text-center shadow-sm transition-shadow hover:shadow-md ${
-                  isCurrent ? "border-gray-300 bg-gray-100" : ""
+                className={`flex h-full min-h-[60vh] flex-col rounded-lg border p-6 text-center shadow-sm transition-shadow ${
+                  isCurrent ? "pointer-events-none bg-gray-200 opacity-70" : ""
                 }`}
               >
                 {/* Upper portion */}
@@ -62,20 +56,24 @@ const TiersGrid: React.FC<TiersGridProps> = ({
                   </ul>
                 </div>
 
-                {/* Bottom portion: button anchored at the bottom */}
+                {/* Bottom portion: button anchored at bottom */}
                 <div className="mt-auto">
                   {isCurrent ? (
                     <Button
                       variant="outline"
                       disabled
-                      className="border-gray-300"
+                      className="cursor-default"
                     >
                       Current Plan
                     </Button>
                   ) : (
                     <Button
                       variant="default"
-                      onClick={() => onSelectTier(tier.id)}
+                      onClick={() => {
+                        if (tier.id !== currentTierId) {
+                          onSelectTier(tier.id);
+                        }
+                      }}
                     >
                       {isSubscribed ? "Switch to This Plan" : "Subscribe"}
                     </Button>
