@@ -45,11 +45,15 @@ export function ServiceSidebar({
       url: "1",
       icon: WalletCards,
     },
-    ...(isOwner ? [{
-      title: "Add Version",
-      url: `/service/${serviceId}/add-version`,
-      icon: PlusCircle,
-    }] : []),
+    ...(isOwner
+      ? [
+          {
+            title: "Add Version",
+            url: `/service/${serviceId}/add-version`,
+            icon: PlusCircle,
+          },
+        ]
+      : []),
   ];
   return <DefaultSideBar items={items} />;
-};
+}

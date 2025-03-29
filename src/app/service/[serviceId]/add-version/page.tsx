@@ -77,13 +77,13 @@ export default function AddServicePage() {
       onSuccess: ({ id: versionId }) => {
         toast.success("Version created successfully");
         router.push(`/service/${serviceId}/${versionId}`);
-    },
-    onError: (error) => {
-      toast.error("Failed to create version", {
-        description: error.message,
-      });
-    },
-  });
+      },
+      onError: (error) => {
+        toast.error("Failed to create version", {
+          description: error.message,
+        });
+      },
+    });
 
   // Add a new detail section (text or table)
   const addDetail = (type: "text" | "table") => {
