@@ -699,4 +699,96 @@ export const serviceRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  updateSubscriptionPaymentMethod: protectedProcedure
+    .input(
+      z.object({
+        subscriptionTierId: z.string(), // which tier the user is subscribed to
+        paymentMethodId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { subscriptionTierId, paymentMethodId } = input;
+
+      // 1) Find the user's subscription
+      const subscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTierId: subscriptionTierId,
+        },
+      });
+      if (!subscription) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Subscription not found for the given tier",
+        });
+      }
+
+      // 2) Validate payment method
+      if (paymentMethodId == subscription.paymentMethodId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payment method is the same as the current one",
+        });
+      }
+
+      const paymentMethod = await ctx.db.paymentMethod.findUnique({
+        where: { id: paymentMethodId },
+      });
+      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Payment method not found or doesn't belong to user",
+        });
+      }
+
+      // 3) (Optional) Handle additional logic (e.g. update auto-renew, create a billing receipt, etc.)
+
+      // 4) Update the subscription with the new payment method
+      await ctx.db.serviceConsumer.update({
+        where: { id: subscription.id, subscriptionTierId: subscriptionTierId },
+        data: { paymentMethodId: paymentMethod.id },
+      });
+
+      return { success: true };
+    }),
+
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  unsubscribeToTier: protectedProcedure
+    .input(
+      z.object({
+        subscriptionTierId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { subscriptionTierId } = input;
+
+      // 1) Find the subscription
+      const subscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTierId,
+        },
+      });
+      if (!subscription) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Subscription not found",
+        });
+      }
+
+      // 2) Delete the subscription record
+      await ctx.db.serviceConsumer.delete({
+        where: { id: subscription.id },
+      });
+
+      // 3) (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
+
+      return { success: true };
+    }),
 });
