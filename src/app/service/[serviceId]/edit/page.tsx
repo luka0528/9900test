@@ -36,6 +36,7 @@ export default function AddServicePage() {
   const serviceId = rawServiceId as string;
   const router = useRouter();
   const [tagInput, setTagInput] = useState("");
+  const utils = api.useUtils();
 
   const { data: service } = api.service.getServiceMetadataById.useQuery({
     serviceId,
@@ -63,6 +64,7 @@ export default function AddServicePage() {
     api.service.updateServiceMetadata.useMutation({
       onSuccess: () => {
         toast.success("Service updated successfully");
+        void utils.service.getServiceMetadataById.invalidate({ serviceId });
         router.push(`/service/${serviceId}`);
       },
       onError: (error) => {
