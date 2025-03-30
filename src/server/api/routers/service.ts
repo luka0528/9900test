@@ -114,6 +114,61 @@ export const serviceRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  updateServiceMetadata: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string().min(1),
+        newName: z.string().min(1),
+        tags: z.array(z.string()).default([]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+        include: {
+          owners: true,
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      if (service.owners.some((owner) => owner.userId !== ctx.session.user.id)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to update this service",
+        });
+      }
+
+      await ctx.db.service.update({
+        where: { id: input.serviceId },
+        data: {
+          name: input.newName,
+          tags: {
+            disconnect: input.tags
+              ? await ctx.db.tag.findMany({
+                  where: {
+                    services: { some: { id: input.serviceId } },
+                    name: { notIn: input.tags },
+                  },
+                  select: { id: true },
+                })
+              : [],
+            connectOrCreate: input.tags.map((tag) => ({
+              where: { name: tag },
+              create: { name: tag },
+            })),
+          },
+        },
+      });
+
+      return { success: true };
+    }),
+
   getInfiniteServices: publicProcedure
     .input(
       z.object({

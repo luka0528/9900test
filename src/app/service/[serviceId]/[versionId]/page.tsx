@@ -21,13 +21,14 @@ import {
 } from "~/components/ui/table";
 import { Separator } from "~/components/ui/separator";
 import {
-  Pencil,
   ChevronDown,
   Heart,
   HeartOff,
   Loader2,
   MessageSquare,
   AlertTriangle,
+  HandPlatter,
+  FileText,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
@@ -126,15 +127,32 @@ export default function ServicePage() {
                 service.owners.some(
                   (owner) => owner.user.id === session.user.id,
                 ) && (
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      router.push(`/service/${serviceId}/${versionId}/edit`)
-                    }
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Version Details
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        Edit
+                        <ChevronDown className="text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          router.push(`/service/${serviceId}/edit`)
+                        }
+                      >
+                        <HandPlatter className="h-4 w-4" />
+                        Edit service content
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          router.push(`/service/${serviceId}/${versionId}/edit`)
+                        }
+                      >
+                        <FileText className="h-4 w-4" />
+                        Edit version {versionData?.version} details 
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
 
               {/* Version selector */}

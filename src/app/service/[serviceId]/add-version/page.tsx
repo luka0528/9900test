@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import {
@@ -73,7 +74,7 @@ export default function AddServicePage() {
   });
 
   // Update form values when service data is loaded
-  React.useEffect(() => {
+  useEffect(() => {
     if (service && service.versions.length > 0) {
       // Get latest version (should be the first one due to orderBy in the query)
       const latestVersion = service.versions[0];
