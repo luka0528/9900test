@@ -1,28 +1,13 @@
-import { db } from "~/server/db";
-import { redirect } from "next/navigation";
+"use client";
 
-export default async function ServicePage({
-  params,
-}: {
-  params: { serviceId: string };
-}) {
-  const { serviceId } = params;
+import { api } from "~/trpc/react";
+import { useParams, redirect } from "next/navigation";
+export default function ServicePage() {
+  const { serviceId: rawServiceId } = useParams();
+  const serviceId = rawServiceId as string;
 
-  const service = await db.service.findUnique({
-    where: {
-      id: serviceId,
-    },
-    select: {
-      versions: {
-        select: {
-          id: true,
-        },
-        orderBy: {
-          version: "desc",
-        },
-        take: 1,
-      },
-    },
+  const { data: service } = api.service.getServiceMetadataById.useQuery({
+    serviceId,
   });
 
   if (!service) {
