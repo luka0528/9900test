@@ -149,7 +149,7 @@ export default function ServicePage() {
                         }
                       >
                         <FileText className="h-4 w-4" />
-                        Edit version {versionData?.version} details 
+                        Edit version {versionData?.version} details
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

@@ -137,7 +137,9 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      if (service.owners.some((owner) => owner.userId !== ctx.session.user.id)) {
+      if (
+        service.owners.some((owner) => owner.userId !== ctx.session.user.id)
+      ) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You do not have permission to update this service",
