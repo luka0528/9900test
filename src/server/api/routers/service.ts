@@ -268,6 +268,9 @@ export const serviceRouter = createTRPCRouter({
                 },
               },
             },
+            orderBy: {
+              version: "desc",
+            },
           },
           owners: {
             select: {
