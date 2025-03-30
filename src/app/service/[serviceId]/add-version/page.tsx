@@ -22,6 +22,7 @@ import { Separator } from "~/components/ui/separator";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
+import React from "react";
 
 // Define form schema with consistent structure
 const formSchema = z.object({
@@ -70,6 +71,49 @@ export default function AddServicePage() {
       ],
     },
   });
+
+  // Update form values when service data is loaded
+  React.useEffect(() => {
+    if (service && service.versions.length > 0) {
+      // Get latest version (should be the first one due to orderBy in the query)
+      const latestVersion = service.versions[0];
+
+      if (!latestVersion) return;
+
+      // Increment version number (simple example - you might want more sophisticated logic)
+      const currentVersion = latestVersion.version;
+      const versionParts = currentVersion.split(".");
+      const lastPart = parseInt(versionParts[versionParts.length - 1] ?? "1.0");
+      versionParts[versionParts.length - 1] = (lastPart + 1).toString();
+      const suggestedVersion = versionParts.join(".");
+
+      // Prepare content data
+      const contents = latestVersion.contents.map((content) => ({
+        title: content.title,
+        description: content.description,
+        rows: content.rows.map((row) => ({
+          routeName: row.routeName,
+          description: row.description,
+        })),
+      }));
+
+      // Update form with values from latest version
+      form.reset({
+        description: latestVersion.description,
+        version: suggestedVersion,
+        contents:
+          contents.length > 0
+            ? contents
+            : [
+                {
+                  title: "",
+                  description: "",
+                  rows: [],
+                },
+              ],
+      });
+    }
+  }, [service, form]);
 
   // tRPC
   const { mutate: createVersion, isPending: isCreatingVersion } =
@@ -173,7 +217,8 @@ export default function AddServicePage() {
       <div className="flex h-full grow flex-col overflow-y-auto p-6">
         <h1 className="text-2xl font-bold">Add New Version</h1>
         <p className="mb-6 text-muted-foreground">
-          Add a new version to {service?.name}.
+          Add a new version to {service?.name}. We&apos;ve pre-filled the form
+          with your latest version.
         </p>
 
         <Form {...form}>
@@ -211,7 +256,9 @@ export default function AddServicePage() {
                     <Input placeholder="1.0" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Specify the version of your service (e.g. 1.0, 2.1.3)
+                    Specify the version of your service (e.g. 1.0, 2.1.3).
+                    We&apos;ve provided a suggested version based on your latest
+                    version.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
