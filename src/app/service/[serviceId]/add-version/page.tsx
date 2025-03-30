@@ -256,8 +256,9 @@ export default function AddServicePage() {
                     <Input placeholder="1.0" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Specify the version of your service (e.g. 1.0, 2.1.3). We&apos;ve
-                    provided a suggested version based on your latest version.
+                    Specify the version of your service (e.g. 1.0, 2.1.3).
+                    We&apos;ve provided a suggested version based on your latest
+                    version.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
