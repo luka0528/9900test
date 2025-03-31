@@ -110,6 +110,7 @@ model ServiceVersion {
     version     String
     contents    ServiceContent[]
     createdAt DateTime @default(now())
+    isDeprecated Boolean @default(false)
 
 	@@unique([serviceId, version])
 }
