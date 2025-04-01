@@ -26,8 +26,6 @@ export interface SidebarItem {
 export const DefaultSideBar = ({ items }: DefaultSideBarProps) => {
   const pathname = usePathname();
 
-  console.log(pathname);
-
   return (
     <div className="h-full max-w-60 border-r lg:min-w-60">
       <SidebarProvider className="h-full items-start">

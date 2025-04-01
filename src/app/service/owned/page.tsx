@@ -18,8 +18,6 @@ import { AllServiceSidebar } from "~/components/service/AllServiceSidebar";
 export default function ServicesPage() {
   const { data: session } = useSession();
 
-  // Fetch Data from BE
-  console.log(api.service.getAllByUserId.useQuery());
   const {
     data: services,
     isLoading,
