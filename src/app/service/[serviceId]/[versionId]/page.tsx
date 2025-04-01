@@ -58,15 +58,18 @@ export default function ServicePage() {
     versionId,
   });
 
-  const { mutate: updateDeprecated, isPending: isUpdatingDeprecated } = api.version.updateDeprecated.useMutation({
-    onSuccess: () => {
-      toast.success("Version updated");
-      void utils.version.getDocumentationByVersionId.invalidate({ versionId });
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  const { mutate: updateDeprecated, isPending: isUpdatingDeprecated } =
+    api.version.updateDeprecated.useMutation({
+      onSuccess: () => {
+        toast.success("Version updated");
+        void utils.version.getDocumentationByVersionId.invalidate({
+          versionId,
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   // Show loading state
   if (serviceLoading) {
     return (
@@ -146,7 +149,10 @@ export default function ServicePage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() =>
-                          updateDeprecated({ versionId, isDeprecated: !versionData?.isDeprecated })
+                          updateDeprecated({
+                            versionId,
+                            isDeprecated: !versionData?.isDeprecated,
+                          })
                         }
                         disabled={isUpdatingDeprecated}
                       >

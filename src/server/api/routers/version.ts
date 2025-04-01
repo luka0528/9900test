@@ -248,7 +248,9 @@ export const versionRouter = createTRPCRouter({
     }),
 
   updateDeprecated: protectedProcedure
-    .input(z.object({ versionId: z.string().min(1), isDeprecated: z.boolean() }))
+    .input(
+      z.object({ versionId: z.string().min(1), isDeprecated: z.boolean() }),
+    )
     .mutation(async ({ ctx, input }) => {
       const { versionId, isDeprecated } = input;
       const version = await ctx.db.serviceVersion.findUnique({
@@ -269,7 +271,7 @@ export const versionRouter = createTRPCRouter({
         });
       }
 
-      const isOwner = version.service.owners.some(  
+      const isOwner = version.service.owners.some(
         (owner) => owner.userId === ctx.session.user.id,
       );
 
