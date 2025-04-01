@@ -37,7 +37,7 @@ export function ServiceSidebar({
     },
     {
       title: "Reviews",
-      url: "1",
+      url: `/service/${serviceId}/reviews`,
       icon: MessagesSquare,
     },
     {
