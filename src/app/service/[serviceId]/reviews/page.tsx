@@ -8,6 +8,7 @@ import { ServiceSidebar } from "~/components/service/ServiceSidebar";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 import { ReviewCard } from "~/components/service/ReviewCard";
+import { ReviewReplyCard } from "~/components/service/ReviewReplyCard";
 
 export default function ReviewsPage() {
   const { data: session } = useSession();
@@ -60,14 +61,24 @@ export default function ReviewsPage() {
         <div className="p-6">
           {/* Review information (maybe statistics on left) */}
           <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-3xl font-bold">{service.name}</h1>
+            <h1 className="text-3xl font-bold">{service.name} reviews</h1>
             <div className="flex items-center gap-2"></div>
           </div>
 
-          <Separator className="my-8" />
-          <p>Balls balls balls - insert review cards here</p>
-          <ReviewCard />
-          <ReviewCard />
+          {/* If the current user is subscribed to this service, their should be an add review button */}
+
+          {/* Review cards */}
+          <div className="w-full">
+            <Separator className="my-8" />
+            <ReviewCard />
+            <Separator className="my-8" />
+            <ReviewCard />
+            <ReviewReplyCard />
+            <Separator className="my-8" />
+            <ReviewCard />
+            <Separator className="my-8" />
+            <ReviewCard />
+          </div>
         </div>
       </div>
     </div>
