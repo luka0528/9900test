@@ -520,7 +520,6 @@ export const serviceRouter = createTRPCRouter({
           ? dates
           : [dates]
         : [];
-      console.log(processTags);
       let orderBy: Prisma.ServiceOrderByWithRelationInput = {
         consumerEvents: {
           _count: "desc",
@@ -637,8 +636,6 @@ export const serviceRouter = createTRPCRouter({
         cursor: cursor ? { id: cursor } : undefined,
         take: limit,
       });
-
-      console.log(services);
 
       const nextCursor = services.length > limit ? services.pop()?.id : null;
       return { services, nextCursor };

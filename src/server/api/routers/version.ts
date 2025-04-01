@@ -122,6 +122,7 @@ export const versionRouter = createTRPCRouter({
           description: true,
           version: true,
           createdAt: true,
+          isDeprecated: true,
           contents: {
             select: {
               id: true,
@@ -243,6 +244,47 @@ export const versionRouter = createTRPCRouter({
             })),
           },
         },
+      });
+    }),
+
+  updateDeprecated: protectedProcedure
+    .input(
+      z.object({ versionId: z.string().min(1), isDeprecated: z.boolean() }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { versionId, isDeprecated } = input;
+      const version = await ctx.db.serviceVersion.findUnique({
+        where: { id: versionId },
+        select: {
+          service: {
+            select: {
+              owners: true,
+            },
+          },
+        },
+      });
+
+      if (!version) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Version not found",
+        });
+      }
+
+      const isOwner = version.service.owners.some(
+        (owner) => owner.userId === ctx.session.user.id,
+      );
+
+      if (!isOwner) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You are not an owner of the service",
+        });
+      }
+
+      await ctx.db.serviceVersion.update({
+        where: { id: versionId },
+        data: { isDeprecated },
       });
     }),
 });
