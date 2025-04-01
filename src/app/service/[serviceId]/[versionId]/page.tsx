@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -21,17 +21,18 @@ import {
 } from "~/components/ui/table";
 import { Separator } from "~/components/ui/separator";
 import {
-  Pencil,
   ChevronDown,
   Heart,
   HeartOff,
   Loader2,
   MessageSquare,
   AlertTriangle,
+  HandPlatter,
+  FileText,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
-import { useToast } from "~/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function ServicePage() {
   const { data: session } = useSession();
@@ -39,10 +40,8 @@ export default function ServicePage() {
   const serviceId = params.serviceId as string;
   const versionId = params.versionId as string;
   const router = useRouter();
-  const { toast } = useToast();
 
   const [isSaved, setIsSaved] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState("");
 
   // Fetch service data from backend
   const {
@@ -60,45 +59,16 @@ export default function ServicePage() {
     versionId,
   });
 
-  // Tries to get latest version
-  useEffect(() => {
-    if (
-      service &&
-      !selectedVersion &&
-      service.versions &&
-      service.versions.length > 0
-    ) {
-      // Use the most recent version
-      const latestVersion =
-        service.versions[service.versions.length - 1]!.version;
-      setSelectedVersion(latestVersion);
-    }
-  }, [service, selectedVersion]);
-
-  // Handler for version selection
-  const handleVersionSelect = (version: string) => {
-    setSelectedVersion(version);
-  };
-
   // Handle saving/favoriting service
   const toggleSaveService = () => {
     if (!session) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to save services",
-        variant: "destructive",
-      });
+      toast.error("Please log in to save services");
       return;
     }
 
     // Here you would call an API to save/unsave
     setIsSaved(!isSaved);
-    toast({
-      title: isSaved ? "Removed from favorites" : "Added to favorites",
-      description: isSaved
-        ? "Service removed from your saved list"
-        : "Service added to your saved list",
-    });
+    toast.success(isSaved ? "Removed from favorites" : "Added to favorites");
   };
 
   // Show loading state
@@ -133,7 +103,7 @@ export default function ServicePage() {
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
-      <ServiceSidebar />
+      <ServiceSidebar serviceId={serviceId} versionId={versionId} />
       <div className="flex h-full grow flex-col overflow-y-auto">
         <div className="p-6">
           {/* Service Header with Name and Actions */}
@@ -157,24 +127,41 @@ export default function ServicePage() {
                 service.owners.some(
                   (owner) => owner.user.id === session.user.id,
                 ) && (
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      router.push(
-                        `/service/${serviceId}/${versionId}/edit`,
-                      )
-                    }
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        Edit
+                        <ChevronDown className="text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          router.push(`/service/${serviceId}/edit`)
+                        }
+                      >
+                        <HandPlatter className="h-4 w-4" />
+                        Edit service content
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          router.push(`/service/${serviceId}/${versionId}/edit`)
+                        }
+                      >
+                        <FileText className="h-4 w-4" />
+                        Edit version {versionData?.version} details
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
 
               {/* Version selector */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
-                    {selectedVersion || "Select Version"}
+                    {versionData?.version ?? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
                     <ChevronDown className="text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -182,10 +169,12 @@ export default function ServicePage() {
                   {service.versions.map((version) => (
                     <DropdownMenuItem
                       key={version.version}
-                      onClick={() => handleVersionSelect(version.version)}
+                      onClick={() =>
+                        router.push(`/service/${serviceId}/${version.id}`)
+                      }
                     >
                       {version.version}
-                      {version.version === selectedVersion && " (current)"}
+                      {version.version === versionData?.version && " (current)"}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -212,7 +201,7 @@ export default function ServicePage() {
 
           {/* Service description */}
           <div className="mb-8">
-            {selectedVersion ? (
+            {versionData ? (
               versionLoading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -235,67 +224,57 @@ export default function ServicePage() {
           <Separator className="my-8" />
 
           {/* Version Content */}
-          {selectedVersion ? (
-            versionLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : versionError ? (
-              <div className="rounded-md bg-destructive/10 p-4 text-center">
-                <p className="font-medium text-destructive">
-                  Error loading version content: {versionError.message}
-                </p>
-              </div>
-            ) : versionData?.contents ? (
-              <div className="space-y-10">
-                {versionData.contents.map((content, index) => (
-                  <div key={index} className="mb-10">
-                    <h2 className="mb-4 text-xl font-semibold">
-                      {content.title}
-                    </h2>
+          {versionLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : versionError ? (
+            <div className="rounded-md bg-destructive/10 p-4 text-center">
+              <p className="font-medium text-destructive">
+                Error loading version content: {versionError.message}
+              </p>
+            </div>
+          ) : versionData?.contents ? (
+            <div className="space-y-10">
+              {versionData.contents.map((content, index) => (
+                <div key={index} className="mb-10">
+                  <h2 className="mb-4 text-xl font-semibold">
+                    {content.title}
+                  </h2>
 
-                    {/* Content description */}
-                    <p className="mb-6">{content.description}</p>
+                  {/* Content description */}
+                  <p className="mb-6">{content.description}</p>
 
-                    {/* If content has table rows, display them */}
-                    {content.rows && content.rows.length > 0 && (
-                      <div className="rounded-md border">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-1/3">
-                                Method/Code
-                              </TableHead>
-                              <TableHead>Description</TableHead>
+                  {/* If content has table rows, display them */}
+                  {content.rows && content.rows.length > 0 && (
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-1/3">Method/Code</TableHead>
+                            <TableHead>Description</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {content.rows.map((row) => (
+                            <TableRow key={row.id}>
+                              <TableCell className="font-mono">
+                                {row.routeName}
+                              </TableCell>
+                              <TableCell>{row.description}</TableCell>
                             </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {content.rows.map((row) => (
-                              <TableRow key={row.id}>
-                                <TableCell className="font-mono">
-                                  {row.routeName}
-                                </TableCell>
-                                <TableCell>{row.description}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-10 text-center">
-                <p className="text-muted-foreground">
-                  No content available for this version
-                </p>
-              </div>
-            )
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="py-10 text-center">
               <p className="text-muted-foreground">
-                Select a version to view content
+                No content available for this version
               </p>
             </div>
           )}

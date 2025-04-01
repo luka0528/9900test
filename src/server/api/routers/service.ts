@@ -114,6 +114,63 @@ export const serviceRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  updateServiceMetadata: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string().min(1),
+        newName: z.string().min(1),
+        tags: z.array(z.string()).default([]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+        include: {
+          owners: true,
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      if (
+        service.owners.some((owner) => owner.userId !== ctx.session.user.id)
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to update this service",
+        });
+      }
+
+      await ctx.db.service.update({
+        where: { id: input.serviceId },
+        data: {
+          name: input.newName,
+          tags: {
+            disconnect: input.tags
+              ? await ctx.db.tag.findMany({
+                  where: {
+                    services: { some: { id: input.serviceId } },
+                    name: { notIn: input.tags },
+                  },
+                  select: { id: true },
+                })
+              : [],
+            connectOrCreate: input.tags.map((tag) => ({
+              where: { name: tag },
+              create: { name: tag },
+            })),
+          },
+        },
+      });
+
+      return { success: true };
+    }),
+
   getInfiniteServices: publicProcedure
     .input(
       z.object({
@@ -133,8 +190,6 @@ export const serviceRouter = createTRPCRouter({
           name: `Service ${id}`,
           createdAt: new Date(),
           updatedAt: new Date(),
-          price: 0,
-          views: 0,
         };
       });
 
@@ -159,7 +214,11 @@ export const serviceRouter = createTRPCRouter({
       },
       include: {
         tags: true,
-        versions: true,
+        versions: {
+          orderBy: {
+            version: "desc",
+          },
+        },
       },
     });
 
@@ -168,7 +227,7 @@ export const serviceRouter = createTRPCRouter({
       name: service.name,
       owner: ctx.session.user.name,
       tags: service.tags.map((tag) => tag.name),
-      latestVersion: service.versions[service.versions.length - 1]!,
+      latestVersion: service.versions[0]!,
     }));
 
     return res;
@@ -222,7 +281,11 @@ export const serviceRouter = createTRPCRouter({
           versions: {
             select: {
               version: true,
+              id: true,
               description: true,
+            },
+            orderBy: {
+              version: "desc",
             },
           },
           owners: {
@@ -261,6 +324,9 @@ export const serviceRouter = createTRPCRouter({
                   rows: true,
                 },
               },
+            },
+            orderBy: {
+              version: "desc",
             },
           },
           owners: {
@@ -455,12 +521,25 @@ export const serviceRouter = createTRPCRouter({
           : [dates]
         : [];
       console.log(processTags);
-      let orderBy: Prisma.ServiceOrderByWithRelationInput = { views: "desc" };
+      let orderBy: Prisma.ServiceOrderByWithRelationInput = {
+        consumerEvents: {
+          _count: "desc",
+        },
+      };
+      // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
       if (sort == "Price-Desc") {
-        orderBy = { price: "desc" } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = {
+          subscriptionTiers: {
+            price: "desc",
+          },
+        } as Prisma.ServiceOrderByWithRelationInput;
+        // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
       } else if (sort == "Price-Asc") {
-        orderBy = { price: "asc" } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort == "New-to-Old") {
+        orderBy = {
+          subscriptionTiers: {
+            price: "asc",
+          },
+        } as Prisma.ServiceOrderByWithRelationInput;
         orderBy = {
           createdAt: "asc",
         } as Prisma.ServiceOrderByWithRelationInput;
@@ -513,6 +592,7 @@ export const serviceRouter = createTRPCRouter({
               },
             },
           }),
+        // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
         ...(price &&
           price.length == 2 && {
             price: {

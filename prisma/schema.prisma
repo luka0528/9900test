@@ -42,6 +42,8 @@ model ServiceComment {
 
 model ConsumerEvent {
     id        String   @id @default(cuid())
+    serviceId String
+    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
     consumerId String
     consumer   ServiceConsumer  @relation(fields: [consumerId], references: [id], onDelete: Cascade)
     eventType String
@@ -51,6 +53,29 @@ model ConsumerEvent {
 enum ConsumerEventType {
     VIEWED
     // TODO: Add more events
+}
+
+// Service Pricing
+
+
+model SubscriptionTier {
+  id          String         @id @default(cuid())
+  serviceId   String
+  service     Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  name        String         @unique
+  price       Float
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  consumers   ServiceConsumer[]
+  features    TierFeature[]
+}
+
+model TierFeature {
+  id                String          @id @default(cuid())
+  subscriptionTierId String
+  subscriptionTier   SubscriptionTier @relation(fields: [subscriptionTierId], references: [id], onDelete: Cascade)
+  feature            String
 }
 
 // Service Management
@@ -69,13 +94,12 @@ model Service {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
+    subscriptionTiers SubscriptionTier[]
     tags      Tag[]
     ratings   ServiceRating[]
     versions ServiceVersion[]
     owners ServiceOwner[]
-    consumers ServiceConsumer[]
-    price     Float?
-    views     Int     @default(0)
+    consumerEvents ConsumerEvent[]
 }
 
 model ServiceVersion {
@@ -86,6 +110,7 @@ model ServiceVersion {
     version     String
     contents    ServiceContent[]
     createdAt DateTime @default(now())
+    isDeprecated Boolean @default(false)
 
 	@@unique([serviceId, version])
 }
@@ -125,12 +150,15 @@ model ServiceConsumer {
     id        String   @id @default(cuid())
     userId    String
     user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    serviceId String
-    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+    subscriptionTierId String
+    subscriptionTier SubscriptionTier @relation(fields: [subscriptionTierId], references: [id], onDelete: Cascade)
     createdAt DateTime @default(now())
 
     ratings ServiceRating[]
     events ConsumerEvent[]
+
+    paymentMethodId    String?
+    paymentMethod     PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
 }
 
 // Notifications
@@ -201,8 +229,8 @@ model User {
   sentNotifications   Notification[] @relation("UserSentNotifications")
     
   isSubscriptionsPublic         Boolean @default(true)
-  isRatingsPublic                 Boolean @default(true)
-  isUserDataCollectionAllowed     Boolean @default(true)
+  isRatingsPublic               Boolean @default(true)
+  isUserDataCollectionAllowed   Boolean @default(true)
 
   stripeCustomerId    String?
   paymentMethods      PaymentMethod[]
@@ -234,19 +262,21 @@ enum VerificationTokenType {
 
 
 model BillingReceipt {
-    id      String   @id @default(cuid())
-    date   DateTime @default(now())
+    id              String   @id @default(cuid())
+    date            DateTime @default(now())
+    amount          Float
+    description     String
+    from            String
+    to              String
+    
+    status                  BillingStatus
+    automaticRenewal        Boolean
+    automaticRenewalDate    DateTime?
+
     paymentMethodId String?
-    paymentMethod       PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
-    amount  Float
-    description String
-    from String
-    to String
-    status BillingStatus
-    automaticRenewal Boolean
-    automaticRenewalDate DateTime?
-    userId  String
-    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId          String
+    paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+    user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum BillingStatus {
@@ -257,10 +287,26 @@ enum BillingStatus {
 }
 
 model PaymentMethod {
-  id              String   @id @default(cuid())
-  stripePaymentId String   @unique 
-  stripeCustomerId String
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  billingReceipts BillingReceipt[]
+    id               String   @id @default(cuid())
+    stripePaymentId  String   @unique
+    stripeCustomerId String
+
+    cardBrand        String?
+    last4            String?
+    expMonth         Int?
+    expYear          Int?
+    cardholderName   String?
+
+    addressLine1     String?
+    addressLine2     String?
+    city             String?
+    state            String?
+    postalCode       String?
+    country          String?
+
+    userId           String
+    user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    billingReceipts  BillingReceipt[]
+    serviceConsumers ServiceConsumer[]
 }

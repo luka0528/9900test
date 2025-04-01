@@ -1,4 +1,4 @@
-import type { MarketplaceSortType } from '~/components/marketplace/MarketplaceSortSelector';
+import type { MarketplaceSortType } from "~/components/marketplace/MarketplaceSortSelector";
 
 export interface Query {
   search: string;
@@ -9,8 +9,8 @@ export interface Query {
 }
 
 export const DEFAULT_QUERY: Query = {
-  search: '',
-  sort: 'Popularity',
+  search: "",
+  sort: "Popularity",
   tags: [],
   price: ["0", "12"],
   dates: [],
