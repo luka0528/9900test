@@ -186,10 +186,9 @@ export const serviceRouter = createTRPCRouter({
           subscriptionTiers: {
             deleteMany: {
               id: {
-                notIn:
-                  input.subscriptionTiers
-                    .filter((tier) => tier.id)
-                    .map((tier) => tier.id),
+                notIn: input.subscriptionTiers
+                  .filter((tier) => tier.id)
+                  .map((tier) => tier.id),
               },
             },
             upsert: input.subscriptionTiers.map((tier) => ({
