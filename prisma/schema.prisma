@@ -111,8 +111,27 @@ model ServiceVersion {
     contents    ServiceContent[]
     createdAt DateTime @default(now())
     isDeprecated Boolean @default(false)
+    changelogPoints     ChangeLogPoint[]
 
 	@@unique([serviceId, version])
+}
+
+model ChangeLogPoint {
+    id        String   @id @default(cuid())
+    versionId String
+    version   ServiceVersion  @relation(fields: [versionId], references: [id], onDelete: Cascade)
+    description String
+    type ChangeLogPointType
+    createdAt DateTime @default(now())
+}
+
+enum ChangeLogPointType {
+    ADDED
+    CHANGED
+    DEPRECATED
+    REMOVED
+    FIXED
+    SECURITY
 }
 
 model ServiceContent {
