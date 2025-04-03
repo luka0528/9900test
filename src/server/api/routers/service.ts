@@ -988,6 +988,7 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return { success: true };
+    }),
   getAllVersionChangelogs: publicProcedure
     .input(z.object({ serviceId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
