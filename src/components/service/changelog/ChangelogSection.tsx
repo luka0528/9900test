@@ -16,8 +16,8 @@ export function ChangelogSection({ changelogData }: ChangelogSectionProps) {
   return (
     <div className="mt-6 flex flex-col gap-6">
       {changelogData.versions.map((version) => (
-        <>
-          <div key={version.version} className="mb-6 flex flex-col gap-4">
+        <div key={version.version}>
+          <div className="mb-6 flex flex-col gap-4">
             <h2 className="text-lg font-bold">Version {version.version}</h2>
             <div className="flex flex-col gap-2">
               {version.changelogPoints.map((changelogPoint) => (
@@ -34,7 +34,7 @@ export function ChangelogSection({ changelogData }: ChangelogSectionProps) {
             </div>
           </div>
           <Separator />
-        </>
+        </div>
       ))}
     </div>
   );

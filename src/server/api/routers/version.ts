@@ -153,6 +153,13 @@ export const versionRouter = createTRPCRouter({
               },
             },
           },
+          changelogPoints: {
+            select: {
+              id: true,
+              type: true,
+              description: true,
+            },
+          },
         },
       });
 
@@ -183,6 +190,13 @@ export const versionRouter = createTRPCRouter({
                 description: z.string().min(1),
               }),
             ),
+          }),
+        ),
+        changelogPoints: z.array(
+          z.object({
+            id: z.string().min(1),
+            type: z.nativeEnum(ChangeLogPointType),
+            description: z.string().min(1),
           }),
         ),
       }),
@@ -252,6 +266,24 @@ export const versionRouter = createTRPCRouter({
                 rows: {
                   create: content.rows,
                 },
+              },
+            })),
+          },
+          changelogPoints: {
+            deleteMany: {
+              id: {
+                notIn: input.changelogPoints.map((changelogPoint) => changelogPoint.id),
+              },
+            },
+            upsert: input.changelogPoints.map((changelogPoint) => ({
+              where: { id: changelogPoint.id },
+              update: {
+                type: changelogPoint.type,
+                description: changelogPoint.description,
+              },
+              create: {
+                type: changelogPoint.type,
+                description: changelogPoint.description,
               },
             })),
           },
