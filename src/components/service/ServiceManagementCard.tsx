@@ -56,10 +56,11 @@ export const ServiceManagementCard = ({
   return (
     <>
       <Card
-        className="overflow-hidden transition-all duration-300 hover:cursor-pointer hover:shadow-lg"
+        className="flex h-full flex-col overflow-hidden transition-all duration-300 hover:cursor-pointer hover:shadow-lg"
         onClick={navigateToService}
       >
-        <CardHeader className="pb-8">
+        {/* Header */}
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />
@@ -70,8 +71,10 @@ export const ServiceManagementCard = ({
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="pb-2">
-          <div className="flex flex-wrap gap-2 pb-4">
+
+        {/* Content stretches to fill space */}
+        <CardContent className="flex-1">
+          <div className="flex flex-wrap gap-2">
             {tags && tags.length > 0 ? (
               tags.map((tag) => (
                 <Badge key={tag} variant="secondary">
@@ -83,6 +86,8 @@ export const ServiceManagementCard = ({
             )}
           </div>
         </CardContent>
+
+        {/* Footer pinned at bottom */}
         <CardFooter className="flex border-t bg-muted/40 px-4 py-2">
           <Button
             variant="ghost"
@@ -100,7 +105,6 @@ export const ServiceManagementCard = ({
         </CardFooter>
       </Card>
 
-      {/* Render the modal outside of the Card to avoid event propagation issues */}
       {showManageDialog && (
         <ManageSubscriptionDialog
           isOpen={showManageDialog}
