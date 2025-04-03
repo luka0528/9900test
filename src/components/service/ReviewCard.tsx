@@ -1,7 +1,16 @@
-import { Card } from "~/components/ui/card";
+import { Card, CardFooter } from "~/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
-import { Star } from "lucide-react";
-import { ReviewReplyCard } from "./ReviewReplyCard";
+import { EllipsisVertical, Pencil, Reply, Star, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "~/components/ui/dropdown-menu";
+import { Button } from "../ui/button";
 
 interface ReviewCardProps {
   review: {
@@ -29,6 +38,33 @@ const Stars = ({ rating }: { rating: number }) => {
   );
 };
 
+const Dropdown = () => {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost">
+          <EllipsisVertical />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end">
+        <DropdownMenuLabel>Options</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem className="flex justify-between">
+            <span>Edit</span>
+            <Pencil />
+          </DropdownMenuItem>
+          <DropdownMenuItem className="group flex justify-between hover:text-red-500">
+            <span className="group-hover:text-red-500">Delete</span>
+            <Trash2 className="group-hover:text-red-500" />
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
 export const ReviewCard = (/*{ review }: ReviewCardProps*/) => {
   // const { id, reviewerName, starValue, content, postedAt } = review;
 
@@ -44,11 +80,20 @@ export const ReviewCard = (/*{ review }: ReviewCardProps*/) => {
           <div className="text-xs text-muted-foreground">day month year</div>
         </div>
         <div className="ml-auto flex items-end gap-1">
-          <Stars rating={2} />
+          <Dropdown />
         </div>
       </div>
       <div className="text-sm leading-loose text-muted-foreground">
+        <div className="ml-auto flex items-end">
+          <Stars rating={2} />
+        </div>
         Insert text here
+      </div>
+      <div>
+        <Button className="size-min" variant="outline">
+          <Reply />
+          Reply
+        </Button>
       </div>
     </Card>
   );

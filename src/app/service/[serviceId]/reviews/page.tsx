@@ -1,7 +1,7 @@
 "use client";
 
 import { Separator } from "~/components/ui/separator";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Pencil } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
@@ -62,21 +62,25 @@ export default function ReviewsPage() {
           {/* Review information (maybe statistics on left) */}
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-3xl font-bold">{service.name} reviews</h1>
-            <div className="flex items-center gap-2"></div>
+            <div className="flex items-center gap-2">
+              {/* If the current user is subscribed to this service, their should be an add/edit review/rating button */}
+              <Button className="size-min" variant="outline">
+                <Pencil />
+                Edit
+              </Button>
+            </div>
           </div>
-
-          {/* If the current user is subscribed to this service, their should be an add review button */}
 
           {/* Review cards */}
           <div className="w-full">
-            <Separator className="my-8" />
+            <Separator className="my-6" />
             <ReviewCard />
-            <Separator className="my-8" />
+            <Separator className="my-6" />
             <ReviewCard />
             <ReviewReplyCard />
-            <Separator className="my-8" />
+            <Separator className="my-6" />
             <ReviewCard />
-            <Separator className="my-8" />
+            <Separator className="my-6" />
             <ReviewCard />
           </div>
         </div>

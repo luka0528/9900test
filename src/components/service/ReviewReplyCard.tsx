@@ -22,13 +22,16 @@ export const ReviewReplyCard = (/*{ reply }: ReplyCardProps*/) => {
           <AvatarFallback>FL</AvatarFallback>
         </Avatar>
         <div className="grid w-full gap-1">
-          <div className="font-medium">Firstname Lastname</div>
+          <div className="font-medium">
+            Firstname Lastname
+            <Badge variant="outline" className="ml-2 bg-purple-100">
+              Owner
+            </Badge>
+          </div>
           <div className="text-xs text-muted-foreground">day month year</div>
         </div>
         <div className="ml-auto flex items-end gap-1">
-          <Badge variant="secondary" className="bg-purple-100">
-            Owner
-          </Badge>
+          {/* Insert edit button */}
         </div>
       </div>
       <div className="text-sm leading-loose text-muted-foreground">
