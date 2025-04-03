@@ -19,6 +19,13 @@ export const serviceRouter = createTRPCRouter({
         version: z.string().min(1),
         description: z.string().min(1),
         tags: z.array(z.string()).default([]),
+        subscriptionTiers: z.array(
+          z.object({
+            name: z.string().min(1),
+            price: z.number().min(0),
+            features: z.array(z.string()).default([]),
+          }),
+        ),
         contents: z.array(
           z.object({
             title: z.string().min(1),
@@ -48,6 +55,17 @@ export const serviceRouter = createTRPCRouter({
             connectOrCreate: input.tags.map((tag) => ({
               where: { name: tag },
               create: { name: tag },
+            })),
+          },
+          subscriptionTiers: {
+            create: input.subscriptionTiers.map((tier) => ({
+              name: tier.name,
+              price: tier.price,
+              features: {
+                create: tier.features.map((feature) => ({
+                  feature
+                })),
+              },
             })),
           },
           owners: {
