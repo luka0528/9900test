@@ -63,7 +63,7 @@ export const serviceRouter = createTRPCRouter({
               price: tier.price,
               features: {
                 create: tier.features.map((feature) => ({
-                  feature
+                  feature,
                 })),
               },
             })),
@@ -144,6 +144,14 @@ export const serviceRouter = createTRPCRouter({
       z.object({
         serviceId: z.string().min(1),
         newName: z.string().min(1),
+        subscriptionTiers: z.array(
+          z.object({
+            id: z.string().min(1),
+            name: z.string().min(1),
+            price: z.number().min(0),
+            features: z.array(z.string()).default([]),
+          }),
+        ),
         tags: z.array(z.string()).default([]),
       }),
     )
@@ -175,6 +183,40 @@ export const serviceRouter = createTRPCRouter({
         where: { id: input.serviceId },
         data: {
           name: input.newName,
+          subscriptionTiers: {
+            deleteMany: {
+              id: {
+                notIn:
+                  input.subscriptionTiers
+                    .filter((tier) => tier.id)
+                    .map((tier) => tier.id),
+              },
+            },
+            upsert: input.subscriptionTiers.map((tier) => ({
+              where: {
+                id: tier.id ?? "",
+              },
+              create: {
+                name: tier.name,
+                price: tier.price,
+                features: {
+                  create: tier.features.map((feature) => ({
+                    feature,
+                  })),
+                },
+              },
+              update: {
+                name: tier.name,
+                price: tier.price,
+                features: {
+                  deleteMany: {},
+                  create: tier.features.map((feature) => ({
+                    feature,
+                  })),
+                },
+              },
+            })),
+          },
           tags: {
             disconnect: input.tags
               ? await ctx.db.tag.findMany({
@@ -311,6 +353,16 @@ export const serviceRouter = createTRPCRouter({
             },
             orderBy: {
               version: "desc",
+            },
+          },
+          subscriptionTiers: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              features: {
+                select: { feature: true },
+              },
             },
           },
           owners: {
