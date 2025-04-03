@@ -8,11 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { Package, User, Settings, ChevronRight } from "lucide-react";
+import { Package, Settings, ChevronRight } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useRouter } from "next/navigation";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
-import { SubscriptionTier } from "@prisma/client";
+import type { SubscriptionTier } from "@prisma/client";
 import React from "react";
 
 interface ServiceManagementCardProps {

@@ -71,7 +71,9 @@ export default function ServicesPage() {
                     showManageDialog: showManageDialog,
                     setShowManageDialog: setShowManageDialog,
                     subscriptionTier: service.subscriptionTier,
-                    refetch: refetch,
+                    refetch: () => {
+                      void refetch();
+                    },
                   }}
                 />
               ))}
