@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
-
+import { ChangeLogPointType } from "@prisma/client";
 // Note that documentation will be contained under versions
 export const versionRouter = createTRPCRouter({
   create: protectedProcedure
@@ -20,6 +20,12 @@ export const versionRouter = createTRPCRouter({
                 description: z.string().min(1),
               }),
             ),
+          }),
+        ),
+        changelogPoints: z.array(
+          z.object({
+            type: z.nativeEnum(ChangeLogPointType),
+            description: z.string().min(1),
           }),
         ),
       }),
@@ -98,6 +104,12 @@ export const versionRouter = createTRPCRouter({
                   description: row.description,
                 })),
               },
+            })),
+          },
+          changelogPoints: {
+            create: input.changelogPoints.map((changelogPoint) => ({
+              type: changelogPoint.type,
+              description: changelogPoint.description,
             })),
           },
         },

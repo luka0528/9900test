@@ -24,6 +24,15 @@ import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
 import React from "react";
+import { ChangeLogPointType } from "@prisma/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Badge } from "~/components/ui/badge";
 
 // Define form schema with consistent structure
 const formSchema = z.object({
@@ -49,6 +58,14 @@ const formSchema = z.object({
       }),
     )
     .default([]),
+  changelogPoints: z
+    .array(
+      z.object({
+        type: z.nativeEnum(ChangeLogPointType),
+        description: z.string(),
+      }),
+    )
+    .default([]),
 });
 
 export default function AddServicePage() {
@@ -70,6 +87,7 @@ export default function AddServicePage() {
           rows: [],
         },
       ],
+      changelogPoints: [],
     },
   });
 
@@ -202,6 +220,28 @@ export default function AddServicePage() {
     );
   };
 
+  // Add a change log point
+  const addChangeLogPoint = () => {
+    const changelogPoints = form.getValues("changelogPoints") ?? [];
+
+    form.setValue("changelogPoints", [
+      ...changelogPoints,
+      {
+        type: ChangeLogPointType.ADDED,
+        description: "",
+      },
+    ]);
+  };
+
+  // Remove a change log point
+  const removeChangeLogPoint = (changelogPointIndex: number) => {
+    const changelogPoints = form.getValues("changelogPoints");
+    form.setValue(
+      "changelogPoints",
+      changelogPoints.filter((_, idx) => idx !== changelogPointIndex),
+    );
+  };
+
   // Handle form submission
   function onSubmit(values: z.infer<typeof formSchema>) {
     createVersion({
@@ -209,6 +249,7 @@ export default function AddServicePage() {
       versionDescription: values.description,
       newVersion: values.version,
       contents: values.contents,
+      changelogPoints: values.changelogPoints,
     });
   }
 
@@ -430,6 +471,92 @@ export default function AddServicePage() {
                     )}
                   </CardContent>
                 </Card>
+              ))}
+            </div>
+
+            <Separator />
+
+            {/* Change Log Points */}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-lg">Change Log Points</FormLabel>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addChangeLogPoint()}
+                  >
+                    <Plus className="mr-1 h-4 w-4" />
+                    Add Change Log Point
+                  </Button>
+                </div>
+              </div>
+              {form.watch("changelogPoints")?.map((changelogPoint, index) => (
+                <div key={index} className="flex w-full gap-2">
+                  <FormField
+                    control={form.control}
+                    name={`changelogPoints.${index}.type`}
+                    render={({ field }) => (
+                      <FormItem className="w-36">
+                        <FormControl>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger className="w-fit border-none shadow-none hover:bg-gray-100 transition-all duration-200">
+                              <SelectValue placeholder="Select a type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={ChangeLogPointType.ADDED}>
+                                <Badge variant="added">Added</Badge>
+                              </SelectItem>
+                              <SelectItem value={ChangeLogPointType.CHANGED}>
+                                <Badge variant="changed">Changed</Badge>
+                              </SelectItem>
+                              <SelectItem value={ChangeLogPointType.DEPRECATED}>
+                                <Badge variant="deprecated">Deprecated</Badge>
+                              </SelectItem>
+                              <SelectItem value={ChangeLogPointType.REMOVED}>
+                                <Badge variant="removed">Removed</Badge>
+                              </SelectItem>
+                              <SelectItem value={ChangeLogPointType.FIXED}>
+                                <Badge variant="fixed">Fixed</Badge>
+                              </SelectItem>
+                              <SelectItem value={ChangeLogPointType.SECURITY}>
+                                <Badge variant="security">Security</Badge>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`changelogPoints.${index}.description`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Textarea
+                            className="flex-1"
+                            placeholder="Enter a description for the change log point"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeChangeLogPoint(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               ))}
             </div>
 
