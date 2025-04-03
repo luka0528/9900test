@@ -24,6 +24,15 @@ import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { createId } from "@paralleldrive/cuid2";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
+import { ChangeLogPointType } from "@prisma/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Badge } from "~/components/ui/badge";
 
 // Define form schema with consistent structure
 const formSchema = z.object({
@@ -48,6 +57,15 @@ const formSchema = z.object({
       }),
     )
     .default([]),
+  changelogPoints: z
+    .array(
+      z.object({
+        id: z.string(),
+        type: z.nativeEnum(ChangeLogPointType),
+        description: z.string(),
+      }),
+    )
+    .default([]),
 });
 
 export default function EditServicePage() {
@@ -69,6 +87,7 @@ export default function EditServicePage() {
       // Set empty defaults initially
       description: "",
       contents: [],
+      changelogPoints: [],
     },
   });
 
@@ -90,6 +109,7 @@ export default function EditServicePage() {
                 description: row.description || "",
               })) || [],
           })) || [],
+        changelogPoints: versionData.changelogPoints || [],
       });
     }
   }, [versionData, form]);
@@ -101,6 +121,10 @@ export default function EditServicePage() {
         void utils.version.getDocumentationByVersionId.invalidate({
           versionId: versionId,
         });
+        void utils.service.getAllVersionChangelogs.invalidate({
+          serviceId: serviceId,
+        });
+        router.push(`/service/${serviceId}/${versionId}`);
       },
       onError: () => {
         toast.error("Failed to update service", {
@@ -188,12 +212,35 @@ export default function EditServicePage() {
     );
   };
 
+  // Add a change log point
+  const addChangeLogPoint = () => {
+    const changelogPoints = form.getValues("changelogPoints") ?? [];
+    form.setValue("changelogPoints", [
+      ...changelogPoints,
+      {
+        id: createId(),
+        type: ChangeLogPointType.ADDED,
+        description: "",
+      },
+    ]);
+  };
+
+  // Remove a change log point
+  const removeChangeLogPoint = (changelogPointIndex: number) => {
+    const changelogPoints = form.getValues("changelogPoints");
+    form.setValue(
+      "changelogPoints",
+      changelogPoints.filter((_, idx) => idx !== changelogPointIndex),
+    );
+  };
+
   // Handle form submission
   async function onSubmit(values: z.infer<typeof formSchema>) {
     editVersion({
       versionId,
       newDescription: values.description,
       contents: values.contents,
+      changelogPoints: values.changelogPoints,
     });
   }
 
@@ -391,6 +438,92 @@ export default function EditServicePage() {
                     )}
                   </CardContent>
                 </Card>
+              ))}
+            </div>
+
+            <Separator />
+
+            {/* Change Log Points */}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-lg">Change Log Points</FormLabel>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addChangeLogPoint()}
+                  >
+                    <Plus className="mr-1 h-4 w-4" />
+                    Add Change Log Point
+                  </Button>
+                </div>
+              </div>
+              {form.watch("changelogPoints")?.map((changelogPoint, index) => (
+                <div key={index} className="flex w-full gap-2">
+                  <FormField
+                    control={form.control}
+                    name={`changelogPoints.${index}.type`}
+                    render={({ field }) => (
+                      <FormItem className="w-36">
+                        <FormControl>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger className="w-fit border-none shadow-none transition-all duration-200 hover:bg-gray-100">
+                              <SelectValue placeholder="Select a type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={ChangeLogPointType.ADDED}>
+                                <Badge variant="added">Added</Badge>
+                              </SelectItem>
+                              <SelectItem value={ChangeLogPointType.CHANGED}>
+                                <Badge variant="changed">Changed</Badge>
+                              </SelectItem>
+                              <SelectItem value={ChangeLogPointType.DEPRECATED}>
+                                <Badge variant="deprecated">Deprecated</Badge>
+                              </SelectItem>
+                              <SelectItem value={ChangeLogPointType.REMOVED}>
+                                <Badge variant="removed">Removed</Badge>
+                              </SelectItem>
+                              <SelectItem value={ChangeLogPointType.FIXED}>
+                                <Badge variant="fixed">Fixed</Badge>
+                              </SelectItem>
+                              <SelectItem value={ChangeLogPointType.SECURITY}>
+                                <Badge variant="security">Security</Badge>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`changelogPoints.${index}.description`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Textarea
+                            className="flex-1"
+                            placeholder="Enter a description for the change log point"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeChangeLogPoint(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               ))}
             </div>
 

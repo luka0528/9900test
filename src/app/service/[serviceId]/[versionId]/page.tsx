@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -22,8 +21,8 @@ import {
 import { Separator } from "~/components/ui/separator";
 import {
   ChevronDown,
-  Heart,
-  HeartOff,
+  Ban,
+  CheckCircle,
   Loader2,
   MessageSquare,
   AlertTriangle,
@@ -40,8 +39,7 @@ export default function ServicePage() {
   const serviceId = params.serviceId as string;
   const versionId = params.versionId as string;
   const router = useRouter();
-
-  const [isSaved, setIsSaved] = useState(false);
+  const utils = api.useUtils();
 
   // Fetch service data from backend
   const {
@@ -59,18 +57,18 @@ export default function ServicePage() {
     versionId,
   });
 
-  // Handle saving/favoriting service
-  const toggleSaveService = () => {
-    if (!session) {
-      toast.error("Please log in to save services");
-      return;
-    }
-
-    // Here you would call an API to save/unsave
-    setIsSaved(!isSaved);
-    toast.success(isSaved ? "Removed from favorites" : "Added to favorites");
-  };
-
+  const { mutate: updateDeprecated, isPending: isUpdatingDeprecated } =
+    api.version.updateDeprecated.useMutation({
+      onSuccess: () => {
+        toast.success("Version updated");
+        void utils.version.getDocumentationByVersionId.invalidate({
+          versionId,
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   // Show loading state
   if (serviceLoading) {
     return (
@@ -103,25 +101,22 @@ export default function ServicePage() {
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
-      <ServiceSidebar serviceId={serviceId} versionId={versionId} />
+      <ServiceSidebar serviceId={serviceId} />
       <div className="flex h-full grow flex-col overflow-y-auto">
         <div className="p-6">
           {/* Service Header with Name and Actions */}
           <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-3xl font-bold">{service.name}</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold">{service.name}</h1>
+              {versionData?.isDeprecated && (
+                <Badge variant="destructive">Deprecated</Badge>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <Button variant="secondary">
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Support
               </Button>
-              <Button
-                size="icon"
-                variant="secondary"
-                onClick={toggleSaveService}
-              >
-                {isSaved ? <HeartOff /> : <Heart />}
-              </Button>
-
               {/* Only show edit button for service creator */}
               {session &&
                 service.owners.some(
@@ -150,6 +145,29 @@ export default function ServicePage() {
                       >
                         <FileText className="h-4 w-4" />
                         Edit version {versionData?.version} details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          updateDeprecated({
+                            versionId,
+                            isDeprecated: !versionData?.isDeprecated,
+                          })
+                        }
+                        disabled={isUpdatingDeprecated}
+                      >
+                        {isUpdatingDeprecated ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : versionData?.isDeprecated ? (
+                          <>
+                            <CheckCircle className="h-4 w-4" />
+                            Unmark as deprecated
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="h-4 w-4" />
+                            Mark as deprecated
+                          </>
+                        )}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
