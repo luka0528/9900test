@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 import {
   Form,
@@ -60,7 +60,6 @@ export default function AddServicePage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [tagInput, setTagInput] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize the form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -81,12 +80,16 @@ export default function AddServicePage() {
   });
 
   // tRPC
-  const createServiceCall = api.service.create.useMutation({
-    onSuccess: (data) => {
-      toast.success("Service created successfully");
-      router.push(`/service/${data.serviceId}/${data.versionId}`);
-    },
-  });
+  const { mutate: createService, isPending: isCreatingService } =
+    api.service.create.useMutation({
+      onSuccess: (data) => {
+        toast.success("Service created successfully");
+        router.push(`/service/${data.serviceId}/${data.versionId}`);
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
 
   // Add a tag
   const addTag = () => {
@@ -181,28 +184,17 @@ export default function AddServicePage() {
 
   // Handle form submission
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!session?.user) {
-      toast.error("You must be logged in to create a service");
-      return;
-    }
+    createService({
+      name: values.name,
+      description: values.description,
+      version: values.version,
+      contents: values.contents,
+      tags: values.tags,
+    });
+  }
 
-    try {
-      setIsSubmitting(true);
-      await createServiceCall.mutateAsync({
-        name: values.name,
-        description: values.description,
-        version: values.version,
-        contents: values.contents,
-        tags: values.tags,
-      });
-    } catch (error) {
-      console.error("Error creating service:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create service",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+  if (!session?.user) {
+    return <div>You must be logged in to create a service</div>;
   }
 
   return (
@@ -481,12 +473,12 @@ export default function AddServicePage() {
                 type="button"
                 variant="outline"
                 onClick={() => router.push("/service")}
-                disabled={isSubmitting}
+                disabled={isCreatingService}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
+              <Button type="submit" disabled={isCreatingService}>
+                {isCreatingService ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating...

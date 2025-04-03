@@ -34,6 +34,13 @@ export const serviceRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.session?.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to create a service",
+        });
+      }
+
       const service = await ctx.db.service.create({
         data: {
           name: input.name,
