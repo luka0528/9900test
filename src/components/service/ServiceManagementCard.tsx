@@ -59,13 +59,15 @@ export const ServiceManagementCard = ({
         className="overflow-hidden transition-all duration-300 hover:cursor-pointer hover:shadow-lg"
         onClick={navigateToService}
       >
-        <CardHeader className="min-h-[5rem] pb-2">
+        <CardHeader className="pb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />
               <CardTitle className="text-lg font-bold">{name}</CardTitle>
             </div>
-            <Badge variant="outline">{tierName}</Badge>
+            <Badge variant="outline" className="max-w-[10rem] truncate">
+              {tierName}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="pb-2">

@@ -681,7 +681,11 @@ export const userRouter = createTRPCRouter({
         include: {
           subscriptionTier: {
             include: {
-              service: true,
+              service: {
+                include: {
+                  tags: true,
+                },
+              },
             },
           },
           paymentMethod: true,
