@@ -272,7 +272,9 @@ export const versionRouter = createTRPCRouter({
           changelogPoints: {
             deleteMany: {
               id: {
-                notIn: input.changelogPoints.map((changelogPoint) => changelogPoint.id),
+                notIn: input.changelogPoints.map(
+                  (changelogPoint) => changelogPoint.id,
+                ),
               },
             },
             upsert: input.changelogPoints.map((changelogPoint) => ({

@@ -12,11 +12,7 @@ import { DefaultSideBar, type SidebarItem } from "../sidebar/DefaultSideBar";
 import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
 
-export function ServiceSidebar({
-  serviceId,
-}: {
-  serviceId: string;
-}) {
+export function ServiceSidebar({ serviceId }: { serviceId: string }) {
   const { data: session } = useSession();
   const { data: service } = api.service.getServiceById.useQuery(serviceId);
   const isOwner = service?.owners.some(

@@ -504,7 +504,7 @@ export default function AddServicePage() {
                             value={field.value}
                             onValueChange={field.onChange}
                           >
-                            <SelectTrigger className="w-fit border-none shadow-none hover:bg-gray-100 transition-all duration-200">
+                            <SelectTrigger className="w-fit border-none shadow-none transition-all duration-200 hover:bg-gray-100">
                               <SelectValue placeholder="Select a type" />
                             </SelectTrigger>
                             <SelectContent>

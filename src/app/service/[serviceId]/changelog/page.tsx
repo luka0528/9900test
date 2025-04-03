@@ -1,37 +1,11 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
-import { Badge } from "~/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
 import { Separator } from "~/components/ui/separator";
-import {
-  ChevronDown,
-  Ban,
-  CheckCircle,
-  Loader2,
-  MessageSquare,
-  AlertTriangle,
-  HandPlatter,
-  FileText,
-} from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
-import { toast } from "sonner";
 import { ChangelogSection } from "~/components/service/changelog/ChangelogSection";
 
 export default function ServicePage() {
@@ -39,10 +13,13 @@ export default function ServicePage() {
   const serviceId = rawServiceId as string;
   const router = useRouter();
 
-  const { data: changelogData, isLoading: changelogDataLoading, error: changelogDataError } =
-    api.service.getAllVersionChangelogs.useQuery({
-      serviceId,
-    });
+  const {
+    data: changelogData,
+    isLoading: changelogDataLoading,
+    error: changelogDataError,
+  } = api.service.getAllVersionChangelogs.useQuery({
+    serviceId,
+  });
 
   // Show loading state
   if (changelogDataLoading) {
