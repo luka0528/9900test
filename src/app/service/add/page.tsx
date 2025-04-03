@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 import {
   Form,
@@ -22,7 +22,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
-import { useToast } from "~/hooks/use-toast";
+import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
 
@@ -38,6 +38,18 @@ const formSchema = z.object({
     message: "Version is required (e.g. 1.0).",
   }),
   tags: z.array(z.string()).default([]),
+  subscriptionTiers: z.array(
+    z.object({
+      name: z.string().min(1, {
+        message: "Subscription tier name must be at least 1 characters.",
+      }),
+      price: z.coerce
+        .number()
+        .min(0, "Price must be greater than or equal to 0")
+        .refine((n) => !isNaN(n), "Price must be a valid number"),
+      features: z.array(z.string()).default([]),
+    }),
+  ),
   contents: z
     .array(
       z.object({
@@ -59,9 +71,7 @@ const formSchema = z.object({
 export default function AddServicePage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const { toast } = useToast();
   const [tagInput, setTagInput] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize the form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -78,19 +88,27 @@ export default function AddServicePage() {
           rows: [],
         },
       ],
+      subscriptionTiers: [
+        {
+          name: "",
+          price: 0,
+          features: ["Feature 1", "Feature 2", "Feature 3"],
+        },
+      ],
     },
   });
 
   // tRPC
-  const createServiceCall = api.service.create.useMutation({
-    onSuccess: (data) => {
-      toast({
-        title: "Success!",
-        description: "Service created successfully",
-      });
-      router.push(`/service/${data.serviceId}/${data.versionId}`);
-    },
-  });
+  const { mutate: createService, isPending: isCreatingService } =
+    api.service.create.useMutation({
+      onSuccess: (data) => {
+        toast.success("Service created successfully");
+        router.push(`/service/${data.serviceId}/${data.versionId}`);
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
 
   // Add a tag
   const addTag = () => {
@@ -183,37 +201,78 @@ export default function AddServicePage() {
     );
   };
 
-  // Handle form submission
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!session?.user) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to create a service",
-        variant: "destructive",
-      });
+  // Add a subscription tier
+  const addSubscriptionTier = () => {
+    const subscriptionTiers = form.getValues("subscriptionTiers") ?? [];
+    if (subscriptionTiers.length >= 3) {
+      toast.error("You can only have up to 3 subscription tiers");
       return;
     }
+    form.setValue("subscriptionTiers", [
+      ...subscriptionTiers,
+      { name: "", price: 0, features: ["Feature 1", "Feature 2", "Feature 3"] },
+    ]);
+  };
 
-    try {
-      setIsSubmitting(true);
-      await createServiceCall.mutateAsync({
-        name: values.name,
-        description: values.description,
-        version: values.version,
-        contents: values.contents,
-        tags: values.tags,
-      });
-    } catch (error) {
-      console.error("Error creating service:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to create service",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+  // Remove a subscription tier
+  const removeSubscriptionTier = (index: number) => {
+    const subscriptionTiers = form.getValues("subscriptionTiers");
+    if (subscriptionTiers.length <= 1) {
+      toast.error("You must have at least one subscription tier");
+      return;
     }
+    form.setValue(
+      "subscriptionTiers",
+      subscriptionTiers.filter((_, idx) => idx !== index),
+    );
+  };
+
+  // Add a feature to a subscription tier
+  const addFeature = (tierIndex: number) => {
+    const subscriptionTiers = form.getValues("subscriptionTiers");
+    const tier = subscriptionTiers[tierIndex] ?? {
+      name: "",
+      price: 0,
+      features: [],
+    };
+    form.setValue(`subscriptionTiers.${tierIndex}.features`, [
+      ...tier.features,
+      "",
+    ]);
+  };
+
+  // Remove a feature from a subscription tier
+  const removeFeature = (tierIndex: number, featureIndex: number) => {
+    const subscriptionTiers = form.getValues("subscriptionTiers");
+    const tier = subscriptionTiers[tierIndex] ?? {
+      name: "",
+      price: 0,
+      features: [],
+    };
+    if (tier.features.length <= 1) {
+      toast.error("You must have at least one feature");
+      return;
+    }
+    form.setValue(
+      `subscriptionTiers.${tierIndex}.features`,
+      tier.features.filter((_, idx) => idx !== featureIndex),
+    );
+  };
+
+  // Handle form submission
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    createService({
+      name: values.name,
+      description: values.description,
+      version: values.version,
+      contents: values.contents,
+      tags: values.tags,
+      subscriptionTiers: values.subscriptionTiers,
+    });
+  }
+
+  if (!session?.user) {
+    return <div>You must be logged in to create a service</div>;
   }
 
   return (
@@ -319,6 +378,122 @@ export default function AddServicePage() {
                 Add keywords that describe your service.
               </FormDescription>
             </FormItem>
+
+            <Separator />
+
+            {/* Subscription Tiers */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-lg">Subscription Tiers</FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addSubscriptionTier}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Tier
+                </Button>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                {form.watch("subscriptionTiers")?.map((tier, tierIndex) => (
+                  <Card key={tierIndex} className="relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-2"
+                      onClick={() => removeSubscriptionTier(tierIndex)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <CardHeader>
+                      <FormField
+                        control={form.control}
+                        name={`subscriptionTiers.${tierIndex}.name`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter tier name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name={`subscriptionTiers.${tierIndex}.price`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Price</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="Enter price"
+                                {...field}
+                                onChange={(e) =>
+                                  field.onChange(e.target.valueAsNumber)
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="w-full space-y-2">
+                        <FormLabel>Features</FormLabel>
+                        {tier.features.map((feature, featureIndex) => (
+                          <div
+                            key={featureIndex}
+                            className="flex items-center gap-2"
+                          >
+                            <FormField
+                              control={form.control}
+                              name={`subscriptionTiers.${tierIndex}.features.${featureIndex}`}
+                              render={({ field }) => (
+                                <FormItem className="flex-1">
+                                  <FormControl>
+                                    <Input
+                                      placeholder="Enter feature"
+                                      {...field}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                removeFeature(tierIndex, featureIndex)
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addFeature(tierIndex)}
+                      >
+                        <PlusCircle className="mr-1 h-4 w-4" />
+                        Add Feature
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
 
             <Separator />
 
@@ -492,12 +667,12 @@ export default function AddServicePage() {
                 type="button"
                 variant="outline"
                 onClick={() => router.push("/service")}
-                disabled={isSubmitting}
+                disabled={isCreatingService}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
+              <Button type="submit" disabled={isCreatingService}>
+                {isCreatingService ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating...

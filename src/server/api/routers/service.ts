@@ -20,6 +20,13 @@ export const serviceRouter = createTRPCRouter({
         version: z.string().min(1),
         description: z.string().min(1),
         tags: z.array(z.string()).default([]),
+        subscriptionTiers: z.array(
+          z.object({
+            name: z.string().min(1),
+            price: z.number().min(0),
+            features: z.array(z.string()).default([]),
+          }),
+        ),
         contents: z.array(
           z.object({
             title: z.string().min(1),
@@ -35,6 +42,13 @@ export const serviceRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.session?.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to create a service",
+        });
+      }
+
       const service = await ctx.db.service.create({
         data: {
           name: input.name,
@@ -42,6 +56,17 @@ export const serviceRouter = createTRPCRouter({
             connectOrCreate: input.tags.map((tag) => ({
               where: { name: tag },
               create: { name: tag },
+            })),
+          },
+          subscriptionTiers: {
+            create: input.subscriptionTiers.map((tier) => ({
+              name: tier.name,
+              price: tier.price,
+              features: {
+                create: tier.features.map((feature) => ({
+                  feature,
+                })),
+              },
             })),
           },
           owners: {
@@ -115,6 +140,104 @@ export const serviceRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  updateServiceMetadata: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string().min(1),
+        newName: z.string().min(1),
+        subscriptionTiers: z.array(
+          z.object({
+            id: z.string().min(1),
+            name: z.string().min(1),
+            price: z.number().min(0),
+            features: z.array(z.string()).default([]),
+          }),
+        ),
+        tags: z.array(z.string()).default([]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+        include: {
+          owners: true,
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      if (
+        service.owners.some((owner) => owner.userId !== ctx.session.user.id)
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have permission to update this service",
+        });
+      }
+
+      await ctx.db.service.update({
+        where: { id: input.serviceId },
+        data: {
+          name: input.newName,
+          subscriptionTiers: {
+            deleteMany: {
+              id: {
+                notIn: input.subscriptionTiers
+                  .filter((tier) => tier.id)
+                  .map((tier) => tier.id),
+              },
+            },
+            upsert: input.subscriptionTiers.map((tier) => ({
+              where: {
+                id: tier.id ?? "",
+              },
+              create: {
+                name: tier.name,
+                price: tier.price,
+                features: {
+                  create: tier.features.map((feature) => ({
+                    feature,
+                  })),
+                },
+              },
+              update: {
+                name: tier.name,
+                price: tier.price,
+                features: {
+                  deleteMany: {},
+                  create: tier.features.map((feature) => ({
+                    feature,
+                  })),
+                },
+              },
+            })),
+          },
+          tags: {
+            disconnect: input.tags
+              ? await ctx.db.tag.findMany({
+                  where: {
+                    services: { some: { id: input.serviceId } },
+                    name: { notIn: input.tags },
+                  },
+                  select: { id: true },
+                })
+              : [],
+            connectOrCreate: input.tags.map((tag) => ({
+              where: { name: tag },
+              create: { name: tag },
+            })),
+          },
+        },
+      });
+
+      return { success: true };
+    }),
+
   getInfiniteServices: publicProcedure
     .input(
       z.object({
@@ -158,7 +281,11 @@ export const serviceRouter = createTRPCRouter({
       },
       include: {
         tags: true,
-        versions: true,
+        versions: {
+          orderBy: {
+            version: "desc",
+          },
+        },
       },
     });
 
@@ -167,7 +294,7 @@ export const serviceRouter = createTRPCRouter({
       name: service.name,
       owner: ctx.session.user.name,
       tags: service.tags.map((tag) => tag.name),
-      latestVersion: service.versions[service.versions.length - 1]!,
+      latestVersion: service.versions[0]!,
     }));
 
     return res;
@@ -221,7 +348,21 @@ export const serviceRouter = createTRPCRouter({
           versions: {
             select: {
               version: true,
+              id: true,
               description: true,
+            },
+            orderBy: {
+              version: "desc",
+            },
+          },
+          subscriptionTiers: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              features: {
+                select: { feature: true },
+              },
             },
           },
           owners: {
@@ -261,6 +402,9 @@ export const serviceRouter = createTRPCRouter({
                   rows: true,
                 },
               },
+            },
+            orderBy: {
+              version: "desc",
             },
           },
           owners: {
@@ -453,7 +597,6 @@ export const serviceRouter = createTRPCRouter({
           ? dates
           : [dates]
         : [];
-      console.log(processTags);
       let orderBy: Prisma.ServiceOrderByWithRelationInput = {
         consumerEvents: {
           _count: "desc",
@@ -570,8 +713,6 @@ export const serviceRouter = createTRPCRouter({
         cursor: cursor ? { id: cursor } : undefined,
         take: limit,
       });
-
-      console.log(services);
 
       const nextCursor = services.length > limit ? services.pop()?.id : null;
       return { services, nextCursor };
@@ -847,5 +988,25 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return { success: true };
+  getAllVersionChangelogs: publicProcedure
+    .input(z.object({ serviceId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+        select: {
+          name: true,
+          versions: {
+            select: {
+              changelogPoints: true,
+              version: true,
+            },
+            orderBy: {
+              version: "desc",
+            },
+          },
+        },
+      });
+
+      return service;
     }),
 });
