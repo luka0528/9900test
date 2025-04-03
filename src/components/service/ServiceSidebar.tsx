@@ -6,6 +6,7 @@ import {
   TestTube,
   WalletCards,
   PlusCircle,
+  FileClock,
 } from "lucide-react";
 import { DefaultSideBar, type SidebarItem } from "../sidebar/DefaultSideBar";
 import { useSession } from "next-auth/react";
@@ -13,10 +14,8 @@ import { api } from "~/trpc/react";
 
 export function ServiceSidebar({
   serviceId,
-  versionId,
 }: {
   serviceId: string;
-  versionId: string;
 }) {
   const { data: session } = useSession();
   const { data: service } = api.service.getServiceById.useQuery(serviceId);
@@ -27,7 +26,7 @@ export function ServiceSidebar({
   const items: SidebarItem[] = [
     {
       title: "Details",
-      url: `/service/${serviceId}/${versionId}`,
+      url: `/service/${serviceId}`,
       icon: NotebookPen,
     },
     {
@@ -44,6 +43,11 @@ export function ServiceSidebar({
       title: "Purchase",
       url: "1",
       icon: WalletCards,
+    },
+    {
+      title: "Changelog",
+      url: `/service/${serviceId}/changelog`,
+      icon: FileClock,
     },
     ...(isOwner
       ? [

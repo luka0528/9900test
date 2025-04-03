@@ -101,7 +101,7 @@ export default function ServicePage() {
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
-      <ServiceSidebar serviceId={serviceId} versionId={versionId} />
+      <ServiceSidebar serviceId={serviceId} />
       <div className="flex h-full grow flex-col overflow-y-auto">
         <div className="p-6">
           {/* Service Header with Name and Actions */}
