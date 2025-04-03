@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
-
+import { ChangeLogPointType } from "@prisma/client";
 // Note that documentation will be contained under versions
 export const versionRouter = createTRPCRouter({
   create: protectedProcedure
@@ -20,6 +20,12 @@ export const versionRouter = createTRPCRouter({
                 description: z.string().min(1),
               }),
             ),
+          }),
+        ),
+        changelogPoints: z.array(
+          z.object({
+            type: z.nativeEnum(ChangeLogPointType),
+            description: z.string().min(1),
           }),
         ),
       }),
@@ -100,6 +106,12 @@ export const versionRouter = createTRPCRouter({
               },
             })),
           },
+          changelogPoints: {
+            create: input.changelogPoints.map((changelogPoint) => ({
+              type: changelogPoint.type,
+              description: changelogPoint.description,
+            })),
+          },
         },
       });
 
@@ -141,6 +153,13 @@ export const versionRouter = createTRPCRouter({
               },
             },
           },
+          changelogPoints: {
+            select: {
+              id: true,
+              type: true,
+              description: true,
+            },
+          },
         },
       });
 
@@ -171,6 +190,13 @@ export const versionRouter = createTRPCRouter({
                 description: z.string().min(1),
               }),
             ),
+          }),
+        ),
+        changelogPoints: z.array(
+          z.object({
+            id: z.string().min(1),
+            type: z.nativeEnum(ChangeLogPointType),
+            description: z.string().min(1),
           }),
         ),
       }),
@@ -240,6 +266,26 @@ export const versionRouter = createTRPCRouter({
                 rows: {
                   create: content.rows,
                 },
+              },
+            })),
+          },
+          changelogPoints: {
+            deleteMany: {
+              id: {
+                notIn: input.changelogPoints.map(
+                  (changelogPoint) => changelogPoint.id,
+                ),
+              },
+            },
+            upsert: input.changelogPoints.map((changelogPoint) => ({
+              where: { id: changelogPoint.id },
+              update: {
+                type: changelogPoint.type,
+                description: changelogPoint.description,
+              },
+              create: {
+                type: changelogPoint.type,
+                description: changelogPoint.description,
               },
             })),
           },

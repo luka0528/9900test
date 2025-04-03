@@ -640,4 +640,26 @@ export const serviceRouter = createTRPCRouter({
       const nextCursor = services.length > limit ? services.pop()?.id : null;
       return { services, nextCursor };
     }),
+
+  getAllVersionChangelogs: publicProcedure
+    .input(z.object({ serviceId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+        select: {
+          name: true,
+          versions: {
+            select: {
+              changelogPoints: true,
+              version: true,
+            },
+            orderBy: {
+              version: "desc",
+            },
+          },
+        },
+      });
+
+      return service;
+    }),
 });
