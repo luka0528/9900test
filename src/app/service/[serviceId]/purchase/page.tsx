@@ -36,6 +36,7 @@ const PurchasePage: React.FC = () => {
     data: subscriptionStatus,
     isLoading: subscriptionLoading,
     error: subscriptionError,
+    refetch: subscriptionStatusRefetch,
   } = api.user.isUserSubscribedToService.useQuery({ serviceId });
 
   // 3. Fetch payment methods
@@ -52,6 +53,7 @@ const PurchasePage: React.FC = () => {
     string | null
   >(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   // Track user's current tier in local state
   const [currentTierId, setCurrentTierId] = useState<string | null>(null);
@@ -70,6 +72,10 @@ const PurchasePage: React.FC = () => {
       setSelectedPaymentMethod(paymentMethodsData[0].id);
     }
   }, [isPaymentDataLoading, paymentMethodsData]);
+
+  useEffect(() => {
+    setIsSubscribed(subscriptionStatus?.isSubscribed ?? false);
+  }, [subscriptionStatus]);
 
   // 5. The purchase/update flow
   const handlePurchase = async () => {
@@ -97,6 +103,7 @@ const PurchasePage: React.FC = () => {
         toast.success("Successfully subscribed.");
         setCurrentTierId(selectedTier);
       }
+      subscriptionStatusRefetch();
       router.refresh(); // or redirect, if desired
     } catch (err) {
       console.error(err);
@@ -130,8 +137,6 @@ const PurchasePage: React.FC = () => {
   if (!service) {
     return <div className="p-4">Service not found.</div>;
   }
-
-  const isSubscribed = subscriptionStatus?.isSubscribed;
 
   return (
     <div className="container mx-auto mt-12 max-w-5xl">

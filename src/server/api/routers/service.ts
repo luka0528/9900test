@@ -828,17 +828,19 @@ export const serviceRouter = createTRPCRouter({
           },
         });
       } else {
-        const existingSubscriptionToNewTier =
+        const existingSubscriptionToService =
           await ctx.db.serviceConsumer.findFirst({
             where: {
               userId: ctx.session.user.id,
-              subscriptionTierId: newTier.id,
+              subscriptionTier: {
+                serviceId: service.id,
+              },
             },
           });
-        if (existingSubscriptionToNewTier) {
+        if (existingSubscriptionToService) {
           throw new TRPCError({
             code: "CONFLICT",
-            message: "User already subscribed to the new tier",
+            message: "User already subscribed to this service",
           });
         }
 
