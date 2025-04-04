@@ -180,9 +180,9 @@ const UserProfilePage = () => {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl justify-center p-6">
-      <Card className="w-full max-w-4xl shadow-lg">
-        <CardHeader className="text-center">
+    <div className="container mx-auto mt-12 max-w-6xl space-y-6">
+      <Card>
+        <CardHeader>
           <h2 className="text-2xl font-semibold">Profile Settings</h2>
           <p className="text-sm text-gray-500">
             {isOwnProfile

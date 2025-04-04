@@ -10,7 +10,7 @@ export default function UserLayout({
 }) {
   return (
     <SessionProvider>
-      <div className="flex h-screen w-screen flex-col overflow-hidden">
+      <div className="flex h-screen w-screen flex-col">
         <HydrateClient>
           <NavBar />
         </HydrateClient>

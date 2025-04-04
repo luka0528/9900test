@@ -29,7 +29,7 @@ const TiersGrid: React.FC<TiersGridProps> = ({
     <div>
       <h3 className="mb-6 text-lg font-semibold">
         {isSubscribed
-          ? "You are already subscribed. Change or upgrade below:"
+          ? "Change Your Subscription Tier"
           : "Choose a Subscription Tier:"}
       </h3>
 

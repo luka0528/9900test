@@ -23,7 +23,7 @@ interface PaymentMethodDialogProps {
   onClose: () => void;
   isSubscribed?: boolean;
   selectedTier: string | null;
-  subscriptionTier: SubscriptionTier & { service: Service };
+  subscriptionTier: SubscriptionTier;
   paymentMethods: PaymentMethod[]; // or typed PaymentMethod[]
   selectedPaymentMethod: string | null;
   setSelectedPaymentMethod: React.Dispatch<React.SetStateAction<string | null>>;
@@ -33,7 +33,6 @@ interface PaymentMethodDialogProps {
   isPending: boolean;
   title: string;
   description: string;
-  refetch: () => void;
 }
 
 const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
@@ -51,7 +50,6 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
   isPending,
   title,
   description,
-  refetch,
 }) => {
   const router = useRouter();
   const { data: session } = useSession();

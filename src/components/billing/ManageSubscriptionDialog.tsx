@@ -209,7 +209,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
           <AlertDialogContent className="min-h-[55vh] max-w-4xl space-y-6 p-12">
             <AlertDialogHeader>
               <AlertDialogTitle className="text-center text-2xl font-bold">
-                Change Subscription Tier
+                {service.name}
               </AlertDialogTitle>
               <AlertDialogDescription className="mx-auto max-w-md text-center text-sm text-gray-500">
                 Select a new tier below to switch your subscription.

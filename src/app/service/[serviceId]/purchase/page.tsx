@@ -144,13 +144,6 @@ const PurchasePage: React.FC = () => {
             />
             <CardTitle className="text-3xl font-bold">{service.name}</CardTitle>
           </div>
-
-          <CardDescription>
-            {/* Example description: can be replaced with real data from service */}
-            <p className="text-sm text-gray-600">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            </p>
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {service.subscriptionTiers?.length === 0 ? (
@@ -176,7 +169,9 @@ const PurchasePage: React.FC = () => {
           onClose={() => setShowPaymentDialog(false)}
           isSubscribed={isSubscribed}
           selectedTier={selectedTier}
-          service={service}
+          subscriptionTier={
+            service.subscriptionTiers.find((tier) => tier.id === selectedTier)!
+          }
           paymentMethods={paymentMethodsData ?? []}
           selectedPaymentMethod={selectedPaymentMethod}
           setSelectedPaymentMethod={setSelectedPaymentMethod}

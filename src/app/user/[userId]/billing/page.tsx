@@ -45,7 +45,7 @@ const BillingPage: React.FC = () => {
 
   return (
     <Elements stripe={stripePromise}>
-      <div className="container mx-auto mt-12 min-h-[80vh] max-w-7xl">
+      <div className="container mx-auto mt-12 min-h-[80vh] max-w-6xl">
         <Card className="h-full px-10 py-8">
           <CardHeader>
             <CardTitle className="text-4xl font-bold">
