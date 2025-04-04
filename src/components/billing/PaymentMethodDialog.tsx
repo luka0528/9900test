@@ -157,7 +157,7 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
           <p className="text-lg font-bold text-gray-700 sm:mr-4">
             Price:{" "}
             <span className="font-medium">
-              {tier?.price === 0 ? `$${tier?.price?.toFixed(2)}` : "Free"}
+              {tier?.price === 0 ? "Free" : `$${tier?.price?.toFixed(2)}`}
             </span>
           </p>
 

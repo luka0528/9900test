@@ -13,7 +13,7 @@ import { Button } from "~/components/ui/button";
 import { useRouter } from "next/navigation";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
 import type { SubscriptionTier } from "@prisma/client";
-import React from "react";
+import React, { useState } from "react";
 
 interface ServiceManagementCardProps {
   service: {
@@ -21,8 +21,6 @@ interface ServiceManagementCardProps {
     name: string;
     tierName: string;
     tags: string[];
-    showManageDialog: boolean;
-    setShowManageDialog: (show: boolean) => void;
     subscriptionTier: SubscriptionTier;
     refetch: () => void;
   };
@@ -32,16 +30,9 @@ export const ServiceManagementCard = ({
   service,
 }: ServiceManagementCardProps) => {
   const router = useRouter();
-  const {
-    id,
-    name,
-    tierName,
-    tags,
-    showManageDialog,
-    setShowManageDialog,
-    subscriptionTier,
-    refetch,
-  } = service;
+  const { id, name, tierName, tags, subscriptionTier, refetch } = service;
+
+  const [showManageDialog, setShowManageDialog] = useState(false);
 
   const navigateToService = () => {
     router.push(`/service/${id}`);
@@ -88,7 +79,7 @@ export const ServiceManagementCard = ({
         </CardContent>
 
         {/* Footer pinned at bottom */}
-        <CardFooter className="flex border-t bg-muted/40 px-4 py-2">
+        <CardFooter className="flex justify-between border-t bg-muted/40 px-4 py-2">
           <Button
             variant="ghost"
             size="sm"

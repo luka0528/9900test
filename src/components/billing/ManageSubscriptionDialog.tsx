@@ -128,9 +128,6 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     }
   };
 
-  if (serviceLoading) return <div>Loading...</div>;
-  if (serviceError) return <div>Error: {serviceError.message}</div>;
-
   return (
     <>
       {/* Main Manage Subscription Dialog */}
