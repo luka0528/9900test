@@ -10,7 +10,6 @@ import { useState } from "react";
 
 export default function ServicesPage() {
   const { data: session } = useSession();
-  const [showManageDialog, setShowManageDialog] = useState(false);
 
   const {
     data: services,
@@ -58,25 +57,29 @@ export default function ServicesPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-              {services?.subscriptions?.map((service, index) => (
-                <ServiceManagementCard
-                  key={index}
-                  service={{
-                    id: service.subscriptionTier.service.id,
-                    name: service.subscriptionTier.service.name,
-                    tierName: service.subscriptionTier.name,
-                    tags: service.subscriptionTier.service.tags?.map(
-                      (tag) => tag.name,
-                    ),
-                    showManageDialog: showManageDialog,
-                    setShowManageDialog: setShowManageDialog,
-                    subscriptionTier: service.subscriptionTier,
-                    refetch: () => {
-                      void refetch();
-                    },
-                  }}
-                />
-              ))}
+              {services?.subscriptions
+                ?.sort((a, b) =>
+                  a.subscriptionTier.service.name.localeCompare(
+                    b.subscriptionTier.service.name,
+                  ),
+                )
+                .map((service, index) => (
+                  <ServiceManagementCard
+                    key={index}
+                    service={{
+                      id: service.subscriptionTier.service.id,
+                      name: service.subscriptionTier.service.name,
+                      tierName: service.subscriptionTier.name,
+                      tags: service.subscriptionTier.service.tags?.map(
+                        (tag) => tag.name,
+                      ),
+                      subscriptionTier: service.subscriptionTier,
+                      refetch: () => {
+                        void refetch();
+                      },
+                    }}
+                  />
+                ))}
             </div>
           )}
         </div>

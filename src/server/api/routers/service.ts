@@ -1010,4 +1010,24 @@ export const serviceRouter = createTRPCRouter({
 
       return service;
     }),
+
+  getServiceConsumerByTierId: protectedProcedure
+    .input(z.object({ subscriptionTierId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const consumers = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          subscriptionTierId: input.subscriptionTierId,
+          userId: ctx.session.user.id,
+        },
+        include: {
+          subscriptionTier: {
+            include: {
+              service: true,
+            },
+          },
+        },
+      });
+
+      return consumers;
+    }),
 });

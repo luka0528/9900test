@@ -43,11 +43,14 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   const [selectedNewTier, setSelectedNewTier] = useState<string | null>(null);
 
   // Query service details for this subscription
-  const {
-    data: service,
-    isLoading: serviceLoading,
-    error: serviceError,
-  } = api.service.getServiceById.useQuery(subscriptionTier.serviceId);
+  const { data: serviceConsumer, refetch: refetchServiceConsumer } =
+    api.service.getServiceConsumerByTierId.useQuery({
+      subscriptionTierId: subscriptionTier.id,
+    });
+
+  const { data: service } = api.service.getServiceById.useQuery(
+    subscriptionTier.serviceId,
+  );
 
   // Query saved payment methods
   const { data: paymentMethodsData, status: getPaymentMethodsStatus } =
@@ -60,10 +63,16 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   }, [getPaymentMethodsStatus, paymentMethodsData]);
 
   useEffect(() => {
-    if (service) {
+    if (serviceConsumer) {
       setSelectedNewTier(subscriptionTier.id);
     }
-  }, [service, subscriptionTier]);
+  }, [serviceConsumer, subscriptionTier]);
+
+  useEffect(() => {
+    if (serviceConsumer && serviceConsumer.paymentMethodId) {
+      setSelectedPaymentMethod(serviceConsumer.paymentMethodId);
+    }
+  }, [serviceConsumer]);
 
   // Mutation for updating payment method
   const updatePaymentMethodMutation =
@@ -87,6 +96,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       });
       toast.success("Payment method updated successfully.");
       refetchSubscriptions();
+      refetchServiceConsumer();
       setShowPaymentDialog(false);
     } catch {
       toast.error("Failed to update payment method.");
@@ -174,13 +184,13 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       </AlertDialog>
 
       {/* Payment Method Dialog */}
-      {showPaymentDialog && service && (
+      {showPaymentDialog && serviceConsumer && (
         <PaymentMethodDialog
           isOpen={showPaymentDialog}
           onClose={() => setShowPaymentDialog(false)}
           isSubscribed={true}
           selectedTier={subscriptionTier.id}
-          service={service}
+          subscriptionTier={serviceConsumer.subscriptionTier}
           paymentMethods={paymentMethods}
           selectedPaymentMethod={selectedPaymentMethod}
           setSelectedPaymentMethod={setSelectedPaymentMethod}
@@ -194,7 +204,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       )}
 
       {/* Tier Change Modal using TiersGrid */}
-      {showTierDialog && service && (
+      {showTierDialog && serviceConsumer && service && (
         <AlertDialog open={showTierDialog} onOpenChange={setShowTierDialog}>
           <AlertDialogContent className="min-h-[55vh] max-w-4xl space-y-6 p-12">
             <AlertDialogHeader>
@@ -207,7 +217,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
             </AlertDialogHeader>
             <div className="space-y-4">
               <TiersGrid
-                service={service}
+                service={service!}
                 isSubscribed={true}
                 currentTierId={selectedNewTier}
                 onSelectTier={(tierId: string) => {

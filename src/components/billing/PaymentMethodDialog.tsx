@@ -23,7 +23,7 @@ interface PaymentMethodDialogProps {
   onClose: () => void;
   isSubscribed?: boolean;
   selectedTier: string | null;
-  service: Service & { subscriptionTiers: SubscriptionTier[] };
+  subscriptionTier: SubscriptionTier & { service: Service };
   paymentMethods: PaymentMethod[]; // or typed PaymentMethod[]
   selectedPaymentMethod: string | null;
   setSelectedPaymentMethod: React.Dispatch<React.SetStateAction<string | null>>;
@@ -33,6 +33,7 @@ interface PaymentMethodDialogProps {
   isPending: boolean;
   title: string;
   description: string;
+  refetch: () => void;
 }
 
 const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
@@ -40,7 +41,7 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
   onClose,
   isSubscribed,
   selectedTier,
-  service,
+  subscriptionTier,
   paymentMethods,
   selectedPaymentMethod,
   setSelectedPaymentMethod,
@@ -50,15 +51,12 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
   isPending,
   title,
   description,
+  refetch,
 }) => {
   const router = useRouter();
   const { data: session } = useSession();
 
   // Find the selected tier object for price display
-  const tier = service.subscriptionTiers.find(
-    (t: SubscriptionTier) => t.id === selectedTier,
-  );
-
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className="min-h-[60vh] max-w-4xl space-y-6 p-6">
@@ -157,7 +155,9 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
           <p className="text-lg font-bold text-gray-700 sm:mr-4">
             Price:{" "}
             <span className="font-medium">
-              {tier?.price === 0 ? "Free" : `$${tier?.price?.toFixed(2)}`}
+              {subscriptionTier?.price === 0
+                ? "Free"
+                : `$${subscriptionTier?.price?.toFixed(2)}`}
             </span>
           </p>
 
