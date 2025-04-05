@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "~/components/ui/dropdown-menu";
-import { Button } from "../ui/button";
+import { Button } from "../../ui/button";
 
 interface ReviewCardProps {
   review: {
@@ -90,6 +90,7 @@ export const ReviewCard = (/*{ review }: ReviewCardProps*/) => {
         Insert text here
       </div>
       <div>
+        {/* TODO - only render reply button if curr user is the owner */}
         <Button className="size-min" variant="outline">
           <Reply />
           Reply

@@ -1,20 +1,27 @@
 "use client";
 
 import { Separator } from "~/components/ui/separator";
-import { Loader2, AlertTriangle, Pencil } from "lucide-react";
+import {
+  Loader2,
+  AlertTriangle,
+  Pencil,
+  MessageSquarePlus,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
-import { ReviewCard } from "~/components/service/ReviewCard";
-import { ReviewReplyCard } from "~/components/service/ReviewReplyCard";
+import { ReviewCard } from "~/components/service/reviews/ReviewCard";
+import { ReviewReplyCard } from "~/components/service/reviews/ReviewReplyCard";
+import { ReviewCardForm } from "~/components/service/reviews/ReviewCardForm";
+import { useState } from "react";
+import { EditReviewModal } from "~/components/service/reviews/EditReviewModal";
 
 export default function ReviewsPage() {
   const { data: session } = useSession();
   const params = useParams();
   const serviceId = params.serviceId as string;
-  const versionId = params.versionId as string;
   const router = useRouter();
 
   // Fetch service data from backend
@@ -54,9 +61,44 @@ export default function ReviewsPage() {
     );
   }
 
+  // Now get the reviews
+  const [reviewCards, setReviewCards] = useState(false); // TODO
+  const [showNewCard, setShowNewCard] = useState(false);
+  const [newCardData, setNewCardData] = useState(false); // TODO
+
+  // Haven't reviewed - add, reviewed - edit, owner - owned, not subscribed - null (disabled)
+  type buttonType = "Add" | "Edit" | "Owned" | null;
+  let initState: buttonType = null;
+
+  if (!session) {
+    initState = null;
+  } else if (
+    service.subscriptionTiers.some((sub) =>
+      sub.consumers.some((userId) => userId.userId === session.user.id),
+    ) &&
+    service.ratings.some((rater) => rater.consumer.userId === session.user.id)
+  ) {
+    // Is subscribed and posted review before
+    initState = "Edit";
+  } else if (
+    service.subscriptionTiers.some((sub) =>
+      sub.consumers.some((userId) => userId.userId === session.user.id),
+    )
+  ) {
+    // Is subscribed and hasn't posted a review before
+    initState = "Add";
+  } else if (
+    service.owners.some((owner) => owner.user.id === session.user.id)
+  ) {
+    // Owns service
+    initState = "Owned";
+  }
+  const [topButton, setTopButton] = useState<buttonType>(initState);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
-      <ServiceSidebar serviceId={serviceId} versionId={versionId} />
+      <ServiceSidebar serviceId={serviceId} />
       <div className="flex h-full grow flex-col overflow-y-auto">
         <div className="p-6">
           {/* Review information (maybe statistics on left) */}
@@ -64,16 +106,29 @@ export default function ReviewsPage() {
             <h1 className="text-3xl font-bold">{service.name} reviews</h1>
             <div className="flex items-center gap-2">
               {/* If the current user is subscribed to this service, their should be an add/edit review/rating button */}
-              <Button className="size-min" variant="outline">
-                <Pencil />
-                Edit
-              </Button>
+              {topButton === "Edit" ? (
+                <EditReviewModal setEditModalOpen={setEditModalOpen} />
+              ) : (
+                <Button
+                  className="size-min"
+                  variant="outline"
+                  // TODO - also disabled if topButton === "Owned"
+                  disabled={topButton === null} // Disable the add review button if not subbed
+                  onClick={() => {
+                    setShowNewCard(true);
+                  }}
+                >
+                  <MessageSquarePlus className="animate-slide-in transform transition" />
+                  Add review
+                </Button>
+              )}
             </div>
           </div>
+          <Separator className="my-6" />
 
           {/* Review cards */}
           <div className="w-full">
-            <Separator className="my-6" />
+            {showNewCard && <ReviewCardForm setShowNewCard={setShowNewCard} />}
             <ReviewCard />
             <Separator className="my-6" />
             <ReviewCard />

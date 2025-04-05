@@ -357,11 +357,28 @@ export const serviceRouter = createTRPCRouter({
           subscriptionTiers: {
             select: {
               id: true,
+              consumers: {
+                select: {
+                  userId: true,
+                },
+              },
               name: true,
               price: true,
               features: {
                 select: { feature: true },
               },
+            },
+          },
+          ratings: {
+            select: {
+              consumer: {
+                select: {
+                  userId: true,
+                },
+              },
+              starValue: true,
+              content: true,
+              createdAt: true,
             },
           },
           owners: {
