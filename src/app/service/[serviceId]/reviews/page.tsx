@@ -8,7 +8,7 @@ import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 import { ReviewCard } from "~/components/service/reviews/ReviewCard";
 import { ReviewCardForm } from "~/components/service/reviews/ReviewCardForm";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EditReviewModal } from "~/components/service/reviews/EditReviewModal";
 
 export default function ReviewsPage() {
@@ -55,38 +55,80 @@ export default function ReviewsPage() {
   }
 
   // Now get the reviews
-  const [reviewCards, setReviewCards] = useState(false); // TODO
+  // let reviewContents: any = [];
+  interface ReviewContents {
+    id: string;
+    reviewerId: string;
+    reviewerName: string | null;
+    starValue: number;
+    content: string;
+    postedAt: Date;
+    replies: {
+      id: string;
+      replierId: string;
+      replierName: string | null;
+      content: string;
+      postedAt: Date;
+    }[];
+  }
+
+  const [reviews, setReviews] = useState<ReviewContents[]>([]);
+
+  // Load review cards
+  useEffect(() => {
+    console.log("useEffect triggered");
+    if (service && service.ratings.length > 0) {
+      const reviewContents = service.ratings.map((review) => ({
+        id: review.id,
+        reviewerId: review.consumer.user.id,
+        reviewerName: review.consumer.user.name,
+        starValue: review.starValue,
+        content: review.content,
+        postedAt: review.createdAt,
+        replies: review.comments.map((reply) => ({
+          id: reply.id,
+          replierId: reply.owner.user.id,
+          replierName: reply.owner.user.name,
+          content: reply.content,
+          postedAt: reply.createdAt,
+        })),
+      }));
+      setReviews(reviewContents);
+    }
+  }, [service]);
+
   const [showNewCard, setShowNewCard] = useState(false);
   const [newCardData, setNewCardData] = useState(false); // TODO
 
   // Haven't reviewed - add, reviewed - edit, owner - owned, not subscribed - null (disabled)
-  type buttonType = "Add" | "Edit" | "Owned" | null;
-  let initState: buttonType = null;
-
-  if (!session) {
-    initState = null;
-  } else if (
-    service.subscriptionTiers.some((sub) =>
-      sub.consumers.some((userId) => userId.userId === session.user.id),
-    ) &&
-    service.ratings.some((rater) => rater.consumer.userId === session.user.id)
-  ) {
-    // Is subscribed and posted review before
-    initState = "Edit";
-  } else if (
-    service.subscriptionTiers.some((sub) =>
-      sub.consumers.some((userId) => userId.userId === session.user.id),
-    )
-  ) {
-    // Is subscribed and hasn't posted a review before
-    initState = "Add";
-  } else if (
-    service.owners.some((owner) => owner.user.id === session.user.id)
-  ) {
-    // Owns service
-    initState = "Owned";
-  }
-  const [topButton, setTopButton] = useState<buttonType>(initState);
+  const [topButton, setTopButton] = useState(() => {
+    if (!session) {
+      return null;
+    } else if (
+      service.subscriptionTiers.some((sub) =>
+        sub.consumers.some((userId) => userId.userId === session.user.id),
+      ) &&
+      service.ratings.some(
+        (rater) => rater.consumer.user.id === session.user.id,
+      )
+    ) {
+      // Is subscribed and posted review before
+      return "Edit";
+    } else if (
+      service.subscriptionTiers.some((sub) =>
+        sub.consumers.some((userId) => userId.userId === session.user.id),
+      )
+    ) {
+      // Is subscribed and hasn't posted a review before
+      return "Add";
+    } else if (
+      service.owners.some((owner) => owner.user.id === session.user.id)
+    ) {
+      // Owns service
+      return "Owned";
+    }
+    return null;
+  });
   const [editModalOpen, setEditModalOpen] = useState(false); // todo unused?
 
   return (
@@ -121,20 +163,9 @@ export default function ReviewsPage() {
           {/* Review cards */}
           <div className="w-full">
             {showNewCard && <ReviewCardForm setShowNewCard={setShowNewCard} />}
-            <ReviewCard
-              replies={[
-                {
-                  id: "1",
-                  replierId: "1",
-                  replierName: "John",
-                  content: "hi",
-                  postedAt: "date thing",
-                },
-              ]}
-            />
-            <ReviewCard />
-            <ReviewCard />
-            <ReviewCard />
+            {reviews.map((review: any) => (
+              <ReviewCard review={review} key={review.id} />
+            ))}
           </div>
         </div>
       </div>

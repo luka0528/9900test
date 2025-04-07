@@ -8,6 +8,7 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import type { Query } from "~/components/marketplace/MarketplaceQuery";
+import { content } from "tailwindcss/defaultTheme";
 
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";
@@ -371,14 +372,43 @@ export const serviceRouter = createTRPCRouter({
           },
           ratings: {
             select: {
+              id: true,
               consumer: {
                 select: {
-                  userId: true,
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
                 },
               },
               starValue: true,
               content: true,
               createdAt: true,
+              comments: {
+                select: {
+                  id: true,
+                  owner: {
+                    select: {
+                      user: {
+                        select: {
+                          id: true,
+                          name: true,
+                        },
+                      },
+                    },
+                  },
+                  content: true,
+                  createdAt: true,
+                },
+                orderBy: {
+                  createdAt: "desc",
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "desc",
             },
           },
           owners: {

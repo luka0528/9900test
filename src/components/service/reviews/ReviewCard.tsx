@@ -8,16 +8,6 @@ import { ReviewReplyCardForm } from "./ReviewReplyCardForm";
 import OptionsDropdown from "./OptionsDropdown";
 import { Separator } from "~/components/ui/separator";
 
-interface ReviewCardProps {
-  review: {
-    id: string;
-    reviewerName: string;
-    starValue: number;
-    content: string;
-    postedAt: string;
-  };
-}
-
 const Stars = ({ rating }: { rating: number }) => {
   return (
     <>
@@ -34,22 +24,36 @@ const Stars = ({ rating }: { rating: number }) => {
   );
 };
 
-interface reply {
-  id: string;
-  replierId: string;
-  replierName: string;
-  content: string;
-  postedAt: string;
-}
-
-interface props {
-  replies?: reply[]; // Make replies optional
+interface ReviewCardProps {
+  review: {
+    id: string;
+    reviewerId: string;
+    reviewerName: string | null;
+    starValue: number;
+    content: string;
+    postedAt: Date;
+    replies: {
+      id: string;
+      replierId: string;
+      replierName: string | null;
+      content: string;
+      postedAt: Date;
+    }[];
+  };
 }
 
 export const ReviewCard = (
-  { replies }: props /*{ review }: ReviewCardProps*/,
+  { review }: ReviewCardProps /*{ review }: ReviewCardProps*/,
 ) => {
-  // const { id, reviewerName, starValue, content, postedAt } = review;
+  const {
+    id,
+    reviewerId,
+    reviewerName,
+    starValue,
+    content,
+    postedAt,
+    replies,
+  } = review;
 
   const [isReplyOpen, setIsReplyOpen] = useState(false);
 
@@ -60,11 +64,11 @@ export const ReviewCard = (
         <div className="flex items-center gap-4">
           <Avatar className="h-10 w-10 border">
             <AvatarImage src="/placeholder-user.jpg" alt="profile picture" />
-            <AvatarFallback>FL</AvatarFallback>
+            <AvatarFallback>{reviewerName && reviewerName[0]}</AvatarFallback>
           </Avatar>
           <div className="grid gap-1">
-            <div className="font-medium">Firstname Lastname</div>
-            <div className="text-xs text-muted-foreground">day month year</div>
+            <div className="font-medium">{reviewerName}</div>
+            <div className="text-xs text-muted-foreground">{`${postedAt.toLocaleString()}`}</div>
           </div>
           <div className="ml-auto flex items-end gap-1">
             <OptionsDropdown />
@@ -72,9 +76,9 @@ export const ReviewCard = (
         </div>
         <div className="text-sm leading-loose text-muted-foreground">
           <div className="ml-auto flex items-end">
-            <Stars rating={2} />
+            <Stars rating={starValue} />
           </div>
-          Insert text here
+          {content}
         </div>
         <div>
           {/* TODO - only render reply button if curr user is the owner */}
@@ -93,16 +97,16 @@ export const ReviewCard = (
             setIsReplyOpen={setIsReplyOpen}
           />
         )}
-        {replies &&
-          replies.map((rep) => (
+        {review.replies &&
+          review.replies.map((reply) => (
             <ReviewReplyCard
-              key={rep.id}
+              key={reply.id}
               reply={{
-                id: rep.id,
-                replierId: rep.replierId,
-                replierName: rep.replierName,
-                content: rep.content,
-                postedAt: rep.postedAt,
+                id: reply.id,
+                replierId: reply.replierId,
+                replierName: reply.replierName,
+                content: reply.content,
+                postedAt: reply.postedAt,
               }}
             />
           ))}
