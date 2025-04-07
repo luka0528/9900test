@@ -82,7 +82,6 @@ export default function SignIn() {
         password: values.password,
       });
 
-      console.log("result", result);
       if (result?.error) {
         toast.error("Invalid email or password");
         form.setError("email", { message: " " });
