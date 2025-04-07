@@ -22,4 +22,3 @@ const items: SidebarItem[] = [
 export const AnalyticsSideBar = () => {
   return <DefaultSideBar items={items} />;
 };
-
