@@ -101,17 +101,29 @@ export const serviceRouter = createTRPCRouter({
         },
       });
 
-      // Check that the service was created properly
-      if (!service.versions?.length || !service.versions[0]) {
+      // Ensure service and versions exist and are properly typed
+      if (
+        !service ||
+        !Array.isArray(service.versions) ||
+        service.versions.length === 0
+      ) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Service version was not created properly",
         });
       }
 
+      const firstVersion = service.versions[0];
+      if (!firstVersion || typeof firstVersion.id !== "string") {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Service version ID is invalid",
+        });
+      }
+
       return {
         serviceId: service.id,
-        versionId: service.versions[0].id,
+        versionId: firstVersion.id,
       };
     }),
 
