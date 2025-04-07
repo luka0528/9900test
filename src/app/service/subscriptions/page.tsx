@@ -1,8 +1,7 @@
 "use client";
 
 import { Separator } from "~/components/ui/separator";
-
-import { AllServiceSidebar } from "../../../components/service/AllServiceSidebar";
+import { AllServiceSidebar } from "~/components/service/AllServiceSidebar";
 
 export default function SubscriptionsPage() {
   return (
