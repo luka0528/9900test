@@ -149,7 +149,7 @@ model ContentTableRow {
   content     ServiceContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
   routeName   String
   description String
-  method      RestMethod
+  method      RestMethod     @default(GET)
   createdAt   DateTime       @default(now())
 }
 

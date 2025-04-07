@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { createId } from "@paralleldrive/cuid2";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
-import { ChangeLogPointType } from "@prisma/client";
+import { ChangeLogPointType, RestMethod } from "@prisma/client";
 import {
   Select,
   SelectContent,
@@ -51,6 +51,7 @@ const formSchema = z.object({
               id: z.string(),
               routeName: z.string(),
               description: z.string(),
+              method: z.nativeEnum(RestMethod),
             }),
           )
           .default([]),
@@ -107,6 +108,7 @@ export default function EditServicePage() {
                 id: row.id,
                 routeName: row.routeName || "",
                 description: row.description || "",
+                method: row.method || RestMethod.GET,
               })) || [],
           })) || [],
         changelogPoints: versionData.changelogPoints || [],
@@ -144,7 +146,14 @@ export default function EditServicePage() {
           id: createId(),
           title: "",
           description: "",
-          rows: [{ id: createId(), routeName: "", description: "" }],
+          rows: [
+            {
+              id: createId(),
+              routeName: "",
+              description: "",
+              method: RestMethod.GET,
+            },
+          ],
         },
       ]);
     } else {
@@ -175,7 +184,12 @@ export default function EditServicePage() {
       ...content,
       rows: [
         ...content.rows,
-        { id: createId(), routeName: "", description: "" },
+        {
+          id: createId(),
+          routeName: "",
+          description: "",
+          method: RestMethod.GET,
+        },
       ],
     };
 
@@ -361,7 +375,51 @@ export default function EditServicePage() {
                                 key={rowIndex}
                                 className="mb-4 grid grid-cols-[1fr_auto] gap-4"
                               >
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="flex gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name={`contents.${contentIndex}.rows.${rowIndex}.method`}
+                                    render={({ field }) => (
+                                      <FormItem className="w-36">
+                                        <FormControl>
+                                          <Select
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select a method" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value={RestMethod.GET}>
+                                                GET
+                                              </SelectItem>
+                                              <SelectItem value={RestMethod.POST}>
+                                                POST
+                                              </SelectItem>
+                                              <SelectItem value={RestMethod.PUT}>
+                                                PUT
+                                              </SelectItem>
+                                              <SelectItem value={RestMethod.DELETE}>
+                                                DELETE
+                                              </SelectItem>
+                                              <SelectItem value={RestMethod.PATCH}>
+                                                PATCH
+                                              </SelectItem>
+                                              <SelectItem value={RestMethod.HEAD}>
+                                                HEAD
+                                              </SelectItem>
+                                              <SelectItem value={RestMethod.OPTIONS}>
+                                                OPTIONS
+                                              </SelectItem>
+                                              <SelectItem value={RestMethod.TRACE}>
+                                                TRACE
+                                              </SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
                                   <FormField
                                     control={form.control}
                                     name={`contents.${contentIndex}.rows.${rowIndex}.routeName`}
@@ -380,7 +438,7 @@ export default function EditServicePage() {
                                     control={form.control}
                                     name={`contents.${contentIndex}.rows.${rowIndex}.description`}
                                     render={({ field }) => (
-                                      <FormItem>
+                                      <FormItem className="flex-1">
                                         <FormControl>
                                           <Input
                                             placeholder="Description"

@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { RestMethod, type Service, type ServiceVersion } from "@prisma/client";
 
 import {
   createTRPCRouter,
@@ -34,6 +35,7 @@ export const serviceRouter = createTRPCRouter({
               z.object({
                 routeName: z.string().min(1),
                 description: z.string().min(1),
+                method: z.nativeEnum(RestMethod),
               }),
             ),
           }),
@@ -87,6 +89,7 @@ export const serviceRouter = createTRPCRouter({
                   description: content.description,
                   rows: {
                     create: content.rows.map((row) => ({
+                      method: row.method,
                       routeName: row.routeName,
                       description: row.description,
                     })),
@@ -101,12 +104,7 @@ export const serviceRouter = createTRPCRouter({
         },
       });
 
-      // Ensure service and versions exist and are properly typed
-      if (
-        !service ||
-        !Array.isArray(service.versions) ||
-        service.versions.length === 0
-      ) {
+      if (!service.versions || service.versions.length === 0) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Service version was not created properly",
@@ -114,6 +112,7 @@ export const serviceRouter = createTRPCRouter({
       }
 
       const firstVersion = service.versions[0];
+
       if (!firstVersion || typeof firstVersion.id !== "string") {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
