@@ -283,13 +283,15 @@ export default function ServicePage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-1/3">Method/Code</TableHead>
+                            <TableHead className="w-36">Method</TableHead>
+                            <TableHead>Route</TableHead>
                             <TableHead>Description</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {content.rows.map((row) => (
                             <TableRow key={row.id}>
+                              <TableCell>{row.method}</TableCell>
                               <TableCell className="font-mono">
                                 {row.routeName}
                               </TableCell>
