@@ -785,4 +785,68 @@ export const serviceRouter = createTRPCRouter({
 
       return service;
     }),
+
+  createReview: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string().min(1),
+        content: z.string(),
+        starValue: z.number().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure user is subscribed to this service and hasn't reviewed it already
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+        select: {
+          subscriptionTiers: {
+            select: {
+              consumers: {
+                where: {
+                  userId: ctx.session.user.id,
+                },
+              },
+            },
+          },
+          owners: {
+            where: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // These errors should never occur (due to frontend verifying this already)
+      if (service.owners.length >= 1) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot review your own service",
+        });
+      }
+      if (service.subscriptionTiers.length >= 1) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You have already posted a review",
+        });
+      }
+
+      // Post the review
+      await ctx.db.serviceRating.create({
+        data: {
+          starValue: input.starValue,
+          content: input.content,
+          serviceId: input.serviceId,
+          consumerId: ctx.session.user.id,
+        },
+      });
+
+      return { success: true };
+    }),
 });

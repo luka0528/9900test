@@ -40,7 +40,6 @@ export const ReviewReplyCardForm = (
               Owner
             </Badge>
           </div>
-          <div className="text-xs text-muted-foreground">day month year</div>
         </div>
         <div className="ml-auto flex items-end gap-1">
           <Button

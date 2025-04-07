@@ -10,7 +10,15 @@ import { ReviewCard } from "~/components/service/reviews/ReviewCard";
 import { ReviewCardForm } from "~/components/service/reviews/ReviewCardForm";
 import { useEffect, useState } from "react";
 import { EditReviewModal } from "~/components/service/reviews/EditReviewModal";
-import { ReviewContent } from "~/components/service/reviews/ReviewContent";
+import { ReviewContent } from "~/components/service/reviews/helper";
+import { toast } from "sonner";
+import React from "react";
+
+interface NewCard {
+  isVisible: boolean;
+  starValue: number | null;
+  content: string | null;
+}
 
 export default function ReviewsPage() {
   const { data: session } = useSession();
@@ -26,12 +34,47 @@ export default function ReviewsPage() {
   } = api.service.getServiceMetadataById.useQuery({ serviceId });
 
   const [reviews, setReviews] = useState<ReviewContent[]>([]);
-  const [showNewCard, setShowNewCard] = useState(false);
-  const [newCardData, setNewCardData] = useState(false); // TODO
+  const [newCardData, setNewCardData] = useState<NewCard>({
+    isVisible: false,
+    starValue: null,
+    content: null,
+  });
+
+  const { mutate: createReview, isPending: isCreatingReview } =
+    api.service.createReview.useMutation({
+      onSuccess: (_) => {
+        toast.success("Review posted");
+      },
+      onError: (error) => {
+        toast.error("Failed to create review", {
+          description: error.message,
+        });
+      },
+    });
+
+  // New review
+  useEffect(() => {
+    if (newCardData.isVisible && newCardData.starValue !== null) {
+      // todo, create the review
+      createReview({
+        serviceId: serviceId,
+        content: newCardData.content ? newCardData.content : "",
+        starValue: newCardData.starValue,
+      });
+
+      // Finally reset data
+      setNewCardData({
+        isVisible: false,
+        starValue: null,
+        content: null,
+      });
+    }
+  }, [newCardData]);
 
   // Haven't reviewed - add, reviewed - edit, owner - owned, not subscribed - null (disabled)
   type buttonType = "Add" | "Edit" | "Owned" | null;
   const [topButton, setTopButton] = useState<buttonType>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false); // todo unused?
 
   // Load review cards
   useEffect(() => {
@@ -85,8 +128,6 @@ export default function ReviewsPage() {
     }
   }, [service]);
 
-  const [editModalOpen, setEditModalOpen] = useState(false); // todo unused?
-
   // Show loading state
   if (serviceLoading) {
     return (
@@ -136,7 +177,11 @@ export default function ReviewsPage() {
                   // TODO - also disabled if topButton === "Owned"
                   disabled={topButton === null} // Disable the add review button if not subbed
                   onClick={() => {
-                    setShowNewCard(true);
+                    setNewCardData({
+                      isVisible: true,
+                      starValue: null,
+                      content: null,
+                    });
                   }}
                 >
                   <MessageSquarePlus className="animate-slide-in transform transition" />
@@ -148,7 +193,12 @@ export default function ReviewsPage() {
 
           {/* Review cards */}
           <div className="w-full">
-            {showNewCard && <ReviewCardForm setShowNewCard={setShowNewCard} />}
+            {newCardData.isVisible && session && session.user && (
+              <ReviewCardForm
+                reviewerName={session.user.name}
+                setNewCardData={setNewCardData}
+              />
+            )}
             {reviews.map((review) => (
               <ReviewCard review={review} key={review.id} />
             ))}

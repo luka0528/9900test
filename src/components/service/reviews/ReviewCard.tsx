@@ -7,7 +7,7 @@ import { ReviewReplyCard } from "./ReviewReplyCard";
 import { ReviewReplyCardForm } from "./ReviewReplyCardForm";
 import OptionsDropdown from "./OptionsDropdown";
 import { Separator } from "~/components/ui/separator";
-import { ReviewContent } from "~/components/service/reviews/ReviewContent";
+import { ReviewContent } from "~/components/service/reviews/helper";
 
 const Stars = ({ rating }: { rating: number }) => {
   return (
