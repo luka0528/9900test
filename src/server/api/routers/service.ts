@@ -101,7 +101,8 @@ export const serviceRouter = createTRPCRouter({
         },
       });
 
-      if (!service.versions.length || !service.versions[0]) {
+      // Check that the service was created properly
+      if (!service.versions?.length || !service.versions[0]) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Service version was not created properly",
