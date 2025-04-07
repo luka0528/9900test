@@ -7,6 +7,7 @@ import { ReviewReplyCard } from "./ReviewReplyCard";
 import { ReviewReplyCardForm } from "./ReviewReplyCardForm";
 import OptionsDropdown from "./OptionsDropdown";
 import { Separator } from "~/components/ui/separator";
+import { ReviewContent } from "~/components/service/reviews/ReviewContent";
 
 const Stars = ({ rating }: { rating: number }) => {
   return (
@@ -25,26 +26,10 @@ const Stars = ({ rating }: { rating: number }) => {
 };
 
 interface ReviewCardProps {
-  review: {
-    id: string;
-    reviewerId: string;
-    reviewerName: string | null;
-    starValue: number;
-    content: string;
-    postedAt: Date;
-    replies: {
-      id: string;
-      replierId: string;
-      replierName: string | null;
-      content: string;
-      postedAt: Date;
-    }[];
-  };
+  review: ReviewContent;
 }
 
-export const ReviewCard = (
-  { review }: ReviewCardProps /*{ review }: ReviewCardProps*/,
-) => {
+export const ReviewCard = ({ review }: ReviewCardProps) => {
   const {
     id,
     reviewerId,

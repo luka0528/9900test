@@ -10,6 +10,7 @@ import { ReviewCard } from "~/components/service/reviews/ReviewCard";
 import { ReviewCardForm } from "~/components/service/reviews/ReviewCardForm";
 import { useEffect, useState } from "react";
 import { EditReviewModal } from "~/components/service/reviews/EditReviewModal";
+import { ReviewContent } from "~/components/service/reviews/ReviewContent";
 
 export default function ReviewsPage() {
   const { data: session } = useSession();
@@ -23,6 +24,68 @@ export default function ReviewsPage() {
     isLoading: serviceLoading,
     error: serviceError,
   } = api.service.getServiceMetadataById.useQuery({ serviceId });
+
+  const [reviews, setReviews] = useState<ReviewContent[]>([]);
+  const [showNewCard, setShowNewCard] = useState(false);
+  const [newCardData, setNewCardData] = useState(false); // TODO
+
+  // Haven't reviewed - add, reviewed - edit, owner - owned, not subscribed - null (disabled)
+  type buttonType = "Add" | "Edit" | "Owned" | null;
+  const [topButton, setTopButton] = useState<buttonType>(null);
+
+  // Load review cards
+  useEffect(() => {
+    console.log("useEffect triggered");
+    if (service) {
+      if (service.ratings.length > 0) {
+        const reviewContents = service.ratings.map((review) => ({
+          id: review.id,
+          reviewerId: review.consumer.user.id,
+          reviewerName: review.consumer.user.name,
+          starValue: review.starValue,
+          content: review.content,
+          postedAt: review.createdAt,
+          replies: review.comments.map((reply) => ({
+            id: reply.id,
+            replierId: reply.owner.user.id,
+            replierName: reply.owner.user.name,
+            content: reply.content,
+            postedAt: reply.createdAt,
+          })),
+        }));
+        setReviews(reviewContents);
+      }
+      if (!session) {
+        setTopButton(null);
+      } else if (
+        service.subscriptionTiers.some((sub) =>
+          sub.consumers.some((userId) => userId.userId === session.user.id),
+        ) &&
+        service.ratings.some(
+          (rater) => rater.consumer.user.id === session.user.id,
+        )
+      ) {
+        // Is subscribed and posted review before
+        setTopButton("Edit");
+      } else if (
+        service.subscriptionTiers.some((sub) =>
+          sub.consumers.some((userId) => userId.userId === session.user.id),
+        )
+      ) {
+        // Is subscribed and hasn't posted a review before
+        setTopButton("Add");
+      } else if (
+        service.owners.some((owner) => owner.user.id === session.user.id)
+      ) {
+        // Owns service
+        setTopButton("Owned");
+      } else {
+        setTopButton(null);
+      }
+    }
+  }, [service]);
+
+  const [editModalOpen, setEditModalOpen] = useState(false); // todo unused?
 
   // Show loading state
   if (serviceLoading) {
@@ -53,83 +116,6 @@ export default function ReviewsPage() {
       </div>
     );
   }
-
-  // Now get the reviews
-  // let reviewContents: any = [];
-  interface ReviewContents {
-    id: string;
-    reviewerId: string;
-    reviewerName: string | null;
-    starValue: number;
-    content: string;
-    postedAt: Date;
-    replies: {
-      id: string;
-      replierId: string;
-      replierName: string | null;
-      content: string;
-      postedAt: Date;
-    }[];
-  }
-
-  const [reviews, setReviews] = useState<ReviewContents[]>([]);
-
-  // Load review cards
-  useEffect(() => {
-    console.log("useEffect triggered");
-    if (service && service.ratings.length > 0) {
-      const reviewContents = service.ratings.map((review) => ({
-        id: review.id,
-        reviewerId: review.consumer.user.id,
-        reviewerName: review.consumer.user.name,
-        starValue: review.starValue,
-        content: review.content,
-        postedAt: review.createdAt,
-        replies: review.comments.map((reply) => ({
-          id: reply.id,
-          replierId: reply.owner.user.id,
-          replierName: reply.owner.user.name,
-          content: reply.content,
-          postedAt: reply.createdAt,
-        })),
-      }));
-      setReviews(reviewContents);
-    }
-  }, [service]);
-
-  const [showNewCard, setShowNewCard] = useState(false);
-  const [newCardData, setNewCardData] = useState(false); // TODO
-
-  // Haven't reviewed - add, reviewed - edit, owner - owned, not subscribed - null (disabled)
-  const [topButton, setTopButton] = useState(() => {
-    if (!session) {
-      return null;
-    } else if (
-      service.subscriptionTiers.some((sub) =>
-        sub.consumers.some((userId) => userId.userId === session.user.id),
-      ) &&
-      service.ratings.some(
-        (rater) => rater.consumer.user.id === session.user.id,
-      )
-    ) {
-      // Is subscribed and posted review before
-      return "Edit";
-    } else if (
-      service.subscriptionTiers.some((sub) =>
-        sub.consumers.some((userId) => userId.userId === session.user.id),
-      )
-    ) {
-      // Is subscribed and hasn't posted a review before
-      return "Add";
-    } else if (
-      service.owners.some((owner) => owner.user.id === session.user.id)
-    ) {
-      // Owns service
-      return "Owned";
-    }
-    return null;
-  });
-  const [editModalOpen, setEditModalOpen] = useState(false); // todo unused?
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
@@ -163,7 +149,7 @@ export default function ReviewsPage() {
           {/* Review cards */}
           <div className="w-full">
             {showNewCard && <ReviewCardForm setShowNewCard={setShowNewCard} />}
-            {reviews.map((review: any) => (
+            {reviews.map((review) => (
               <ReviewCard review={review} key={review.id} />
             ))}
           </div>
