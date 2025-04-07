@@ -1,7 +1,9 @@
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { Card } from "../../ui/card";
 import { Badge } from "~/components/ui/badge";
-import OptionsDropdown from "./OptionsDropdown";
+import { Textarea } from "~/components/ui/textarea";
+import { Send, X } from "lucide-react";
+import { Button } from "~/components/ui/button";
 
 // Assumption - only owners can reply
 interface ReplyCardProps {
@@ -14,8 +16,15 @@ interface ReplyCardProps {
   };
 }
 
-export const ReviewReplyCard = ({ reply }: ReplyCardProps) => {
-  const { id, replierId, replierName, content } = reply;
+interface props {
+  isReplyOpen: boolean;
+  setIsReplyOpen: (isOpen: boolean) => void;
+}
+
+export const ReviewReplyCardForm = (
+  { isReplyOpen, setIsReplyOpen }: props /*{ reply }: ReplyCardProps*/,
+) => {
+  // const { id, replierId, replierName, content } = reply;
 
   return (
     <Card className="ml-10 mt-1 grid max-w-full gap-6 border-0 bg-gray-100 p-6 shadow-none">
@@ -26,7 +35,7 @@ export const ReviewReplyCard = ({ reply }: ReplyCardProps) => {
         </Avatar>
         <div className="grid w-full gap-1">
           <div className="font-medium">
-            {replierName}
+            insert name
             <Badge variant="outline" className="ml-2 bg-purple-100">
               Owner
             </Badge>
@@ -34,11 +43,27 @@ export const ReviewReplyCard = ({ reply }: ReplyCardProps) => {
           <div className="text-xs text-muted-foreground">day month year</div>
         </div>
         <div className="ml-auto flex items-end gap-1">
-          <OptionsDropdown />
+          <Button
+            className="size-min"
+            variant="outline"
+            onClick={() => setIsReplyOpen(false)}
+          >
+            <X />
+          </Button>
         </div>
       </div>
       <div className="text-sm leading-loose text-muted-foreground">
-        {content}
+        <Textarea placeholder="Insert response" rows={5} />
+      </div>
+      <div className="flex justify-end">
+        <Button
+          className="size-min"
+          variant="outline"
+          onClick={() => setIsReplyOpen(false)} // TODO - add, ensure text len >= 1
+        >
+          <Send />
+          Post
+        </Button>
       </div>
     </Card>
   );

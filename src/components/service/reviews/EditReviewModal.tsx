@@ -9,8 +9,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
 import StarRating from "./StarRating";
 import { useState } from "react";
 import { Textarea } from "~/components/ui/textarea";

@@ -1,5 +1,4 @@
 import { Star } from "lucide-react";
-import React, { useState } from "react";
 
 interface props {
   hoveredRating: number;

@@ -1,16 +1,12 @@
-import { Card, CardFooter } from "~/components/ui/card";
+import { Card } from "~/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
-import { EllipsisVertical, Pencil, Reply, Star, Trash2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "~/components/ui/dropdown-menu";
+import { Reply, Star } from "lucide-react";
 import { Button } from "../../ui/button";
+import { useState } from "react";
+import { ReviewReplyCard } from "./ReviewReplyCard";
+import { ReviewReplyCardForm } from "./ReviewReplyCardForm";
+import OptionsDropdown from "./OptionsDropdown";
+import { Separator } from "~/components/ui/separator";
 
 interface ReviewCardProps {
   review: {
@@ -38,64 +34,79 @@ const Stars = ({ rating }: { rating: number }) => {
   );
 };
 
-const Dropdown = () => {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost">
-          <EllipsisVertical />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end">
-        <DropdownMenuLabel>Options</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem className="flex justify-between">
-            <span>Edit</span>
-            <Pencil />
-          </DropdownMenuItem>
-          <DropdownMenuItem className="group flex justify-between hover:text-red-500">
-            <span className="group-hover:text-red-500">Delete</span>
-            <Trash2 className="group-hover:text-red-500" />
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-};
+interface reply {
+  id: string;
+  replierId: string;
+  replierName: string;
+  content: string;
+  postedAt: string;
+}
 
-export const ReviewCard = (/*{ review }: ReviewCardProps*/) => {
+interface props {
+  replies?: reply[]; // Make replies optional
+}
+
+export const ReviewCard = (
+  { replies }: props /*{ review }: ReviewCardProps*/,
+) => {
   // const { id, reviewerName, starValue, content, postedAt } = review;
 
+  const [isReplyOpen, setIsReplyOpen] = useState(false);
+
   return (
-    <Card className="mt-7 grid max-w-full gap-6 border-0 p-6 shadow-none">
-      <div className="flex items-center gap-4">
-        <Avatar className="h-10 w-10 border">
-          <AvatarImage src="/placeholder-user.jpg" alt="profile picture" />
-          <AvatarFallback>FL</AvatarFallback>
-        </Avatar>
-        <div className="grid gap-1">
-          <div className="font-medium">Firstname Lastname</div>
-          <div className="text-xs text-muted-foreground">day month year</div>
+    <>
+      <Separator className="my-6" />
+      <Card className="mt-7 grid max-w-full gap-6 border-0 p-6 shadow-none">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-10 w-10 border">
+            <AvatarImage src="/placeholder-user.jpg" alt="profile picture" />
+            <AvatarFallback>FL</AvatarFallback>
+          </Avatar>
+          <div className="grid gap-1">
+            <div className="font-medium">Firstname Lastname</div>
+            <div className="text-xs text-muted-foreground">day month year</div>
+          </div>
+          <div className="ml-auto flex items-end gap-1">
+            <OptionsDropdown />
+          </div>
         </div>
-        <div className="ml-auto flex items-end gap-1">
-          <Dropdown />
+        <div className="text-sm leading-loose text-muted-foreground">
+          <div className="ml-auto flex items-end">
+            <Stars rating={2} />
+          </div>
+          Insert text here
         </div>
-      </div>
-      <div className="text-sm leading-loose text-muted-foreground">
-        <div className="ml-auto flex items-end">
-          <Stars rating={2} />
+        <div>
+          {/* TODO - only render reply button if curr user is the owner */}
+          <Button
+            className="size-min"
+            variant="outline"
+            onClick={() => setIsReplyOpen(true)}
+          >
+            <Reply />
+            Reply
+          </Button>
         </div>
-        Insert text here
-      </div>
-      <div>
-        {/* TODO - only render reply button if curr user is the owner */}
-        <Button className="size-min" variant="outline">
-          <Reply />
-          Reply
-        </Button>
-      </div>
-    </Card>
+        {isReplyOpen && (
+          <ReviewReplyCardForm
+            isReplyOpen={isReplyOpen}
+            setIsReplyOpen={setIsReplyOpen}
+          />
+        )}
+        {replies &&
+          replies.map((rep) => (
+            <ReviewReplyCard
+              key={rep.id}
+              reply={{
+                id: rep.id,
+                replierId: rep.replierId,
+                replierName: rep.replierName,
+                content: rep.content,
+                postedAt: rep.postedAt,
+              }}
+            />
+          ))}
+      </Card>
+    </>
   );
 };

@@ -1,19 +1,12 @@
 "use client";
 
-import { Separator } from "~/components/ui/separator";
-import {
-  Loader2,
-  AlertTriangle,
-  Pencil,
-  MessageSquarePlus,
-} from "lucide-react";
+import { Loader2, AlertTriangle, MessageSquarePlus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 import { ReviewCard } from "~/components/service/reviews/ReviewCard";
-import { ReviewReplyCard } from "~/components/service/reviews/ReviewReplyCard";
 import { ReviewCardForm } from "~/components/service/reviews/ReviewCardForm";
 import { useState } from "react";
 import { EditReviewModal } from "~/components/service/reviews/EditReviewModal";
@@ -94,7 +87,7 @@ export default function ReviewsPage() {
     initState = "Owned";
   }
   const [topButton, setTopButton] = useState<buttonType>(initState);
-  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false); // todo unused?
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
@@ -124,18 +117,23 @@ export default function ReviewsPage() {
               )}
             </div>
           </div>
-          <Separator className="my-6" />
 
           {/* Review cards */}
           <div className="w-full">
             {showNewCard && <ReviewCardForm setShowNewCard={setShowNewCard} />}
+            <ReviewCard
+              replies={[
+                {
+                  id: "1",
+                  replierId: "1",
+                  replierName: "John",
+                  content: "hi",
+                  postedAt: "date thing",
+                },
+              ]}
+            />
             <ReviewCard />
-            <Separator className="my-6" />
             <ReviewCard />
-            <ReviewReplyCard />
-            <Separator className="my-6" />
-            <ReviewCard />
-            <Separator className="my-6" />
             <ReviewCard />
           </div>
         </div>
