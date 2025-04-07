@@ -1,18 +1,12 @@
+"use client";
+
 import { TableProperties, LayoutDashboard } from "lucide-react";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-} from "~/components/ui/sidebar";
-import Link from "next/link";
+  DefaultSideBar,
+  type SidebarItem,
+} from "~/components/sidebar/DefaultSideBar";
 
-// Menu items.
-const items = [
+const items: SidebarItem[] = [
   {
     title: "Dashboard",
     url: "/analytics",
@@ -26,33 +20,6 @@ const items = [
 ];
 
 export const AnalyticsSideBar = () => {
-  return (
-    <div className="h-full max-w-60 border-r lg:min-w-60">
-      <SidebarProvider className="h-full items-start">
-        <Sidebar collapsible="none" className="hidden h-full bg-white md:flex">
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {items.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <Link
-                          href={item.url}
-                          className="flex items-center gap-2"
-                        >
-                          <item.icon className="h-5 w-5" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-        </Sidebar>
-      </SidebarProvider>
-    </div>
-  );
+  return <DefaultSideBar items={items} />;
 };
+
