@@ -17,13 +17,13 @@ import { Textarea } from "~/components/ui/textarea";
 import { Plus, Trash2, X, PlusCircle, Loader2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import * as z from "zod";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
-import { createId } from "@paralleldrive/cuid2";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
+import React from "react";
 import { ChangeLogPointType } from "@prisma/client";
 import {
   Select,
@@ -39,16 +39,17 @@ const formSchema = z.object({
   description: z.string().min(1, {
     message: "Description must be at least 1 characters.",
   }),
+  version: z.string().min(1, {
+    message: "Version is required (e.g. 1.0).",
+  }),
   contents: z
     .array(
       z.object({
-        id: z.string(),
         title: z.string().min(2),
         description: z.string().default(""),
         rows: z
           .array(
             z.object({
-              id: z.string(),
               routeName: z.string(),
               description: z.string(),
             }),
@@ -60,7 +61,6 @@ const formSchema = z.object({
   changelogPoints: z
     .array(
       z.object({
-        id: z.string(),
         type: z.nativeEnum(ChangeLogPointType),
         description: z.string(),
       }),
@@ -68,67 +68,82 @@ const formSchema = z.object({
     .default([]),
 });
 
-export default function EditServicePage() {
+export default function AddServicePage() {
   const router = useRouter();
-  const { serviceId: serviceIdParam, versionId: versionIdParam } = useParams();
-  const versionId = versionIdParam as string;
-  const serviceId = serviceIdParam as string;
-  const utils = api.useUtils();
+  const { serviceId: rawServiceId } = useParams();
+  const serviceId = rawServiceId as string;
+  const { data: service } = api.service.getServiceById.useQuery(serviceId);
 
-  const { data: versionData } =
-    api.version.getDocumentationByVersionId.useQuery({
-      versionId: versionId,
-    });
-
-  // Initialize form with default values
+  // Initialize the form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      // Set empty defaults initially
       description: "",
-      contents: [],
+      version: "",
+      contents: [
+        {
+          title: "",
+          description: "",
+          rows: [],
+        },
+      ],
       changelogPoints: [],
     },
   });
 
-  // Populate form when data loads
+  // Update form values when service data is loaded
   useEffect(() => {
-    if (versionData) {
-      // Set form values from loaded data
+    if (service && service.versions.length > 0) {
+      // Get latest version (should be the first one due to orderBy in the query)
+      const latestVersion = service.versions[0];
+
+      if (!latestVersion) return;
+
+      // Increment version number (simple example - you might want more sophisticated logic)
+      const currentVersion = latestVersion.version;
+      const versionParts = currentVersion.split(".");
+      const lastPart = parseInt(versionParts[versionParts.length - 1] ?? "1.0");
+      versionParts[versionParts.length - 1] = (lastPart + 1).toString();
+      const suggestedVersion = versionParts.join(".");
+
+      // Prepare content data
+      const contents = latestVersion.contents.map((content) => ({
+        title: content.title,
+        description: content.description,
+        rows: content.rows.map((row) => ({
+          routeName: row.routeName,
+          description: row.description,
+        })),
+      }));
+
+      // Update form with values from latest version
       form.reset({
-        description: versionData.description || "",
+        description: latestVersion.description,
+        version: suggestedVersion,
         contents:
-          versionData.contents?.map((content) => ({
-            id: content.id,
-            title: content.title || "",
-            description: content.description || "",
-            rows:
-              content.rows?.map((row) => ({
-                id: row.id,
-                routeName: row.routeName || "",
-                description: row.description || "",
-              })) || [],
-          })) || [],
-        changelogPoints: versionData.changelogPoints || [],
+          contents.length > 0
+            ? contents
+            : [
+                {
+                  title: "",
+                  description: "",
+                  rows: [],
+                },
+              ],
       });
     }
-  }, [versionData, form]);
+  }, [service, form]);
 
-  const { mutate: editVersion, isPending: isEditing } =
-    api.version.editVersion.useMutation({
-      onSuccess: () => {
-        toast.success("Your changes have been saved");
-        void utils.version.getDocumentationByVersionId.invalidate({
-          versionId: versionId,
-        });
-        void utils.service.getAllVersionChangelogs.invalidate({
-          serviceId: serviceId,
-        });
+  // tRPC
+  const { mutate: createVersion, isPending: isCreatingVersion } =
+    api.version.create.useMutation({
+      onSuccess: ({ id: versionId }) => {
+        toast.success("Version created successfully");
         router.push(`/service/${serviceId}/${versionId}`);
       },
-      onError: () => {
-        toast.error("Failed to update service", {
-          description: "There was an error updating your service.",
+      onError: (error) => {
+        toast.error("Failed to create version", {
+          description: error.message,
         });
       },
     });
@@ -141,17 +156,15 @@ export default function EditServicePage() {
       form.setValue("contents", [
         ...contents,
         {
-          id: createId(),
           title: "",
           description: "",
-          rows: [{ id: createId(), routeName: "", description: "" }],
+          rows: [{ routeName: "", description: "" }],
         },
       ]);
     } else {
       form.setValue("contents", [
         ...contents,
         {
-          id: createId(),
           title: "",
           description: "",
           rows: [],
@@ -164,7 +177,6 @@ export default function EditServicePage() {
   const addTableRow = (contentIndex: number) => {
     const contents = form.getValues("contents");
     const content = contents[contentIndex] ?? {
-      id: createId(),
       title: "",
       description: "",
       rows: [],
@@ -173,10 +185,7 @@ export default function EditServicePage() {
     const updatedContents = [...contents];
     updatedContents[contentIndex] = {
       ...content,
-      rows: [
-        ...content.rows,
-        { id: createId(), routeName: "", description: "" },
-      ],
+      rows: [...content.rows, { routeName: "", description: "" }],
     };
 
     form.setValue("contents", updatedContents);
@@ -186,7 +195,6 @@ export default function EditServicePage() {
   const removeTableRow = (contentIndex: number, rowIndex: number) => {
     const contents = form.getValues("contents");
     const content = contents[contentIndex] ?? {
-      id: createId(),
       title: "",
       description: "",
       rows: [],
@@ -215,10 +223,10 @@ export default function EditServicePage() {
   // Add a change log point
   const addChangeLogPoint = () => {
     const changelogPoints = form.getValues("changelogPoints") ?? [];
+
     form.setValue("changelogPoints", [
       ...changelogPoints,
       {
-        id: createId(),
         type: ChangeLogPointType.ADDED,
         description: "",
       },
@@ -235,10 +243,11 @@ export default function EditServicePage() {
   };
 
   // Handle form submission
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    editVersion({
-      versionId,
-      newDescription: values.description,
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    createVersion({
+      serviceId,
+      versionDescription: values.description,
+      newVersion: values.version,
       contents: values.contents,
       changelogPoints: values.changelogPoints,
     });
@@ -248,7 +257,11 @@ export default function EditServicePage() {
     <div className="flex h-full w-full xl:max-w-[96rem]">
       <GoBackSideBar />
       <div className="flex h-full grow flex-col overflow-y-auto p-6">
-        <h1 className="mb-6 text-2xl font-bold">Edit Service</h1>
+        <h1 className="text-2xl font-bold">Add New Version</h1>
+        <p className="mb-6 text-muted-foreground">
+          Add a new version to {service?.name}. We&apos;ve pre-filled the form
+          with your latest version.
+        </p>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -274,9 +287,29 @@ export default function EditServicePage() {
               )}
             />
 
+            {/* Version Field*/}
+            <FormField
+              control={form.control}
+              name="version"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Version</FormLabel>
+                  <FormControl>
+                    <Input placeholder="1.0" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Specify the version of your service (e.g. 1.0, 2.1.3).
+                    We&apos;ve provided a suggested version based on your latest
+                    version.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <Separator />
 
-            {/* Content Sections */}
+            {/* Details */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <FormLabel className="text-lg">Content Sections</FormLabel>
@@ -531,21 +564,19 @@ export default function EditServicePage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() =>
-                  router.push(`/service/${serviceId}/${versionId}`)
-                }
-                disabled={isEditing}
+                onClick={() => router.push("/service")}
+                disabled={isCreatingVersion}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isEditing}>
-                {isEditing ? (
+              <Button type="submit" disabled={isCreatingVersion}>
+                {isCreatingVersion ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    Creating...
                   </>
                 ) : (
-                  "Save Changes"
+                  "Create new version"
                 )}
               </Button>
             </div>

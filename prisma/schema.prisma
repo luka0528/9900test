@@ -2,282 +2,327 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
-    binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
-    provider = "postgresql"
-    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
-    // Further reading:
-    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
-    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
-    url      = env("DATABASE_URL")
-    directUrl = env("DIRECT_URL")
+  provider  = "postgresql"
+  // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
+  // Further reading:
+  // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
+  // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // Analytics
 model ServiceRating {
-    id        String   @id @default(cuid())
-    serviceId String
-    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-    consumerId String
-    consumer   ServiceConsumer     @relation(fields: [consumerId], references: [id], onDelete: Cascade)
-    starValue    Int      
-    content      String
-    createdAt DateTime @default(now())
+  id         String          @id @default(cuid())
+  serviceId  String
+  service    Service         @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  consumerId String
+  consumer   ServiceConsumer @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  starValue  Int
+  content    String
+  createdAt  DateTime        @default(now())
 
-    comments ServiceComment[]
+  comments ServiceComment[]
 }
 
 model ServiceComment {
-    id        String   @id @default(cuid())
-    ratingId String
-    rating   ServiceRating  @relation(fields: [ratingId], references: [id], onDelete: Cascade)
-    ownerId String
-    owner   ServiceOwner  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-    content   String
-    createdAt DateTime @default(now())
+  id        String        @id @default(cuid())
+  ratingId  String
+  rating    ServiceRating @relation(fields: [ratingId], references: [id], onDelete: Cascade)
+  ownerId   String
+  owner     ServiceOwner  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime      @default(now())
 }
 
 model ConsumerEvent {
-    id        String   @id @default(cuid())
-    consumerId String
-    consumer   ServiceConsumer  @relation(fields: [consumerId], references: [id], onDelete: Cascade)
-    eventType String
-    createdAt DateTime @default(now())
+  id         String          @id @default(cuid())
+  serviceId  String
+  service    Service         @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  consumerId String
+  consumer   ServiceConsumer @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  eventType  String
+  createdAt  DateTime        @default(now())
 }
 
 enum ConsumerEventType {
-    VIEWED
-    // TODO: Add more events
+  VIEWED
+  // TODO: Add more events
+}
+
+// Service Pricing
+
+model SubscriptionTier {
+  id        String   @id @default(cuid())
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  name      String   @unique
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  consumers ServiceConsumer[]
+  features  TierFeature[]
+}
+
+model TierFeature {
+  id                 String           @id @default(cuid())
+  subscriptionTierId String
+  subscriptionTier   SubscriptionTier @relation(fields: [subscriptionTierId], references: [id], onDelete: Cascade)
+  feature            String
 }
 
 // Service Management
 model Tag {
-    id        String   @id @default(cuid())
-    name      String   @unique
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    services  Service[]
+  services Service[]
 }
 
 model Service {
-    id        String   @id @default(cuid())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    tags      Tag[]
-    ratings   ServiceRating[]
-    versions ServiceVersion[]
-    owners ServiceOwner[]
-    consumers ServiceConsumer[]
-    price     Float?
-    views     Int     @default(0)
+  subscriptionTiers SubscriptionTier[]
+  tags              Tag[]
+  ratings           ServiceRating[]
+  versions          ServiceVersion[]
+  owners            ServiceOwner[]
+  consumerEvents    ConsumerEvent[]
 }
 
 model ServiceVersion {
-    id        String   @id @default(cuid())
-    serviceId String
-    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-    description String
-    version     String
-    contents    ServiceContent[]
-    createdAt DateTime @default(now())
+  id              String           @id @default(cuid())
+  serviceId       String
+  service         Service          @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  description     String
+  version         String
+  contents        ServiceContent[]
+  createdAt       DateTime         @default(now())
+  isDeprecated    Boolean          @default(false)
+  changelogPoints ChangeLogPoint[]
 
-	@@unique([serviceId, version])
+  @@unique([serviceId, version])
+}
+
+model ChangeLogPoint {
+  id          String             @id @default(cuid())
+  versionId   String
+  version     ServiceVersion     @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  description String
+  type        ChangeLogPointType
+  createdAt   DateTime           @default(now())
+}
+
+enum ChangeLogPointType {
+  ADDED
+  CHANGED
+  DEPRECATED
+  REMOVED
+  FIXED
+  SECURITY
 }
 
 model ServiceContent {
-    id        String   @id @default(cuid())
-    versionId String
-    version   ServiceVersion  @relation(fields: [versionId], references: [id], onDelete: Cascade)
-    title     String
-    description String
-    rows ContentTableRow[]
-    createdAt DateTime @default(now())
+  id          String            @id @default(cuid())
+  versionId   String
+  version     ServiceVersion    @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  rows        ContentTableRow[]
+  createdAt   DateTime          @default(now())
 }
 
 model ContentTableRow {
-    id        String   @id @default(cuid())
-    contentId String
-    content   ServiceContent  @relation(fields: [contentId], references: [id], onDelete: Cascade)
-    routeName     String
-    description String
-    createdAt DateTime @default(now())
+  id          String         @id @default(cuid())
+  contentId   String
+  content     ServiceContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  routeName   String
+  description String
+  createdAt   DateTime       @default(now())
 }
 
 // Service Memberships
 model ServiceOwner {
-    id        String   @id @default(cuid())
-    userId    String
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    serviceId String
-    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-    createdAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 
-    ratings ServiceComment[]
+  ratings ServiceComment[]
 }
 
 model ServiceConsumer {
-    id        String   @id @default(cuid())
-    userId    String
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    serviceId String
-    service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-    createdAt DateTime @default(now())
+  id                 String           @id @default(cuid())
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionTierId String
+  subscriptionTier   SubscriptionTier @relation(fields: [subscriptionTierId], references: [id], onDelete: Cascade)
+  createdAt          DateTime         @default(now())
 
-    ratings ServiceRating[]
-    events ConsumerEvent[]
+  ratings ServiceRating[]
+  events  ConsumerEvent[]
+
+  paymentMethodId String?
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
 }
 
 // Notifications
 model Notification {
-    id        String   @id @default(cuid())
-    recipientId    String
-    recipient      User     @relation("UserNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
-    senderId       String
-    sender         User     @relation("UserSentNotifications", fields: [senderId], references: [id], onDelete: Cascade)
-    createdAt DateTime @default(now())
-    content   String
-    read      Boolean  @default(false)
+  id          String   @id @default(cuid())
+  recipientId String
+  recipient   User     @relation("UserNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User     @relation("UserSentNotifications", fields: [senderId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  content     String
+  read        Boolean  @default(false)
 }
 
 enum NotificationType {
-    ALERT
-    NEW_SUBSCRIPTION
-    NEW_RATING
-    NEW_COMMENT
-    SERVICE_UPDATE
+  ALERT
+  NEW_SUBSCRIPTION
+  NEW_RATING
+  NEW_COMMENT
+  SERVICE_UPDATE
 }
 
 // Necessary for Next auth
 model Account {
-    id                       String  @id @default(cuid())
-    userId                   String
-    type                     String
-    provider                 String
-    providerAccountId        String
-    refresh_token            String? // @db.Text
-    access_token             String? // @db.Text
-    expires_at               Int?
-    token_type               String?
-    scope                    String?
-    id_token                 String? // @db.Text
-    session_state            String?
-    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    refresh_token_expires_in Int?
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String? // @db.Text
+  access_token             String? // @db.Text
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String? // @db.Text
+  session_state            String?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refresh_token_expires_in Int?
 
-    @@unique([provider, providerAccountId])
+  @@unique([provider, providerAccountId])
 }
 
 model Session {
-    id           String   @id @default(cuid())
-    sessionToken String   @unique
-    userId       String
-    expires      DateTime
-    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id                  String    @id @default(cuid())
-  name                String?
-  email               String?   @unique
-  emailVerified       DateTime?
-  password            String?
-  image               String?
-  bio                 String?
-  accounts            Account[]
-  sessions            Session[]
-  verificationTokens  VerificationToken[]
-  role                UserRole  @default(USER)
+  id                 String              @id @default(cuid())
+  name               String?
+  email              String?             @unique
+  emailVerified      DateTime?
+  password           String?
+  image              String?
+  bio                String?
+  accounts           Account[]
+  sessions           Session[]
+  verificationTokens VerificationToken[]
+  role               UserRole            @default(USER)
 
-  subscriptions       ServiceConsumer[]
-  ownerships          ServiceOwner[]
+  subscriptions ServiceConsumer[]
+  ownerships    ServiceOwner[]
 
-  notifications       Notification[] @relation("UserNotifications")
-  sentNotifications   Notification[] @relation("UserSentNotifications")
-    
-  isSubscriptionsPublic         Boolean @default(true)
-  isRatingsPublic               Boolean @default(true)
-  isUserDataCollectionAllowed   Boolean @default(true)
+  notifications     Notification[] @relation("UserNotifications")
+  sentNotifications Notification[] @relation("UserSentNotifications")
 
-  stripeCustomerId    String?
-  paymentMethods      PaymentMethod[]
-  billingHistory      BillingReceipt[]
-  
+  isSubscriptionsPublic       Boolean @default(true)
+  isRatingsPublic             Boolean @default(true)
+  isUserDataCollectionAllowed Boolean @default(true)
+
+  stripeCustomerId String?
+  paymentMethods   PaymentMethod[]
+  billingHistory   BillingReceipt[]
 }
 
 enum UserRole {
-    USER
-    ADMIN
+  USER
+  ADMIN
 }
 
 model VerificationToken {
-    id         String   @id @default(cuid())
-    identifier String
-    token      String   @unique
-    expires    DateTime
-    userId     String
-    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    type       VerificationTokenType
+  id         String                @id @default(cuid())
+  identifier String
+  token      String                @unique
+  expires    DateTime
+  userId     String
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       VerificationTokenType
 
-    @@unique([identifier, token])
+  @@unique([identifier, token])
 }
 
 enum VerificationTokenType {
-    EMAIL
-    PASSWORD_RESET
+  EMAIL
+  PASSWORD_RESET
 }
 
-
 model BillingReceipt {
-    id              String   @id @default(cuid())
-    date            DateTime @default(now())
-    amount          Float
-    description     String
-    from            String
-    to              String
-    
-    status                  BillingStatus
-    automaticRenewal        Boolean
-    automaticRenewalDate    DateTime?
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  amount      Float
+  description String
+  from        String
+  to          String
 
-    paymentMethodId String?
-    userId          String
-    paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
-    user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status               BillingStatus
+  automaticRenewal     Boolean
+  automaticRenewalDate DateTime?
+
+  paymentMethodId String?
+  userId          String
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum BillingStatus {
-    PAID
-    PENDING
-    PROCESSING
-    FAILED
+  PAID
+  PENDING
+  PROCESSING
+  FAILED
 }
 
 model PaymentMethod {
-  id               String   @id @default(cuid())
-  stripePaymentId  String   @unique
+  id               String @id @default(cuid())
+  stripePaymentId  String @unique
   stripeCustomerId String
 
-  cardBrand        String?
-  last4            String?
-  expMonth         Int?
-  expYear          Int?
-  cardholderName   String?
+  cardBrand      String?
+  last4          String?
+  expMonth       Int?
+  expYear        Int?
+  cardholderName String?
 
-  addressLine1     String?
-  addressLine2     String?
-  city             String?
-  state            String?
-  postalCode       String?
-  country          String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String?
 
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   billingReceipts  BillingReceipt[]
+  serviceConsumers ServiceConsumer[]
 }

@@ -16,8 +16,6 @@ interface MarketplaceServiceProps {
     name: string;
     createdAt: Date;
     updatedAt: Date;
-    price: number | null;
-    views: number;
     tags: {
       name: string;
     }[];
@@ -34,7 +32,7 @@ interface MarketplaceServiceProps {
 }
 
 export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
-  const { name, createdAt, price, views, versions, tags } = service;
+  const { name, createdAt, versions, tags } = service;
   const { description, version } = versions[0] ?? {
     description: "",
     version: "",
@@ -60,7 +58,7 @@ export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
         <div className="grid grid-cols-1 gap-2 text-sm">
           <div className="flex items-center gap-1.5">
             <Download className="h-4 w-4 text-muted-foreground" />
-            <span>{views + "K"}</span>
+            <span>0K</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -89,7 +87,7 @@ export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
             size="sm"
             className="min-w-20 border-blue-500 text-sm font-medium hover:bg-blue-50 hover:text-blue-600"
           >
-            {price && (Number(price) === 0 ? "Free" : "$" + price.toFixed(2))}
+            Free
           </Button>
         </div>
       </CardFooter>
