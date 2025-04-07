@@ -7,7 +7,6 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import type { Query } from "~/components/marketplace/MarketplaceQuery";
 import { BillingStatus } from "@prisma/client";
 
 // make a max float string
