@@ -8,6 +8,7 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import type { Query } from "~/components/marketplace/MarketplaceQuery";
+import { BillingStatus } from "@prisma/client";
 
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";
@@ -932,6 +933,7 @@ export const serviceRouter = createTRPCRouter({
       // (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
 
       return { success: true };
+    }),
   getAllVersionChangelogs: publicProcedure
     .input(z.object({ serviceId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
