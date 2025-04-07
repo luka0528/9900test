@@ -291,9 +291,7 @@ export default function ServicePage() {
                         <TableBody>
                           {content.rows.map((row) => (
                             <TableRow key={row.id}>
-                              <TableCell>
-                                {row.method}
-                              </TableCell>
+                              <TableCell>{row.method}</TableCell>
                               <TableCell className="font-mono">
                                 {row.routeName}
                               </TableCell>

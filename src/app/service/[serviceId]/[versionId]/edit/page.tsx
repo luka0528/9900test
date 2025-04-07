@@ -390,28 +390,44 @@ export default function EditServicePage() {
                                               <SelectValue placeholder="Select a method" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                              <SelectItem value={RestMethod.GET}>
+                                              <SelectItem
+                                                value={RestMethod.GET}
+                                              >
                                                 GET
                                               </SelectItem>
-                                              <SelectItem value={RestMethod.POST}>
+                                              <SelectItem
+                                                value={RestMethod.POST}
+                                              >
                                                 POST
                                               </SelectItem>
-                                              <SelectItem value={RestMethod.PUT}>
+                                              <SelectItem
+                                                value={RestMethod.PUT}
+                                              >
                                                 PUT
                                               </SelectItem>
-                                              <SelectItem value={RestMethod.DELETE}>
+                                              <SelectItem
+                                                value={RestMethod.DELETE}
+                                              >
                                                 DELETE
                                               </SelectItem>
-                                              <SelectItem value={RestMethod.PATCH}>
+                                              <SelectItem
+                                                value={RestMethod.PATCH}
+                                              >
                                                 PATCH
                                               </SelectItem>
-                                              <SelectItem value={RestMethod.HEAD}>
+                                              <SelectItem
+                                                value={RestMethod.HEAD}
+                                              >
                                                 HEAD
                                               </SelectItem>
-                                              <SelectItem value={RestMethod.OPTIONS}>
+                                              <SelectItem
+                                                value={RestMethod.OPTIONS}
+                                              >
                                                 OPTIONS
                                               </SelectItem>
-                                              <SelectItem value={RestMethod.TRACE}>
+                                              <SelectItem
+                                                value={RestMethod.TRACE}
+                                              >
                                                 TRACE
                                               </SelectItem>
                                             </SelectContent>
