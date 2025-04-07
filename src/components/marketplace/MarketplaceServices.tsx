@@ -3,11 +3,9 @@
 import React from "react";
 import { api } from "~/trpc/react";
 import { useInView } from "react-intersection-observer";
-
 import { MarketplaceService } from "./MarketplaceService";
 import { MarketplaceServicesSkeleton } from "./MarketplaceServicesSkeleton";
 import { MarketplaceServicesNoResults } from "./MarketplaceServicesNoResults";
-
 import type { Query } from "./MarketplaceQuery";
 
 interface MarketplaceServicesProps {
