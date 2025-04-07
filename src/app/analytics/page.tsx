@@ -5,17 +5,17 @@ import { AnalyticsReviewSection } from "~/components/analytics/AnalyticsReviewSe
 import { AnalyticsPieChart } from "~/components/analytics/AnalyticsPieChart";
 
 export default function Analytics() {
-    return (
-        <div className="flex w-full h-full xl:max-w-[96rem]">
-            <AnalyticsSideBar />
-            <div className="flex flex-col grow h-full">
-                <AnalyticsCards />
-                <AnalyticsChart />
-                <div className="flex m-4 space-x-4">
-                    <AnalyticsReviewSection />
-                    <AnalyticsPieChart />
-                </div>
-            </div>
+  return (
+    <div className="flex h-full w-full xl:max-w-[96rem]">
+      <AnalyticsSideBar />
+      <div className="flex h-full grow flex-col">
+        <AnalyticsCards />
+        <AnalyticsChart />
+        <div className="m-4 flex space-x-4">
+          <AnalyticsReviewSection />
+          <AnalyticsPieChart />
         </div>
-    );
+      </div>
+    </div>
+  );
 }

@@ -13,7 +13,7 @@ export const appRouter = createTRPCRouter({
   service: serviceRouter,
   user: userRouter,
   version: versionRouter,
-  analytics: analyticsRouter
+  analytics: analyticsRouter,
 });
 
 // export type definition of API

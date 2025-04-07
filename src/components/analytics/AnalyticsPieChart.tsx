@@ -1,15 +1,11 @@
-"use client"
+"use client";
 
-import {
-  Card
-} from "~/components/ui/card"
+import { Card } from "~/components/ui/card";
 
 export const AnalyticsPieChart = () => {
   return (
-    <Card className="flex flex-col h-64 w-1/4">
-        <div className="p-4">
-            TODO
-        </div>
+    <Card className="flex h-64 w-1/4 flex-col">
+      <div className="p-4">TODO</div>
     </Card>
-  )
-}
+  );
+};

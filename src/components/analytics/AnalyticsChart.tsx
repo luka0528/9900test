@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import * as React from "react";
+import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import {
   Card,
@@ -9,24 +9,21 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "~/components/ui/card"
+} from "~/components/ui/card";
 import {
-  ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "~/components/ui/charts"
+} from "~/components/ui/charts";
+import type { ChartConfig } from "~/components/ui/charts";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/components/ui/select"
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "~/components/ui/toggle-group"
+} from "~/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 
 const chartData = [
   { date: "2024-04-01", desktop: 222, mobile: 150 },
@@ -120,7 +117,7 @@ const chartData = [
   { date: "2024-06-28", desktop: 149, mobile: 200 },
   { date: "2024-06-29", desktop: 103, mobile: 160 },
   { date: "2024-06-30", desktop: 446, mobile: 400 },
-]
+];
 
 const chartConfig = {
   visitors: {
@@ -134,27 +131,27 @@ const chartConfig = {
     label: "Mobile",
     color: "hsl(var(--chart-2))",
   },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 
 export const AnalyticsChart = () => {
-  const [timeRange, setTimeRange] = React.useState("30d")
+  const [timeRange, setTimeRange] = React.useState("30d");
 
   const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date)
-    const referenceDate = new Date("2024-06-30")
-    let daysToSubtract = 90
+    const date = new Date(item.date);
+    const referenceDate = new Date("2024-06-30");
+    let daysToSubtract = 90;
     if (timeRange === "30d") {
-      daysToSubtract = 30
+      daysToSubtract = 30;
     } else if (timeRange === "7d") {
-      daysToSubtract = 7
+      daysToSubtract = 7;
     }
-    const startDate = new Date(referenceDate)
-    startDate.setDate(startDate.getDate() - daysToSubtract)
-    return date >= startDate
-  })
+    const startDate = new Date(referenceDate);
+    startDate.setDate(startDate.getDate() - daysToSubtract);
+    return date >= startDate;
+  });
 
   return (
-    <Card className="mx-4 @container/card">
+    <Card className="@container/card mx-4">
       <CardHeader className="relative">
         <CardTitle>Total Visitors</CardTitle>
         <CardDescription>
@@ -242,11 +239,11 @@ export const AnalyticsChart = () => {
               tickMargin={8}
               minTickGap={32}
               tickFormatter={(value: string | number | Date) => {
-                const date = new Date(value)
+                const date = new Date(value);
                 return date.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
-                })
+                });
               }}
             />
             <ChartTooltip
@@ -257,7 +254,7 @@ export const AnalyticsChart = () => {
                     return new Date(value).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
-                    })
+                    });
                   }}
                   indicator="dot"
                 />
@@ -281,5 +278,5 @@ export const AnalyticsChart = () => {
         </ChartContainer>
       </CardContent>
     </Card>
-  )
-}
+  );
+};
