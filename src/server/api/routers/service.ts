@@ -101,9 +101,16 @@ export const serviceRouter = createTRPCRouter({
         },
       });
 
+      if (!service.versions.length || !service.versions[0]) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Service version was not created properly",
+        });
+      }
+
       return {
         serviceId: service.id,
-        versionId: service.versions[0]!.id,
+        versionId: service.versions[0].id,
       };
     }),
 
