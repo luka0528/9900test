@@ -6,6 +6,7 @@ import { useInView } from "react-intersection-observer";
 import { MarketplaceService } from "./MarketplaceService";
 import { MarketplaceServicesSkeleton } from "./MarketplaceServicesSkeleton";
 import { MarketplaceServicesNoResults } from "./MarketplaceServicesNoResults";
+
 import type { Query } from "./MarketplaceQuery";
 
 interface MarketplaceServicesProps {

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import type { Prisma, Service } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import {
@@ -7,7 +7,6 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import type { Query } from "~/components/marketplace/MarketplaceQuery";
 import { BillingStatus } from "@prisma/client";
 
 // make a max float string
@@ -236,33 +235,6 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return { success: true };
-    }),
-
-  getInfiniteServices: publicProcedure
-    .input(
-      z.object({
-        query: z.custom<Query>(),
-        cursor: z.number().nullish(),
-      }),
-    )
-    .query(async ({ input }) => {
-      const cursor = input.cursor ?? 0;
-      const limit = 12;
-
-      // Generates fake services as mock data.
-      const services: Service[] = Array.from({ length: limit }, (_, i) => {
-        const id = cursor + i;
-        return {
-          id: id.toString(),
-          name: `Service ${id}`,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      });
-
-      const nextCursor = services.length ? cursor + limit : null;
-
-      return { services, nextCursor };
     }),
 
   getAll: publicProcedure.query(async ({ ctx }) => {
@@ -714,6 +686,8 @@ export const serviceRouter = createTRPCRouter({
         take: limit,
       });
 
+      console.log(JSON.stringify(services));
+
       const nextCursor = services.length > limit ? services.pop()?.id : null;
       return { services, nextCursor };
     }),
@@ -954,5 +928,68 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return service;
+    }),
+
+  getRelatedServices: publicProcedure
+    .input(
+      z.object({
+        currentServiceId: z.string(),
+        tags: z.array(z.string()).default([]),
+        limit: z.number().default(6),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const { currentServiceId, tags, limit } = input;
+
+      if (tags.length === 0) {
+        return {
+          relatedServices: [],
+          foundRelated: false,
+          message:
+            "Cannot find similar services due to current service having no tags",
+        };
+      }
+
+      const services = await ctx.db.service.findMany({
+        where: {
+          id: {
+            not: currentServiceId,
+          },
+          tags: {
+            some: {
+              name: {
+                in: tags,
+              },
+            },
+          },
+        },
+        include: {
+          versions: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+          },
+          owners: {
+            include: {
+              user: true,
+            },
+          },
+          tags: true,
+        },
+        take: limit,
+        orderBy: {
+          updatedAt: "desc",
+        },
+      });
+
+      return {
+        relatedServices: services,
+        foundRelated: services.length > 0,
+        message:
+          services.length > 0
+            ? "Found related services"
+            : "No related services found",
+      };
     }),
 });
