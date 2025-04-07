@@ -149,7 +149,19 @@ model ContentTableRow {
   content     ServiceContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
   routeName   String
   description String
+  method      RestMethod
   createdAt   DateTime       @default(now())
+}
+
+enum RestMethod {
+  GET
+  POST
+  PUT
+  DELETE
+  PATCH
+  OPTIONS
+  HEAD
+  TRACE
 }
 
 // Service Memberships
