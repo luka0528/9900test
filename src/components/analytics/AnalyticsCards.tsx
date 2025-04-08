@@ -1,4 +1,5 @@
 import { AnalyticsTotalRevenueCard } from "~/components/analytics/AnalyticsTotalRevenueCard";
+import { AnalyticsAvgRatingCard } from "~/components/analytics/AnalyticsAvgRatingCard";
 import { AnalyticsCustomerGrowthCard } from "~/components/analytics/AnalyticsCustomerGrowthCard";
 
 export const AnalyticsCards = () => {
@@ -6,6 +7,7 @@ export const AnalyticsCards = () => {
     <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
       <AnalyticsTotalRevenueCard />
       <AnalyticsCustomerGrowthCard />
+      <AnalyticsAvgRatingCard />
     </div>
   );
 };
