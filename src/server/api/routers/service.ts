@@ -1203,6 +1203,53 @@ export const serviceRouter = createTRPCRouter({
       };
     }),
 
+  deleteReview: protectedProcedure
+    .input(
+      z.object({
+        reviewId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const reviewOwner = await ctx.db.serviceRating.findUnique({
+        where: {
+          id: input.reviewId,
+        },
+        select: {
+          consumer: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!reviewOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The review you are trying to delete does not exist",
+        });
+      }
+
+      if (reviewOwner.consumer.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot delete this review",
+        });
+      }
+
+      // Delete the review
+      await ctx.db.serviceRating.delete({
+        where: {
+          id: input.reviewId,
+        },
+      });
+
+      return {
+        success: true,
+      };
+    }),
+
   editReviewReply: protectedProcedure
     .input(
       z.object({
@@ -1252,8 +1299,53 @@ export const serviceRouter = createTRPCRouter({
       return {
         replierId: ctx.session.user.id,
         replierName: ctx.session.user.name,
-        ...editedReview,
+        ...editedReply,
       };
+    }),
+
+  deleteReviewReply: protectedProcedure
+    .input(
+      z.object({
+        commentId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const commentOwner = await ctx.db.serviceComment.findUnique({
+        where: {
+          id: input.commentId,
+        },
+        select: {
+          owner: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!commentOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The reply you are trying to delete does not exist",
+        });
+      }
+
+      if (commentOwner.owner.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot delete this reply",
+        });
+      }
+
+      // Delete the reply
+      await ctx.db.serviceComment.delete({
+        where: {
+          id: input.commentId,
+        },
+      });
+
+      return { success: true };
     }),
 
   getRelatedServices: publicProcedure
