@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardContent } from "~/components/ui/card";
 import {
   Form,
@@ -23,37 +23,24 @@ import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { toast } from "sonner";
 import Image from "next/image";
-import { Pencil } from "lucide-react";
 import { Checkbox } from "~/components/ui/checkbox";
+import { Loader2 } from "lucide-react";
 
-// Define Zod Schema for validation
-const profileSchema = z
-  .object({
-    name: z.string().min(1, "Name is required"),
-    email: z.string().email("Invalid email format"),
-    bio: z.string().optional(),
-    currentPassword: z.string().optional().or(z.literal("")),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .optional()
-      .or(z.literal("")),
-    confirmPassword: z.string().optional().or(z.literal("")),
-    isSubscriptionsPublic: z.boolean().optional(),
-    isRatingsPublic: z.boolean().optional(),
-    isUserDataCollectionAllowed: z.boolean().optional(),
-  })
-  .refine((data) => !data.password || data.password === data.confirmPassword, {
-    message: "Passwords must match",
-    path: ["confirmPassword"],
-  });
+// Updated schema without password-related fields
+const profileSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email format"),
+  bio: z.string().optional(),
+  isSubscriptionsPublic: z.boolean().optional(),
+  isRatingsPublic: z.boolean().optional(),
+  isUserDataCollectionAllowed: z.boolean().optional(),
+});
 
 const UserProfilePage = () => {
   const router = useRouter();
   const { data: session } = useSession();
   const userId = session?.user?.id; // will always exist as cant enter settings without profile
-  const [isEditing, setIsEditing] = useState(false);
-  const [isEditingPrivacy, setIsEditingPrivacy] = useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Queries & Mutations
   const { data: userData, isLoading: isLoadingUserProfile } =
@@ -62,36 +49,27 @@ const UserProfilePage = () => {
       { enabled: !!userId },
     );
   const { mutate: updateUser } = api.user.update.useMutation();
-  const updatePasswordMutation = api.user.updatePassword.useMutation();
-  const validateCurrentPassword =
-    api.user.validateCurrentPassword.useMutation();
 
   // React Hook Form
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: userData?.user?.name ?? "",
-      email: userData?.user?.email ?? "",
-      bio: userData?.user?.bio ?? "",
-      currentPassword: "",
-      password: "",
-      confirmPassword: "",
-      isSubscriptionsPublic: userData?.user?.isSubscriptionsPublic ?? false,
-      isRatingsPublic: userData?.user?.isRatingsPublic ?? false,
-      isUserDataCollectionAllowed:
-        userData?.user?.isUserDataCollectionAllowed ?? false,
+      name: "",
+      email: "",
+      bio: "",
+      isSubscriptionsPublic: false,
+      isRatingsPublic: false,
+      isUserDataCollectionAllowed: false,
     },
   });
 
+  // Update form with user data once loaded
   useEffect(() => {
     if (userData) {
       form.reset({
         name: userData.user?.name ?? "",
         email: userData.user?.email ?? "",
         bio: userData.user?.bio ?? "",
-        currentPassword: "",
-        password: "",
-        confirmPassword: "",
         isSubscriptionsPublic: userData.user?.isSubscriptionsPublic ?? false,
         isRatingsPublic: userData.user?.isRatingsPublic ?? false,
         isUserDataCollectionAllowed:
@@ -100,351 +78,253 @@ const UserProfilePage = () => {
     }
   }, [userData, form]);
 
-  const toggleEditingPrivacy = () => {
-    setIsEditingPrivacy(!isEditingPrivacy);
-    form.setValue(
-      "isSubscriptionsPublic",
-      userData?.user?.isSubscriptionsPublic ?? false,
-    );
-    form.setValue("isRatingsPublic", userData?.user?.isRatingsPublic ?? false);
-    form.setValue(
-      "isUserDataCollectionAllowed",
-      userData?.user?.isUserDataCollectionAllowed ?? false,
-    );
-  };
-
-  const resetFormPasswordFields = () => {
-    form.setValue("currentPassword", "");
-    form.setValue("password", "");
-    form.setValue("confirmPassword", "");
-  };
-
   // Handle Form Submission
   const onSubmit = async (values: z.infer<typeof profileSchema>) => {
-    updateUser({
-      name: values.name,
-      email: values.email,
-      bio: values.bio,
-      isSubscriptionsPublic: values.isSubscriptionsPublic,
-      isRatingsPublic: values.isRatingsPublic,
-      isUserDataCollectionAllowed: values.isUserDataCollectionAllowed,
-    });
+    setIsSubmitting(true);
 
-    // Handle Password Update
-    if (values.password) {
-      // Validate current password using a mutation
-      const validate = await validateCurrentPassword.mutateAsync({
-        currentPassword: values.currentPassword ?? "",
+    try {
+      // Update profile information
+      await updateUser({
+        name: values.name,
+        email: values.email,
+        bio: values.bio,
+        isSubscriptionsPublic: values.isSubscriptionsPublic,
+        isRatingsPublic: values.isRatingsPublic,
+        isUserDataCollectionAllowed: values.isUserDataCollectionAllowed,
       });
 
-      if (!validate.success || !validate.isValidPassword) {
-        toast.error("Current password is incorrect.");
-      } else {
-        // If validation succeeds, update the password
-        const update = await updatePasswordMutation.mutateAsync({
-          password: values.password,
-        });
-        if (update.success) {
-          toast.success("Password updated successfully!");
-        } else {
-          toast.error("Failed to update password. Please try again.");
-        }
-      }
-      resetFormPasswordFields();
-      return; // Stops execution if password validation fails
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // Handle loading state
   if (isLoadingUserProfile) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex w-3/4 max-w-4xl flex-col items-center">
-          <Skeleton className="flex h-[1000px] w-full items-center justify-center rounded-lg">
-            <div className="mr-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-gray-500"></div>
-            <span className="block text-center text-xl text-gray-500">
+          <Skeleton className="h-[500px] w-full rounded-lg" />
+          <div className="mt-4 flex items-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-center text-muted-foreground">
               Loading user profile...
             </span>
-          </Skeleton>
-          <span className="mt-4 block text-center text-xl text-gray-500">
-            Loading user profile...
-          </span>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl justify-center p-6">
-      <Card className="w-full max-w-4xl shadow-lg">
+    <div className="container mx-auto max-w-4xl px-4 py-6">
+      <Card className="w-full shadow-lg">
         <CardHeader className="text-center">
           <h2 className="text-2xl font-semibold">Profile Settings</h2>
-          <p className="text-sm text-gray-500">Edit your profile details</p>
+          <p className="text-sm text-muted-foreground">
+            Update your profile information and settings
+          </p>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-center gap-6">
+        <CardContent>
+          {/* Profile Image */}
+          <div className="mb-6 flex items-center justify-center">
             {userData?.user?.image ? (
               <Image
-                src={userData?.user?.image || "/default-profile.png"}
+                src={userData.user.image}
                 alt="Profile"
                 width={96}
                 height={96}
                 className="h-24 w-24 rounded-full border"
               />
             ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-full border bg-gray-200 text-gray-500">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full border bg-muted text-muted-foreground">
                 No Image
               </div>
             )}
           </div>
+
+          {/* Form */}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Name */}
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      {isEditing ? (
-                        <Input type="name" {...field} className="w-1/2" />
-                      ) : (
-                        <div className="w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                          {field.value ?? "No name set"}
-                        </div>
-                      )}
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Basic Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Basic Information</h3>
 
-              {/* Email */}
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      {isEditing ? (
-                        <Input type="email" {...field} className="w-1/2" />
-                      ) : (
-                        <div className="w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                          {field.value ?? "No email set"}
-                        </div>
-                      )}
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                {/* Name */}
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Bio */}
-              <FormField
-                control={form.control}
-                name="bio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bio</FormLabel>
-                    <FormControl>
-                      {isEditing ? (
+                {/* Email */}
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Bio */}
+                <FormField
+                  control={form.control}
+                  name="bio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bio</FormLabel>
+                      <FormControl>
                         <textarea
                           {...field}
-                          className="className=w-1/2 min-h-[10rem] w-full resize-none overflow-hidden rounded-lg border px-3 py-2 text-left align-top text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-                          rows={1} // Ensures it starts small but expands
-                          onInput={(e) => {
-                            const target = e.target as HTMLTextAreaElement;
-                            target.style.height = "auto"; // Reset height
-                            target.style.height = `${target.scrollHeight}px`; // Expand height dynamically
-                          }}
+                          className="max-h-[12rem] min-h-[8rem] w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          placeholder="Tell us about yourself"
                         />
-                      ) : (
-                        <div className="className=w-1/2 min-h-[10rem] w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                          {field.value ?? "No bio set"}
-                        </div>
-                      )}
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              {/* Password */}
-              {isEditing && userData?.user?.emailVerified && (
-                <>
-                  <Separator />
-                  <h3 className="text-lg font-semibold">Change Password</h3>
-                  <FormField
-                    control={form.control}
-                    name="currentPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Current Password</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="password"
-                            autoComplete="new-password"
-                            {...field}
-                            className="w-1/2"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <Separator />
 
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>New Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} className="w-1/2" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              {/* Privacy Settings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Privacy Settings</h3>
 
-                  <FormField
-                    control={form.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirm Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} className="w-1/2" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
+                {/* Subscriptions Public */}
+                <FormField
+                  control={form.control}
+                  name="isSubscriptionsPublic"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Make Your Subscriptions Public</FormLabel>
+                        <FormDescription>
+                          Enable this option to allow other users to see what
+                          you are subscribed to.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
-              {/* Editing Privacy Settings */}
-              {isEditing && (
-                <Button
-                  type="button"
-                  variant="link"
-                  onClick={() => {
-                    toggleEditingPrivacy();
-                  }}
-                  className="ufnderline text-sm font-normal hover:font-semibold"
-                >
-                  <Pencil className="h-4 w-4" />
-                  Edit Privacy Settings
-                </Button>
-              )}
+                {/* Ratings Public */}
+                <FormField
+                  control={form.control}
+                  name="isRatingsPublic"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Make Your Ratings & Reviews Public
+                        </FormLabel>
+                        <FormDescription>
+                          Enable this option to allow other users to see your
+                          feedback on services.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
-              {isEditing && isEditingPrivacy && (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="isSubscriptionsPublic"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Make Your Subscriptions Public</FormLabel>
-                          <FormDescription>
-                            Enable this option to allow other users to see what
-                            you are subscribed to.
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="isRatingsPublic"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Make Your Ratings & Reviews Public
-                          </FormLabel>
-                          <FormDescription>
-                            Enable this option to allow other users to see your
-                            feedback on services.
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="isUserDataCollectionAllowed"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Allow Analytics and Data Collection
-                          </FormLabel>
-                          <FormDescription>
-                            Enable this option to allow the collection of data
-                            for analytics purposes. This helps us improve our
-                            services and provide a better user experience.
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
+                {/* Data Collection */}
+                <FormField
+                  control={form.control}
+                  name="isUserDataCollectionAllowed"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Allow Analytics and Data Collection
+                        </FormLabel>
+                        <FormDescription>
+                          Enable this option to allow the collection of data for
+                          analytics purposes. This helps us improve our services
+                          and provide a better user experience.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-              {/* Submit and Edit Buttons */}
-              {isEditing ? (
-                <div className="flex space-x-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditing(false);
-                      setIsEditingPrivacy(false);
-                      form.reset({
-                        name: userData?.user?.name ?? "",
-                        email: userData?.user?.email ?? "",
-                        bio: userData?.user?.bio ?? "",
-                        currentPassword: "",
-                        password: "",
-                        confirmPassword: "",
-                      });
-                    }}
-                    className="w-full border-gray-300 hover:bg-red-400"
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="w-full hover:bg-green-400">
-                    Save Changes
-                  </Button>
+              {/* Password info (non-editable) */}
+              {userData?.user?.emailVerified && (
+                <div className="mt-6 rounded-md border p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium">
+                        Password & Security
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Manage your password and security settings
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push("/settings/security")}
+                      type="button"
+                    >
+                      Manage
+                    </Button>
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <Button onClick={() => setIsEditing(true)} className="w-full">
-                    Edit Profile & Privacy Settings
-                  </Button>
-                  <div style={{ height: "24rem" }}></div>
-                </>
               )}
+
+              {/* Submit Button */}
+              <div className="pb-6 pt-2">
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Profile"
+                  )}
+                </Button>
+              </div>
             </form>
           </Form>
         </CardContent>

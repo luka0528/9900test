@@ -13,14 +13,14 @@ export default function ProfileLayout({
 }) {
   const items: SidebarItem[] = [
     { title: "Profile", url: `/settings/profile`, icon: EyeIcon },
-    { title: "Billing", url: `/settings/profile`, icon: ReceiptText },
-    { title: "Services", url: `/settings/profile`, icon: Package },
+    { title: "Billing", url: `/settings/billing`, icon: ReceiptText },
+    { title: "Services", url: `/settings/services`, icon: Package },
   ];
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
       <DefaultSideBar items={items} />
-      <main className="h-full flex-1 overflow-hidden p-0">{children}</main>
+      <main className="h-full flex-1 p-0">{children}</main>
     </div>
   );
 }
