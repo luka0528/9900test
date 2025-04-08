@@ -1,5 +1,6 @@
 import { Badge } from "~/components/ui/badge";
 import {
+  Card,
   CardHeader,
   CardTitle,
   CardDescription,
@@ -43,9 +44,9 @@ export const MarketplaceService = ({
   const creatorName = service.owners[0]?.user?.name;
 
   return (
-    <div
+    <Card
       onClick={onClick}
-      className="cursor-pointer rounded-lg border bg-card p-6 text-card-foreground shadow-sm transition-all hover:shadow-md"
+      className="overflow-hidden transition-all duration-300 hover:cursor-pointer hover:shadow-lg"
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
@@ -98,6 +99,6 @@ export const MarketplaceService = ({
           </Button>
         </div>
       </CardFooter>
-    </div>
+    </Card>
   );
 };
