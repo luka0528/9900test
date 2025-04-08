@@ -26,6 +26,11 @@ interface MarketplaceServiceProps {
         name: string | null;
       };
     }[];
+    subscriptionTiers: {
+      id: string;
+      name: string;
+      price: number;
+    }[];
   };
   onClick: () => void;
 }
@@ -34,13 +39,25 @@ export const MarketplaceService = ({
   service,
   onClick,
 }: MarketplaceServiceProps) => {
-  const { name, tags, versions } = service;
+  const { name, tags, versions, subscriptionTiers } = service;
   const latestVersion = versions[0] ?? {
     id: "",
     description: "",
     version: "",
   };
   const creatorName = service.owners[0]?.user?.name;
+  
+  // Get the lowest subscription tier price
+  const lowestTier = subscriptionTiers?.[0];
+  const price = lowestTier?.price ?? 0;
+  
+  // Format the price display
+  const priceDisplay = price === 0 
+    ? "Free" 
+    : `$${price.toFixed(2)}`;
+  
+  // Determine button color based on price
+  const isPaid = price > 0;
 
   return (
     <div
@@ -72,7 +89,7 @@ export const MarketplaceService = ({
             <span>{new Date().toDateString()}</span>
           </div>
         </div>
-
+        
         {tags && tags.length > 0 && (
           <div className="mb-2 mt-6 flex flex-wrap gap-1">
             {tags.map((tag) => (
@@ -92,9 +109,13 @@ export const MarketplaceService = ({
           <Button
             variant="outline"
             size="sm"
-            className="min-w-20 border-blue-500 text-sm font-medium hover:bg-blue-50 hover:text-blue-600"
+            className={`min-w-20 text-sm font-medium ${
+              isPaid 
+                ? "border-blue-500 hover:bg-blue-50 hover:text-blue-600" 
+                : "border-green-500 hover:bg-green-50 hover:text-green-600"
+            }`}
           >
-            Free
+            {priceDisplay}
           </Button>
         </div>
       </CardFooter>

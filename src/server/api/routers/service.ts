@@ -568,7 +568,7 @@ export const serviceRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  getServiceByQuery: publicProcedure
+    getServiceByQuery: publicProcedure
     .input(
       z.object({
         search: z.string().nullish(),
@@ -588,42 +588,50 @@ export const serviceRouter = createTRPCRouter({
           ? dates
           : [dates]
         : [];
+  
+      // Define the order by logic based on sort parameter
       let orderBy: Prisma.ServiceOrderByWithRelationInput = {
         consumerEvents: {
           _count: "desc",
         },
       };
-      // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
-      if (sort == "Price-Desc") {
+  
+      // Define sorting based on the lowest subscription tier price
+      if (sort === "Price-Desc") {
         orderBy = {
           subscriptionTiers: {
-            price: "desc",
+            _min: {
+              price: "desc",
+            },
           },
         } as Prisma.ServiceOrderByWithRelationInput;
-        // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
-      } else if (sort == "Price-Asc") {
+      } else if (sort === "Price-Asc") {
         orderBy = {
           subscriptionTiers: {
-            price: "asc",
+            _min: {
+              price: "asc",
+            },
           },
         } as Prisma.ServiceOrderByWithRelationInput;
-        orderBy = {
-          createdAt: "asc",
-        } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort == "Old-to-New") {
+      } else if (sort === "New-to-Old") {
         orderBy = {
           createdAt: "desc",
         } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort == "Last-Updated") {
+      } else if (sort === "Old-to-New") {
+        orderBy = {
+          createdAt: "asc",
+        } as Prisma.ServiceOrderByWithRelationInput;
+      } else if (sort === "Last-Updated") {
         orderBy = {
           updatedAt: "desc",
         } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort == "Name-Asc") {
+      } else if (sort === "Name-Asc") {
         orderBy = { name: "asc" } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort == "Name-Desc") {
+      } else if (sort === "Name-Desc") {
         orderBy = { name: "desc" } as Prisma.ServiceOrderByWithRelationInput;
       }
-
+  
+      // Date filtering logic
       let dateFilter: Prisma.ServiceWhereInput = {};
       if (dates && dates.length > 0) {
         const dateConditions = processDates.map((yearStr) => {
@@ -642,6 +650,8 @@ export const serviceRouter = createTRPCRouter({
           OR: dateConditions,
         };
       }
+  
+      // Build the where clause
       const whereClause: Prisma.ServiceWhereInput = {
         ...(search && {
           name: {
@@ -659,21 +669,71 @@ export const serviceRouter = createTRPCRouter({
               },
             },
           }),
-        // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
-        ...(price &&
-          price.length == 2 && {
-            price: {
-              gte: parseFloat(price[0] ?? "0"),
-              lte: parseFloat(price[1] ?? MAX_FLOAT),
-            },
-          }),
         ...dateFilter,
       };
-
+  
+      // Handle price range filtering by looking at the minimum subscription tier price
+      if (price && price.length === 2) {
+        const minPrice = parseFloat(price[0] ?? "0");
+        const maxPrice = parseFloat(price[1] ?? MAX_FLOAT);
+  
+        // First, get IDs of services that have at least one subscription tier within the price range
+        const servicesWithinPriceRange = await ctx.db.service.findMany({
+          where: {
+            subscriptionTiers: {
+              some: {
+                price: {
+                  gte: minPrice,
+                  lte: maxPrice,
+                },
+              },
+            },
+          },
+          select: {
+            id: true,
+            subscriptionTiers: {
+              select: {
+                price: true,
+              },
+              orderBy: {
+                price: "asc",
+              },
+            },
+          },
+        });
+  
+        // Filter services that have their lowest subscription tier within the price range
+        const serviceIdsWithLowestTierInRange = servicesWithinPriceRange
+          .filter(service => 
+            service.subscriptionTiers.length > 0 && 
+            service.subscriptionTiers[0] && 
+            service.subscriptionTiers[0].price >= minPrice && 
+            service.subscriptionTiers[0].price <= maxPrice
+          )
+          .map(service => service.id);
+  
+        // Add this to the where clause
+        whereClause.id = {
+          in: serviceIdsWithLowestTierInRange,
+        };
+      }
+  
+      // Query services with the where clause and order by
       const services = await ctx.db.service.findMany({
         where: whereClause,
         orderBy: orderBy,
         include: {
+          subscriptionTiers: {
+            orderBy: {
+              price: "asc",
+            },
+            take: 1,
+            select: {
+              id: true,
+              name: true,
+              price: true,
+            },
+          },
           versions: {
             orderBy: {
               version: "desc",
@@ -703,15 +763,12 @@ export const serviceRouter = createTRPCRouter({
           },
         },
         cursor: cursor ? { id: cursor } : undefined,
-        take: limit,
+        take: limit + 1, // Take one extra to determine if there's a next page
       });
-
-      console.log(JSON.stringify(services));
-
+  
       const nextCursor = services.length > limit ? services.pop()?.id : null;
       return { services, nextCursor };
     }),
-
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */

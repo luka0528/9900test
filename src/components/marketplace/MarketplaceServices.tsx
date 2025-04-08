@@ -18,7 +18,7 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [ref, inView] = useInView();
-
+  
   // The Marketplace is unidirection, so we only req. the fields related
   // to the 'next' page.
   const { status, data, fetchNextPage } =
@@ -58,7 +58,7 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
       ) : (
         <>
           {data.pages.map((page) => (
-            <div key={page.nextCursor}>
+            <div key={page.nextCursor ?? 'no-cursor'}>
               {page.services.length === 0 ? (
                 <MarketplaceServicesNoResults />
               ) : (
@@ -67,7 +67,11 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
                     {page.services.map((service) => (
                       <MarketplaceService
                         key={service.id}
-                        service={service}
+                        service={{
+                          ...service,
+                          // Make sure subscriptionTiers is included in the passed props
+                          subscriptionTiers: service.subscriptionTiers || [],
+                        }}
                         onClick={() =>
                           handleServiceClick(
                             service.id,
