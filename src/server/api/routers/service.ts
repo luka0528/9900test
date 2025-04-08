@@ -680,6 +680,7 @@ export const serviceRouter = createTRPCRouter({
             },
             take: 1,
             select: {
+              id: true,
               version: true,
               description: true,
             },
