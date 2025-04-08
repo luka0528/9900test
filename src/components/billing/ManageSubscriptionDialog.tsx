@@ -96,7 +96,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       });
       toast.success("Payment method updated successfully.");
       refetchSubscriptions();
-      refetchServiceConsumer();
+      await refetchServiceConsumer();
       setShowPaymentDialog(false);
     } catch {
       toast.error("Failed to update payment method.");
@@ -189,7 +189,6 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
           isOpen={showPaymentDialog}
           onClose={() => setShowPaymentDialog(false)}
           isSubscribed={true}
-          selectedTier={subscriptionTier.id}
           subscriptionTier={serviceConsumer.subscriptionTier}
           paymentMethods={paymentMethods}
           selectedPaymentMethod={selectedPaymentMethod}
@@ -217,7 +216,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
             </AlertDialogHeader>
             <div className="space-y-4">
               <TiersGrid
-                service={service!}
+                service={service}
                 isSubscribed={true}
                 currentTierId={selectedNewTier}
                 onSelectTier={(tierId: string) => {

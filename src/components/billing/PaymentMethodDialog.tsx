@@ -16,13 +16,12 @@ import { CreditCard, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import type { PaymentMethod, Service, SubscriptionTier } from "@prisma/client";
+import type { PaymentMethod, SubscriptionTier } from "@prisma/client";
 
 interface PaymentMethodDialogProps {
   isOpen: boolean;
   onClose: () => void;
   isSubscribed?: boolean;
-  selectedTier: string | null;
   subscriptionTier: SubscriptionTier;
   paymentMethods: PaymentMethod[]; // or typed PaymentMethod[]
   selectedPaymentMethod: string | null;
@@ -39,7 +38,6 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
   isOpen,
   onClose,
   isSubscribed,
-  selectedTier,
   subscriptionTier,
   paymentMethods,
   selectedPaymentMethod,

@@ -7,13 +7,7 @@ import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { Loader2, ArrowLeftIcon } from "lucide-react";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "~/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/card";
 
 import TiersGrid from "~/components/billing/TiersGrid";
 import PaymentMethodDialog from "~/components/billing/PaymentMethodDialog";
@@ -103,7 +97,7 @@ const PurchasePage: React.FC = () => {
         toast.success("Successfully subscribed.");
         setCurrentTierId(selectedTier);
       }
-      subscriptionStatusRefetch();
+      void subscriptionStatusRefetch();
       router.refresh(); // or redirect, if desired
     } catch (err) {
       console.error(err);
@@ -173,7 +167,6 @@ const PurchasePage: React.FC = () => {
           isOpen={showPaymentDialog}
           onClose={() => setShowPaymentDialog(false)}
           isSubscribed={isSubscribed}
-          selectedTier={selectedTier}
           subscriptionTier={
             service.subscriptionTiers.find((tier) => tier.id === selectedTier)!
           }
