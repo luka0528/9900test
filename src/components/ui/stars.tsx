@@ -17,7 +17,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
 
   return (
     <div className="flex items-center">
-      {[...Array(MAX_STAR_RATING)].map((_, index) => {
+      {[...Array(MAX_STAR_RATING).keys()].map((index) => {
         const fillPercentage =
           Math.min(Math.max(normalizedRating - index, 0), 1) * 100;
 

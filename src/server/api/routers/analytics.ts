@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { api } from "~/trpc/react";
 
 export const analyticsRouter = createTRPCRouter({
   getTotalRevenue: protectedProcedure
