@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { RestMethod, type Service, type ServiceVersion } from "@prisma/client";
+import { RestMethod } from "@prisma/client";
 
 import {
   createTRPCRouter,
@@ -1039,13 +1039,13 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      // These errors should never occur (due to frontend verifying this already) (todo - uncomment)
-      // if (service.owners.length >= 1) {
-      //   throw new TRPCError({
-      //     code: "UNAUTHORIZED",
-      //     message: "You cannot review your own service",
-      //   });
-      // }
+      // These errors should never occur (due to frontend verifying this already)
+      if (service.owners.length >= 1) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot review your own service",
+        });
+      }
       if (service.subscriptionTiers.length == 0) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
@@ -1244,8 +1244,6 @@ export const serviceRouter = createTRPCRouter({
           id: input.reviewId,
         },
       });
-
-      console.log("todo - deleted", input.reviewId);
 
       return {
         deleted: input.reviewId,

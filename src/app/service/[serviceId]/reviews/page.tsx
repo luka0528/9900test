@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Loader2,
-  AlertTriangle,
-  MessageSquarePlus,
-  Pencil,
-} from "lucide-react";
+import { Loader2, AlertTriangle, MessageSquarePlus } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
@@ -16,11 +11,10 @@ import { ReviewCardForm } from "~/components/service/reviews/ReviewCardForm";
 import { useEffect, useState } from "react";
 import { EditReviewModal } from "~/components/service/reviews/EditReviewModal";
 import {
-  updateReviewType,
+  type updateReviewType,
   type ReviewContent,
 } from "~/components/service/reviews/helper";
 import { toast } from "sonner";
-import React from "react";
 
 interface NewCard {
   isVisible: boolean;
@@ -60,57 +54,51 @@ export default function ReviewsPage() {
   });
 
   // Editing a review
-  const { mutate: editReview, isPending: isEditingReview } =
-    api.service.editReview.useMutation({
-      onSuccess: (data) => {
-        setReviews((prevState) =>
-          prevState.map((review) =>
-            review.id === data.id
-              ? {
-                  ...review,
+  const { mutate: editReview } = api.service.editReview.useMutation({
+    onSuccess: (data) => {
+      setReviews((prevState) =>
+        prevState.map((review) =>
+          review.id === data.id
+            ? {
+                ...review,
 
-                  // overwrite the content and star value
-                  content: data.content,
-                  starValue: data.starValue,
-                }
-              : review,
-          ),
-        );
-        toast.success("Review edited");
-      },
-      onError: (error) => {
-        toast.error("Failed to edit review", {
-          description: error.message,
-        });
-      },
-    });
+                // overwrite the content and star value
+                content: data.content,
+                starValue: data.starValue,
+              }
+            : review,
+        ),
+      );
+      toast.success("Review edited");
+    },
+    onError: (error) => {
+      toast.error("Failed to edit review", {
+        description: error.message,
+      });
+    },
+  });
 
   // Deleting a review
-  const { mutate: deleteReview, isPending: isDeletingReview } =
-    api.service.deleteReview.useMutation({
-      onSuccess: (data) => {
-        setReviews((prev) =>
-          prev.filter((review) => review.id !== data.deleted),
-        );
-        toast.success("Review deleted");
-      },
-      onError: (error) => {
-        toast.error("Failed to delete review", {
-          description: error.message,
-        });
-      },
-    });
+  const { mutate: deleteReview } = api.service.deleteReview.useMutation({
+    onSuccess: (data) => {
+      setReviews((prev) => prev.filter((review) => review.id !== data.deleted));
+      toast.success("Review deleted");
+    },
+    onError: (error) => {
+      toast.error("Failed to delete review", {
+        description: error.message,
+      });
+    },
+  });
 
   // Editing or deleting a review
   useEffect(() => {
-    console.log("has been updated!", updatedReview);
     if (
       updatedReview.ready &&
       updatedReview.id !== null &&
       updatedReview.isUpdateDelete !== null
     ) {
       // Delete
-      console.log("trigered asoidjanosdia");
       if (updatedReview.isUpdateDelete) {
         deleteReview({
           reviewId: updatedReview.id,
@@ -122,7 +110,7 @@ export default function ReviewsPage() {
         } else {
           editReview({
             reviewId: updatedReview.id,
-            newContent: updatedReview.updatedContent || "",
+            newContent: updatedReview.updatedContent ?? "",
             newRating: updatedReview.updatedRating,
           });
         }
@@ -136,42 +124,41 @@ export default function ReviewsPage() {
         id: null,
       });
     }
-  }, [updatedReview]);
+  }, [updatedReview, deleteReview, editReview]);
 
   // Haven't reviewed = add, reviewed = edit, owner = owned (disabled), not subscribed = null (disabled)
   type buttonType = "Add" | "Edit" | "Owned" | null;
   const [topButton, setTopButton] = useState<buttonType>(null);
 
-  const { mutate: createReview, isPending: isCreatingReview } =
-    api.service.createReview.useMutation({
-      onSuccess: (data) => {
-        toast.success("Review posted");
-        setReviews([
-          {
-            id: data.id,
-            reviewerId: data.reviewerId,
-            reviewerName: data.reviewerName,
-            starValue: data.starValue,
-            content: data.content,
-            postedAt: data.createdAt,
-            replies: [],
-          },
-          ...reviews,
-        ]);
-      },
-      onError: (error) => {
-        toast.error("Failed to create review", {
-          description: error.message,
-        });
-      },
-    });
+  const { mutate: createReview } = api.service.createReview.useMutation({
+    onSuccess: (data) => {
+      toast.success("Review posted");
+      setReviews([
+        {
+          id: data.id,
+          reviewerId: data.reviewerId,
+          reviewerName: data.reviewerName,
+          starValue: data.starValue,
+          content: data.content,
+          postedAt: data.createdAt,
+          replies: [],
+        },
+        ...reviews,
+      ]);
+    },
+    onError: (error) => {
+      toast.error("Failed to create review", {
+        description: error.message,
+      });
+    },
+  });
 
   // New review
   useEffect(() => {
     if (newCardData.isVisible && newCardData.starValue !== null) {
       createReview({
         serviceId: serviceId,
-        content: newCardData.content ? newCardData.content : "",
+        content: newCardData.content ?? "",
         starValue: newCardData.starValue,
       });
 
@@ -182,15 +169,14 @@ export default function ReviewsPage() {
         content: null,
       });
     }
-  }, [newCardData.starValue]);
+  }, [newCardData, createReview, serviceId]);
 
   const [isUserOwner, setIsUserOwner] = useState(false);
 
   useEffect(() => {
     if (
       session &&
-      service &&
-      service.owners.some((owner) => owner.user.id === session.user.id)
+      service?.owners.some((owner) => owner.user.id === session.user.id)
     ) {
       setIsUserOwner(true);
     }
@@ -228,6 +214,8 @@ export default function ReviewsPage() {
         )
       ) {
         // Is subscribed and posted review before
+        // TODO for future - make it so that the edit button at the top directly opens the modal
+        // for subscribers who have already posted a review
         setTopButton("Edit");
       } else if (
         service.subscriptionTiers.some((sub) =>
@@ -235,8 +223,7 @@ export default function ReviewsPage() {
         )
       ) {
         // Is subscribed and hasn't posted a review before
-        setTopButton("Add"); //todo - fix
-        // setTopButton("Edit");
+        setTopButton("Add");
       } else if (
         service.owners.some((owner) => owner.user.id === session.user.id)
       ) {
@@ -246,7 +233,7 @@ export default function ReviewsPage() {
         setTopButton(null);
       }
     }
-  }, [service]);
+  }, [service, session]);
 
   // Show loading state
   if (serviceLoading) {
@@ -288,7 +275,7 @@ export default function ReviewsPage() {
             <h1 className="text-3xl font-bold">{service.name} reviews</h1>
             <div className="flex items-center gap-2">
               {/* If the current user is subscribed to this service, their should be an add/edit review/rating button */}
-              {topButton === "Edit" ? (
+              {/*{topButton === "Edit" ? (
                 <Button
                   variant="outline"
                   onClick={() => setEditModalOpen(true)}
@@ -296,12 +283,16 @@ export default function ReviewsPage() {
                   <Pencil />
                   Edit review
                 </Button>
-              ) : (
+              ) :*/}{" "}
+              {
                 <Button
                   className="size-min"
                   variant="outline"
-                  // TODO - also disabled if topButton === "Owned"
-                  disabled={topButton === null} // Disable the add review button if not subbed
+                  disabled={
+                    topButton === null ||
+                    topButton === "Owned" ||
+                    topButton === "Edit"
+                  } // Disable the add review button if not subbed
                   onClick={() => {
                     setNewCardData({
                       isVisible: true,
@@ -313,11 +304,11 @@ export default function ReviewsPage() {
                   <MessageSquarePlus className="animate-slide-in transform transition" />
                   Add review
                 </Button>
-              )}
+              }
             </div>
           </div>
 
-          {/* Edit review modal */}
+          {/* Edit review modal - this won't occur until the edit top button functionality is implemented*/}
           {editModalOpen && (
             <EditReviewModal
               setUpdatedPost={setUpdatedReview}

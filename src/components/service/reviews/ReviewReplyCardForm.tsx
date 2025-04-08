@@ -31,7 +31,7 @@ export const ReviewReplyCardForm = ({ replierName, setReplyData }: props) => {
       <div className="flex w-full items-center gap-4">
         <Avatar className="h-10 w-10 border">
           <AvatarImage src="/placeholder-user.jpg" alt="profile picture" />
-          <AvatarFallback>{replierName && replierName[0]}</AvatarFallback>
+          <AvatarFallback>{replierName?.[0]}</AvatarFallback>
         </Avatar>
         <div className="grid w-full gap-1">
           <div className="font-medium">

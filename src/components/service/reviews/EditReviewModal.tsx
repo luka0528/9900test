@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import StarRating from "./StarRating";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Textarea } from "~/components/ui/textarea";
 import type { setUpdateReviewType } from "./helper";
 
@@ -31,9 +31,7 @@ export function EditReviewModal({
   replyId,
   setUpdatedPost,
 }: props) {
-  const [selectedRating, setSelectedRating] = useState(
-    originalRating ? originalRating : 0,
-  );
+  const [selectedRating, setSelectedRating] = useState(originalRating ?? 0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [inputType, setInputType] = useState(!reviewId ? "reply" : "review");
 
@@ -68,7 +66,8 @@ export function EditReviewModal({
         <DialogHeader onClick={() => setModalOpen(false)}>
           <DialogTitle>Edit {inputType}</DialogTitle>
           <DialogDescription>
-            Make changes to your {inputType} here. Click save when you're done.
+            Make changes to your {inputType} here. Click save when you&apos;re
+            done.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -86,13 +85,12 @@ export function EditReviewModal({
             <Textarea
               className="col-span-full"
               placeholder={`Edit ${inputType} text (optional)`}
-              defaultValue={originalContent || ""}
+              defaultValue={originalContent ?? ""}
               ref={textAreaRef} // Assigning ref to the textarea
             />
           </div>
         </div>
         <DialogFooter>
-          {/* TODO - add onclick behavior */}
           <Button type="submit" onClick={handleSubmit}>
             Save changes
           </Button>

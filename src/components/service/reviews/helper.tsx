@@ -1,7 +1,7 @@
 export interface ReviewContent {
   id: string;
   reviewerId: string;
-  reviewerName: string | null | undefined; // todo shouldn't be undefined?
+  reviewerName: string | null | undefined;
   starValue: number;
   content: string;
   postedAt: Date;

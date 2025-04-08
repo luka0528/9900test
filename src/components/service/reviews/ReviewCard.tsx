@@ -76,43 +76,41 @@ export const ReviewCard = ({
   });
 
   // Editing a reply
-  const { mutate: editReply, isPending: isEditingReply } =
-    api.service.editReviewReply.useMutation({
-      onSuccess: (data) => {
-        setAllReplies((prevState) =>
-          prevState.map((reply) =>
-            reply.id === data.id
-              ? {
-                  ...reply,
-                  content: data.content, // overwrite the content with the updated content
-                }
-              : reply,
-          ),
-        );
-        toast.success("Reply edited");
-      },
-      onError: (error) => {
-        toast.error("Failed to edit reply", {
-          description: error.message,
-        });
-      },
-    });
+  const { mutate: editReply } = api.service.editReviewReply.useMutation({
+    onSuccess: (data) => {
+      setAllReplies((prevState) =>
+        prevState.map((reply) =>
+          reply.id === data.id
+            ? {
+                ...reply,
+                content: data.content, // overwrite the content with the updated content
+              }
+            : reply,
+        ),
+      );
+      toast.success("Reply edited");
+    },
+    onError: (error) => {
+      toast.error("Failed to edit reply", {
+        description: error.message,
+      });
+    },
+  });
 
   // Deleting a reply
-  const { mutate: deleteReply, isPending: isDeletingReply } =
-    api.service.deleteReviewReply.useMutation({
-      onSuccess: (data) => {
-        setAllReplies((prev) =>
-          prev.filter((reply) => reply.id !== data.deleted),
-        );
-        toast.success("Reply deleted");
-      },
-      onError: (error) => {
-        toast.error("Failed to delete reply", {
-          description: error.message,
-        });
-      },
-    });
+  const { mutate: deleteReply } = api.service.deleteReviewReply.useMutation({
+    onSuccess: (data) => {
+      setAllReplies((prev) =>
+        prev.filter((reply) => reply.id !== data.deleted),
+      );
+      toast.success("Reply deleted");
+    },
+    onError: (error) => {
+      toast.error("Failed to delete reply", {
+        description: error.message,
+      });
+    },
+  });
 
   useEffect(() => {
     if (
@@ -145,31 +143,30 @@ export const ReviewCard = ({
         id: null,
       });
     }
-  }, [updatedReply.id]);
+  }, [updatedReply, deleteReply, editReply]);
 
   const [allReplies, setAllReplies] = useState(replies);
 
-  const { mutate: createReply, isPending: isCreatingReply } =
-    api.service.createReviewReply.useMutation({
-      onSuccess: (data) => {
-        toast.success("Reply posted");
-        setAllReplies([
-          {
-            id: data.id,
-            replierId: data.replierId,
-            replierName: data.replierName,
-            content: data.content,
-            postedAt: data.createdAt,
-          },
-          ...allReplies,
-        ]);
-      },
-      onError: (error) => {
-        toast.error("Failed to create reply", {
-          description: error.message,
-        });
-      },
-    });
+  const { mutate: createReply } = api.service.createReviewReply.useMutation({
+    onSuccess: (data) => {
+      toast.success("Reply posted");
+      setAllReplies([
+        {
+          id: data.id,
+          replierId: data.replierId,
+          replierName: data.replierName,
+          content: data.content,
+          postedAt: data.createdAt,
+        },
+        ...allReplies,
+      ]);
+    },
+    onError: (error) => {
+      toast.error("Failed to create reply", {
+        description: error.message,
+      });
+    },
+  });
 
   useEffect(() => {
     if (replyData.isVisible && replyData.content !== null) {
@@ -186,7 +183,7 @@ export const ReviewCard = ({
         content: null,
       });
     }
-  }, [replyData.content]);
+  }, [replyData, createReply, id, serviceId]);
 
   return (
     <>
@@ -195,7 +192,7 @@ export const ReviewCard = ({
         <div className="flex items-center gap-4">
           <Avatar className="h-10 w-10 border">
             <AvatarImage src="/placeholder-user.jpg" alt="profile picture" />
-            <AvatarFallback>{reviewerName && reviewerName[0]}</AvatarFallback>
+            <AvatarFallback>{reviewerName?.[0]}</AvatarFallback>
           </Avatar>
           <div className="grid gap-1">
             <div className="font-medium">{reviewerName}</div>
@@ -244,20 +241,18 @@ export const ReviewCard = ({
             setReplyData={setReplyData}
           />
         )}
-        {allReplies &&
-          allReplies.map((reply) => (
-            <ReviewReplyCard
-              key={reply.id}
-              reply={{
-                id: reply.id,
-                replierId: reply.replierId,
-                replierName: reply.replierName,
-                content: reply.content,
-                postedAt: reply.postedAt,
-              }}
-              setUpdatedReply={setUpdatedReply}
-            />
-          ))}
+        {allReplies?.map((reply) => (
+          <ReviewReplyCard
+            key={reply.id}
+            reply={{
+              id: reply.id,
+              replierName: reply.replierName,
+              content: reply.content,
+              postedAt: reply.postedAt,
+            }}
+            setUpdatedReply={setUpdatedReply}
+          />
+        ))}
       </Card>
     </>
   );

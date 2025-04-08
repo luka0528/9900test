@@ -31,13 +31,12 @@ export default function OptionsDropdown({
   const [editModalOpen, setEditModalOpen] = useState(false);
 
   const handleDelete = () => {
-    console.log(`looking to delete ${reviewId} or ${replyId}`);
     setUpdatedPost({
       ready: true,
       isUpdateDelete: true,
       updatedContent: null,
       updatedRating: null,
-      id: reviewId || replyId, // whichever isn't null is the one to delete
+      id: reviewId ?? replyId, // whichever isn't null is the one to delete
     });
   };
 

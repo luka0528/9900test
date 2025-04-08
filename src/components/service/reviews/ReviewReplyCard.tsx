@@ -8,7 +8,6 @@ import type { setUpdateReviewType } from "./helper";
 interface ReplyCardProps {
   reply: {
     id: string;
-    replierId: string; // to check if we can edit this reply
     replierName: string | null | undefined;
     content: string;
     postedAt: Date;
@@ -17,14 +16,14 @@ interface ReplyCardProps {
 }
 
 export const ReviewReplyCard = ({ reply, setUpdatedReply }: ReplyCardProps) => {
-  const { id, replierId, replierName, content, postedAt } = reply;
+  const { id, replierName, content, postedAt } = reply;
 
   return (
     <Card className="ml-10 mt-1 grid max-w-full gap-6 border-0 bg-gray-100 p-6 shadow-none">
       <div className="flex w-full items-center gap-4">
         <Avatar className="h-10 w-10 border">
           <AvatarImage src="/placeholder-user.jpg" alt="profile picture" />
-          <AvatarFallback>{replierName && replierName[0]}</AvatarFallback>
+          <AvatarFallback>{replierName?.[0]}</AvatarFallback>
         </Avatar>
         <div className="grid w-full gap-1">
           <div className="font-medium">

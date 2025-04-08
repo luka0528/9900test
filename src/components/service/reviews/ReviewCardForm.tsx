@@ -17,7 +17,6 @@ interface ReviewCardFormProps {
   }) => void;
 }
 
-// TODO - fix props type
 export const ReviewCardForm = ({
   reviewerName,
   setNewCardData,
@@ -46,7 +45,7 @@ export const ReviewCardForm = ({
           <Avatar className="h-10 w-10 border">
             {/* TODO - edit src */}
             <AvatarImage src="/placeholder-user.jpg" alt="profile picture" />
-            <AvatarFallback>{reviewerName && reviewerName[0]}</AvatarFallback>
+            <AvatarFallback>{reviewerName?.[0]}</AvatarFallback>
           </Avatar>
           <div className="grid gap-1">
             <div className="font-medium">{reviewerName}</div>
