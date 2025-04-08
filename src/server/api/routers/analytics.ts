@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { api } from "~/trpc/react";
 
 export const analyticsRouter = createTRPCRouter({
   getTotalRevenue: protectedProcedure
@@ -34,4 +35,35 @@ export const analyticsRouter = createTRPCRouter({
 
       return dummyRevenue;
     }),
+
+    getAvgRating: protectedProcedure
+        .query(async ({ ctx }) => {
+            const services = await ctx.db.service.findMany({
+                where: {
+                  owners: {
+                    some: {
+                      id: ctx.session.user.id,
+                    },
+                  },
+                },
+                include: {
+                    ratings: {
+                        select: {
+                            starValue: true
+                        }
+                    }
+                },
+            });
+
+            // Calculate average rating across all services
+            const allRatings = services.flatMap(service => service.ratings);
+            const avgRating = allRatings.length > 0 
+                ? allRatings.reduce((sum, rating) => sum + rating.starValue, 0) / allRatings.length 
+                : 0;
+            
+            // return avgRating;
+
+            // Dummy data for testing
+            return 4.5 + 0 * avgRating;
+        }) 
 });
