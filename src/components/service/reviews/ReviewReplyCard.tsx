@@ -34,7 +34,12 @@ export const ReviewReplyCard = ({ reply }: ReplyCardProps) => {
           <div className="text-xs text-muted-foreground">{`${postedAt.toLocaleString()}`}</div>
         </div>
         <div className="ml-auto flex items-end gap-1">
-          <OptionsDropdown />
+          <OptionsDropdown
+            originalRating={null}
+            originalContent={content}
+            reviewId={null}
+            replyId={id}
+          />
         </div>
       </div>
       <div className="text-sm leading-loose text-muted-foreground">

@@ -113,7 +113,14 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
           </div>
           <div className="ml-auto flex items-end gap-1">
             {/* Only display edit button if logged in user is the one who posted it */}
-            {session && session.user.id === reviewerId && <OptionsDropdown />}
+            {session && session.user.id === reviewerId && (
+              <OptionsDropdown
+                originalRating={starValue}
+                originalContent={content}
+                reviewId={id}
+                replyId={null}
+              />
+            )}
           </div>
         </div>
         <div className="text-sm leading-loose text-muted-foreground">

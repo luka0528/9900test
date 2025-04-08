@@ -1093,7 +1093,7 @@ export const serviceRouter = createTRPCRouter({
 
       return {
         reviewerId: ctx.session.user.id,
-        reviewername: ctx.session.user.name,
+        reviewerName: ctx.session.user.name,
         ...rating,
       };
     }),
@@ -1145,6 +1145,114 @@ export const serviceRouter = createTRPCRouter({
         replierId: ctx.session.user.id,
         replierName: ctx.session.user.name,
         ...review,
+      };
+    }),
+
+  editReview: protectedProcedure
+    .input(
+      z.object({
+        reviewId: z.string().min(1),
+        newContent: z.string().min(1),
+        newRating: z.number().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const reviewOwner = await ctx.db.serviceRating.findUnique({
+        where: {
+          id: input.reviewId,
+        },
+        select: {
+          consumer: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!reviewOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The review you are trying to edit does not exist",
+        });
+      }
+
+      if (reviewOwner.consumer.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot edit this review",
+        });
+      }
+
+      // Edit the review
+      const editedReview = await ctx.db.serviceRating.update({
+        where: {
+          id: input.reviewId,
+        },
+        data: {
+          content: input.newContent,
+          starValue: input.newRating,
+        },
+      });
+
+      return {
+        reviewerId: ctx.session.user.id,
+        reviewerName: ctx.session.user.name,
+        ...editedReview,
+      };
+    }),
+
+  editReviewReply: protectedProcedure
+    .input(
+      z.object({
+        commentId: z.string().min(1),
+        newContent: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const commentOwner = await ctx.db.serviceComment.findUnique({
+        where: {
+          id: input.commentId,
+        },
+        select: {
+          owner: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!commentOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The reply you are trying to edit does not exist",
+        });
+      }
+
+      if (commentOwner.owner.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot edit this reply",
+        });
+      }
+
+      // Edit the reply
+      const editedReply = await ctx.db.serviceComment.update({
+        where: {
+          id: input.commentId,
+        },
+        data: {
+          content: input.newContent,
+        },
+      });
+
+      return {
+        replierId: ctx.session.user.id,
+        replierName: ctx.session.user.name,
+        ...editedReview,
       };
     }),
 

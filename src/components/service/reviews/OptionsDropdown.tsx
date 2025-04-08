@@ -9,10 +9,37 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { EllipsisVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { useState } from "react";
+import { EditReviewModal } from "./EditReviewModal";
 
-export default function OptionsDropdown() {
+interface props1 {
+  originalRating: number | null;
+  originalContent: string | null;
+  reviewId: string | null;
+  replyId: string | null;
+}
+// pass in either state for review or reply
+
+export default function OptionsDropdown({
+  originalRating,
+  originalContent,
+  reviewId,
+  replyId,
+}: props1) {
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
   return (
     <DropdownMenu>
+      {editModalOpen && (
+        <EditReviewModal
+          originalRating={originalRating}
+          originalContent={originalContent}
+          isModalOpen={editModalOpen}
+          setModalOpen={setEditModalOpen}
+          reviewId={reviewId}
+          replyId={replyId}
+        />
+      )}
       <DropdownMenuTrigger asChild>
         <Button variant="ghost">
           <EllipsisVertical />
@@ -22,7 +49,10 @@ export default function OptionsDropdown() {
         <DropdownMenuLabel>Options</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem className="flex justify-between">
+          <DropdownMenuItem
+            className="flex justify-between"
+            onClick={() => setEditModalOpen(true)}
+          >
             <span>Edit</span>
             <Pencil />
           </DropdownMenuItem>

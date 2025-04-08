@@ -1,6 +1,11 @@
 "use client";
 
-import { Loader2, AlertTriangle, MessageSquarePlus } from "lucide-react";
+import {
+  Loader2,
+  AlertTriangle,
+  MessageSquarePlus,
+  Pencil,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
@@ -40,6 +45,12 @@ export default function ReviewsPage() {
     content: null,
   });
 
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
+  // Haven't reviewed - add, reviewed - edit, owner - owned, not subscribed - null (disabled)
+  type buttonType = "Add" | "Edit" | "Owned" | null;
+  const [topButton, setTopButton] = useState<buttonType>(null);
+
   const { mutate: createReview, isPending: isCreatingReview } =
     api.service.createReview.useMutation({
       onSuccess: (data) => {
@@ -48,7 +59,7 @@ export default function ReviewsPage() {
           {
             id: data.id,
             reviewerId: data.reviewerId,
-            reviewerName: data.reviewerId,
+            reviewerName: data.reviewerName,
             starValue: data.starValue,
             content: data.content,
             postedAt: data.createdAt,
@@ -81,11 +92,6 @@ export default function ReviewsPage() {
       });
     }
   }, [newCardData.starValue]);
-
-  // Haven't reviewed - add, reviewed - edit, owner - owned, not subscribed - null (disabled)
-  type buttonType = "Add" | "Edit" | "Owned" | null;
-  const [topButton, setTopButton] = useState<buttonType>(null);
-  const [editModalOpen, setEditModalOpen] = useState(false); // todo unused?
 
   // Load review cards
   useEffect(() => {
@@ -127,7 +133,8 @@ export default function ReviewsPage() {
         )
       ) {
         // Is subscribed and hasn't posted a review before
-        setTopButton("Add");
+        setTopButton("Add"); //todo - fix
+        // setTopButton("Edit");
       } else if (
         service.owners.some((owner) => owner.user.id === session.user.id)
       ) {
@@ -180,7 +187,13 @@ export default function ReviewsPage() {
             <div className="flex items-center gap-2">
               {/* If the current user is subscribed to this service, their should be an add/edit review/rating button */}
               {topButton === "Edit" ? (
-                <EditReviewModal setEditModalOpen={setEditModalOpen} />
+                <Button
+                  variant="outline"
+                  onClick={() => setEditModalOpen(true)}
+                >
+                  <Pencil />
+                  Edit review
+                </Button>
               ) : (
                 <Button
                   className="size-min"
@@ -201,6 +214,18 @@ export default function ReviewsPage() {
               )}
             </div>
           </div>
+
+          {/* Edit review modal */}
+          {editModalOpen && (
+            <EditReviewModal
+              originalRating={1} // todo - get rating
+              originalContent={"hello"} // todo - get review
+              isModalOpen={editModalOpen}
+              setModalOpen={setEditModalOpen}
+              reviewId={"1"} //todo
+              replyId={null}
+            />
+          )}
 
           {/* Review cards */}
           <div className="w-full">
