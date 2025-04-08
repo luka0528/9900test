@@ -1,21 +1,22 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardDescription } from "~/components/ui/card"
-import { Star } from "lucide-react"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardDescription,
+} from "~/components/ui/card";
+import { Star } from "lucide-react";
 
-import { api } from "~/trpc/react"
-import { Skeleton } from "~/components/ui/skeleton"
-import { StarRating } from "~/components/ui/stars"
+import { api } from "~/trpc/react";
+import { Skeleton } from "~/components/ui/skeleton";
+import { StarRating } from "~/components/ui/stars";
 
-
-const MAX_RATING = 5
+const MAX_RATING = 5;
 
 export const AnalyticsAvgRatingCard = () => {
-  const {
-    data: avgRating,
-    isLoading,
-  } = api.analytics.getAvgRating.useQuery()
+  const { data: avgRating, isLoading } = api.analytics.getAvgRating.useQuery();
 
   return (
     <Card className="w-full max-w-sm">
@@ -29,7 +30,7 @@ export const AnalyticsAvgRatingCard = () => {
           </div>
         ) : (
           <div className="flex items-center gap-1">
-            <StarRating rating={avgRating!}/>
+            <StarRating rating={avgRating!} />
           </div>
         )}
         <div className="flex items-center justify-center gap-1 pl-4">
@@ -38,11 +39,13 @@ export const AnalyticsAvgRatingCard = () => {
           ) : (
             <>
               <p className="text-3xl font-bold">{avgRating?.toFixed(1)}</p>
-              <p className="text-sm text-muted-foreground self-end mb-1">/{MAX_RATING}</p>
+              <p className="mb-1 self-end text-sm text-muted-foreground">
+                /{MAX_RATING}
+              </p>
             </>
           )}
         </div>
       </CardContent>
     </Card>
-  )
-}
+  );
+};
