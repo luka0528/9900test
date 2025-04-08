@@ -738,6 +738,7 @@ export const serviceRouter = createTRPCRouter({
         where: { id: serviceId },
         include: {
           subscriptionTiers: true,
+          owners: true,
         },
       });
       if (!service) {
@@ -782,7 +783,7 @@ export const serviceRouter = createTRPCRouter({
         // Update the existing subscription to the new tier
         await ctx.db.serviceConsumer.update({
           where: { id: oldSubscription.id },
-          data: { subscriptionTierId: newTier.id },
+          data: { subscriptionTierId: newTier.id, lastRenewed: new Date() },
         });
       } else {
         // className={`rounded-md p-5 text-left shadow-inner ${isCurrent ? "bg-gray-300" : "bg-gray-50"}`}
@@ -805,6 +806,8 @@ export const serviceRouter = createTRPCRouter({
           data: {
             userId: ctx.session.user.id,
             subscriptionTierId: newTier.id,
+            renewingSubscription: autoRenewal,
+            paymentMethodId: paymentMethodId,
           },
         });
       }
@@ -827,14 +830,13 @@ export const serviceRouter = createTRPCRouter({
         // c) Create a billing receipt
         await ctx.db.billingReceipt.create({
           data: {
-            userId: ctx.session.user.id,
-            paymentMethodId: paymentMethod.id,
             amount: newTier.price,
             description: `Subscription to ${newTier.name}`,
-            from: service.name,
-            to: ctx.session.user.name ?? "",
+            fromId: service.owners[0]?.id ?? "",
+            toId: ctx.session.user.name ?? "",
             status: BillingStatus.PAID,
-            automaticRenewal: autoRenewal,
+            paymentMethodId: paymentMethod.id,
+            subscriptionTierId: newTier.id,
           },
         });
       }
@@ -927,6 +929,7 @@ export const serviceRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
   getAllVersionChangelogs: publicProcedure
     .input(z.object({ serviceId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {

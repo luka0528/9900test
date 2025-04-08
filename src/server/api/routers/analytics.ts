@@ -15,7 +15,7 @@ export const analyticsRouter = createTRPCRouter({
 
       const receipts = await ctx.db.billingReceipt.findMany({
         where: {
-          to: ctx.session.user.id,
+          toId: ctx.session.user.id,
           status: "PAID",
           date: {
             lte: filteredDate,

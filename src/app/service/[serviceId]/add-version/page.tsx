@@ -34,6 +34,26 @@ import {
 } from "~/components/ui/select";
 import { Badge } from "~/components/ui/badge";
 
+type RestMethodType =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "DELETE"
+  | "PATCH"
+  | "HEAD"
+  | "OPTIONS"
+  | "TRACE";
+const safeRestMethod: Record<RestMethodType, RestMethodType> = {
+  GET: "GET",
+  POST: "POST",
+  PUT: "PUT",
+  DELETE: "DELETE",
+  PATCH: "PATCH",
+  HEAD: "HEAD",
+  OPTIONS: "OPTIONS",
+  TRACE: "TRACE",
+};
+
 // Define form schema with consistent structure
 const formSchema = z.object({
   description: z.string().min(1, {
@@ -159,7 +179,9 @@ export default function AddServicePage() {
         {
           title: "",
           description: "",
-          rows: [{ routeName: "", description: "", method: RestMethod.GET }],
+          rows: [
+            { routeName: "", description: "", method: safeRestMethod.GET },
+          ],
         },
       ]);
     } else {
@@ -188,7 +210,7 @@ export default function AddServicePage() {
       ...content,
       rows: [
         ...content.rows,
-        { routeName: "", description: "", method: RestMethod.GET },
+        { routeName: "", description: "", method: safeRestMethod.GET },
       ],
     };
 
@@ -414,42 +436,42 @@ export default function AddServicePage() {
                                             </SelectTrigger>
                                             <SelectContent>
                                               <SelectItem
-                                                value={RestMethod.GET}
+                                                value={safeRestMethod.GET}
                                               >
                                                 GET
                                               </SelectItem>
                                               <SelectItem
-                                                value={RestMethod.POST}
+                                                value={safeRestMethod.POST}
                                               >
                                                 POST
                                               </SelectItem>
                                               <SelectItem
-                                                value={RestMethod.PUT}
+                                                value={safeRestMethod.PUT}
                                               >
                                                 PUT
                                               </SelectItem>
                                               <SelectItem
-                                                value={RestMethod.DELETE}
+                                                value={safeRestMethod.DELETE}
                                               >
                                                 DELETE
                                               </SelectItem>
                                               <SelectItem
-                                                value={RestMethod.PATCH}
+                                                value={safeRestMethod.PATCH}
                                               >
                                                 PATCH
                                               </SelectItem>
                                               <SelectItem
-                                                value={RestMethod.HEAD}
+                                                value={safeRestMethod.HEAD}
                                               >
                                                 HEAD
                                               </SelectItem>
                                               <SelectItem
-                                                value={RestMethod.OPTIONS}
+                                                value={safeRestMethod.OPTIONS}
                                               >
                                                 OPTIONS
                                               </SelectItem>
                                               <SelectItem
-                                                value={RestMethod.TRACE}
+                                                value={safeRestMethod.TRACE}
                                               >
                                                 TRACE
                                               </SelectItem>
