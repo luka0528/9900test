@@ -10,7 +10,7 @@ import { ReviewCard } from "~/components/service/reviews/ReviewCard";
 import { ReviewCardForm } from "~/components/service/reviews/ReviewCardForm";
 import { useEffect, useState } from "react";
 import { EditReviewModal } from "~/components/service/reviews/EditReviewModal";
-import { ReviewContent } from "~/components/service/reviews/helper";
+import { type ReviewContent } from "~/components/service/reviews/helper";
 import { toast } from "sonner";
 import React from "react";
 

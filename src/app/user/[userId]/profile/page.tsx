@@ -180,7 +180,7 @@ const UserProfilePage = () => {
   }
 
   return (
-    <div className="mx-auto flex w-3/4 justify-center p-6">
+    <div className="mx-auto flex w-full max-w-4xl justify-center p-6">
       <Card className="w-full max-w-4xl shadow-lg">
         <CardHeader className="text-center">
           <h2 className="text-2xl font-semibold">Profile Settings</h2>
@@ -292,7 +292,12 @@ const UserProfilePage = () => {
                       <FormItem>
                         <FormLabel>Current Password</FormLabel>
                         <FormControl>
-                          <Input type="password" {...field} className="w-1/2" />
+                          <Input
+                            type="password"
+                            autoComplete="new-password"
+                            {...field}
+                            className="w-1/2"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

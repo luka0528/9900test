@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
 import React from "react";
-import { ChangeLogPointType } from "@prisma/client";
+import { ChangeLogPointType, RestMethod } from "@prisma/client";
 import {
   Select,
   SelectContent,
@@ -52,6 +52,7 @@ const formSchema = z.object({
             z.object({
               routeName: z.string(),
               description: z.string(),
+              method: z.nativeEnum(RestMethod),
             }),
           )
           .default([]),
@@ -158,7 +159,7 @@ export default function AddServicePage() {
         {
           title: "",
           description: "",
-          rows: [{ routeName: "", description: "" }],
+          rows: [{ routeName: "", description: "", method: RestMethod.GET }],
         },
       ]);
     } else {
@@ -185,7 +186,10 @@ export default function AddServicePage() {
     const updatedContents = [...contents];
     updatedContents[contentIndex] = {
       ...content,
-      rows: [...content.rows, { routeName: "", description: "" }],
+      rows: [
+        ...content.rows,
+        { routeName: "", description: "", method: RestMethod.GET },
+      ],
     };
 
     form.setValue("contents", updatedContents);
@@ -394,7 +398,68 @@ export default function AddServicePage() {
                                 key={rowIndex}
                                 className="mb-4 grid grid-cols-[1fr_auto] gap-4"
                               >
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="flex gap-4">
+                                  <FormField
+                                    control={form.control}
+                                    name={`contents.${contentIndex}.rows.${rowIndex}.method`}
+                                    render={({ field }) => (
+                                      <FormItem className="w-36">
+                                        <FormControl>
+                                          <Select
+                                            value={field.value}
+                                            onValueChange={field.onChange}
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select a method" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem
+                                                value={RestMethod.GET}
+                                              >
+                                                GET
+                                              </SelectItem>
+                                              <SelectItem
+                                                value={RestMethod.POST}
+                                              >
+                                                POST
+                                              </SelectItem>
+                                              <SelectItem
+                                                value={RestMethod.PUT}
+                                              >
+                                                PUT
+                                              </SelectItem>
+                                              <SelectItem
+                                                value={RestMethod.DELETE}
+                                              >
+                                                DELETE
+                                              </SelectItem>
+                                              <SelectItem
+                                                value={RestMethod.PATCH}
+                                              >
+                                                PATCH
+                                              </SelectItem>
+                                              <SelectItem
+                                                value={RestMethod.HEAD}
+                                              >
+                                                HEAD
+                                              </SelectItem>
+                                              <SelectItem
+                                                value={RestMethod.OPTIONS}
+                                              >
+                                                OPTIONS
+                                              </SelectItem>
+                                              <SelectItem
+                                                value={RestMethod.TRACE}
+                                              >
+                                                TRACE
+                                              </SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+
                                   <FormField
                                     control={form.control}
                                     name={`contents.${contentIndex}.rows.${rowIndex}.routeName`}
@@ -402,7 +467,7 @@ export default function AddServicePage() {
                                       <FormItem>
                                         <FormControl>
                                           <Input
-                                            placeholder="Method/Code"
+                                            placeholder="Route Name"
                                             {...field}
                                           />
                                         </FormControl>
@@ -413,7 +478,7 @@ export default function AddServicePage() {
                                     control={form.control}
                                     name={`contents.${contentIndex}.rows.${rowIndex}.description`}
                                     render={({ field }) => (
-                                      <FormItem>
+                                      <FormItem className="flex-1">
                                         <FormControl>
                                           <Input
                                             placeholder="Description"

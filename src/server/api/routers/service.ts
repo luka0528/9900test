@@ -1,14 +1,14 @@
 import { TRPCError } from "@trpc/server";
-import type { Prisma, Service } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { RestMethod, type Service, type ServiceVersion } from "@prisma/client";
 
 import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import type { Query } from "~/components/marketplace/MarketplaceQuery";
-import { content } from "tailwindcss/defaultTheme";
+import { BillingStatus } from "@prisma/client";
 
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";
@@ -35,6 +35,7 @@ export const serviceRouter = createTRPCRouter({
               z.object({
                 routeName: z.string().min(1),
                 description: z.string().min(1),
+                method: z.nativeEnum(RestMethod),
               }),
             ),
           }),
@@ -88,6 +89,7 @@ export const serviceRouter = createTRPCRouter({
                   description: content.description,
                   rows: {
                     create: content.rows.map((row) => ({
+                      method: row.method,
                       routeName: row.routeName,
                       description: row.description,
                     })),
@@ -102,9 +104,25 @@ export const serviceRouter = createTRPCRouter({
         },
       });
 
+      if (!service.versions || service.versions.length === 0) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Service version was not created properly",
+        });
+      }
+
+      const firstVersion = service.versions[0];
+
+      if (!firstVersion || typeof firstVersion.id !== "string") {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Service version ID is invalid",
+        });
+      }
+
       return {
         serviceId: service.id,
-        versionId: service.versions[0]!.id,
+        versionId: firstVersion.id,
       };
     }),
 
@@ -236,33 +254,6 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return { success: true };
-    }),
-
-  getInfiniteServices: publicProcedure
-    .input(
-      z.object({
-        query: z.custom<Query>(),
-        cursor: z.number().nullish(),
-      }),
-    )
-    .query(async ({ input }) => {
-      const cursor = input.cursor ?? 0;
-      const limit = 12;
-
-      // Generates fake services as mock data.
-      const services: Service[] = Array.from({ length: limit }, (_, i) => {
-        const id = cursor + i;
-        return {
-          id: id.toString(),
-          name: `Service ${id}`,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      });
-
-      const nextCursor = services.length ? cursor + limit : null;
-
-      return { services, nextCursor };
     }),
 
   getAll: publicProcedure.query(async ({ ctx }) => {
@@ -760,10 +751,228 @@ export const serviceRouter = createTRPCRouter({
         take: limit,
       });
 
+      console.log(JSON.stringify(services));
+
       const nextCursor = services.length > limit ? services.pop()?.id : null;
       return { services, nextCursor };
     }),
 
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  subscribeToTier: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string(),
+        newTierId: z.string(),
+        currentTierId: z.string().optional(), // used if changing tiers
+        paymentMethodId: z.string().optional(),
+        autoRenewal: z.boolean().default(false),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const {
+        serviceId,
+        newTierId,
+        currentTierId,
+        paymentMethodId,
+        autoRenewal,
+      } = input;
+
+      // 1. Validate the service
+      const service = await ctx.db.service.findUnique({
+        where: { id: serviceId },
+        include: {
+          subscriptionTiers: true,
+        },
+      });
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // 2. Validate the new tier
+      const newTier = await ctx.db.subscriptionTier.findUnique({
+        where: { id: newTierId },
+      });
+      if (!newTier || newTier.serviceId !== service.id) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid tier for this service",
+        });
+      }
+
+      // 3. If currentTierId is provided, remove (or update) the old subscription
+      if (currentTierId) {
+        if (currentTierId === newTier.id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot subscribe to the same tier",
+          });
+        }
+        // Find the existing subscription to the current tier
+        const oldSubscription = await ctx.db.serviceConsumer.findFirst({
+          where: {
+            userId: ctx.session.user.id,
+            subscriptionTierId: currentTierId,
+          },
+        });
+        if (!oldSubscription) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No existing subscription found for currentTierId",
+          });
+        }
+        // Update the existing subscription to the new tier
+        await ctx.db.serviceConsumer.update({
+          where: { id: oldSubscription.id },
+          data: { subscriptionTierId: newTier.id },
+        });
+      } else {
+        // className={`rounded-md p-5 text-left shadow-inner ${isCurrent ? "bg-gray-300" : "bg-gray-50"}`}
+        // check if user is already subscribed to the new tier
+        const existingSubscriptionToNewTier =
+          await ctx.db.serviceConsumer.findFirst({
+            where: {
+              userId: ctx.session.user.id,
+              subscriptionTierId: newTier.id,
+            },
+          });
+        if (existingSubscriptionToNewTier) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "User already subscribed to the new tier",
+          });
+        }
+        // Create a new subscription to the new tier
+        await ctx.db.serviceConsumer.create({
+          data: {
+            userId: ctx.session.user.id,
+            subscriptionTierId: newTier.id,
+          },
+        });
+      }
+
+      // 5. Hhandle payment logic
+      if (paymentMethodId) {
+        // a) Verify the payment method belongs to the user
+        const paymentMethod = await ctx.db.paymentMethod.findUnique({
+          where: { id: paymentMethodId },
+        });
+        if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Payment method not found or doesn't belong to user",
+          });
+        }
+
+        // b) TODO: Call Stripe
+
+        // c) Create a billing receipt
+        await ctx.db.billingReceipt.create({
+          data: {
+            userId: ctx.session.user.id,
+            paymentMethodId: paymentMethod.id,
+            amount: newTier.price,
+            description: `Subscription to ${newTier.name}`,
+            from: service.name,
+            to: ctx.session.user.name ?? "",
+            status: BillingStatus.PAID,
+            automaticRenewal: autoRenewal,
+          },
+        });
+      }
+
+      return { success: true };
+    }),
+
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  updateSubscriptionPaymentMethod: protectedProcedure
+    .input(
+      z.object({
+        subscriptionTierId: z.string(), // which tier the user is subscribed to
+        paymentMethodId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { subscriptionTierId, paymentMethodId } = input;
+
+      // 1) Find the user's subscription
+      const subscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTierId: subscriptionTierId,
+        },
+      });
+      if (!subscription) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Subscription not found for the given tier",
+        });
+      }
+
+      // 2) Validate payment method
+      const paymentMethod = await ctx.db.paymentMethod.findUnique({
+        where: { id: paymentMethodId },
+      });
+      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Payment method not found or doesn't belong to user",
+        });
+      }
+
+      // 3) (Optional) Handle additional logic (e.g. update auto-renew, create a billing receipt, etc.)
+
+      // 4) Update the subscription with the new payment method
+      // NOTE: This requires that your ServiceConsumer model has a field for paymentMethodId.
+      // If not, you'll need to add it in your Prisma schema.
+      await ctx.db.serviceConsumer.update({
+        where: { id: subscription.id, subscriptionTierId: subscriptionTierId },
+        data: { paymentMethodId: paymentMethod.id },
+      });
+
+      return { success: true };
+    }),
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  unsubscribeToTier: protectedProcedure
+    .input(
+      z.object({
+        subscriptionTierId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { subscriptionTierId } = input;
+
+      // 1) Find the subscription
+      const subscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTierId,
+        },
+      });
+      if (!subscription) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Subscription not found",
+        });
+      }
+
+      // 2) Delete the subscription record
+      await ctx.db.serviceConsumer.delete({
+        where: { id: subscription.id },
+      });
+
+      // (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
+
+      return { success: true };
+    }),
   getAllVersionChangelogs: publicProcedure
     .input(z.object({ serviceId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
@@ -936,6 +1145,69 @@ export const serviceRouter = createTRPCRouter({
         replierId: ctx.session.user.id,
         replierName: ctx.session.user.name,
         ...review,
+      };
+    }),
+
+  getRelatedServices: publicProcedure
+    .input(
+      z.object({
+        currentServiceId: z.string(),
+        tags: z.array(z.string()).default([]),
+        limit: z.number().default(6),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const { currentServiceId, tags, limit } = input;
+
+      if (tags.length === 0) {
+        return {
+          relatedServices: [],
+          foundRelated: false,
+          message:
+            "Cannot find similar services due to current service having no tags",
+        };
+      }
+
+      const services = await ctx.db.service.findMany({
+        where: {
+          id: {
+            not: currentServiceId,
+          },
+          tags: {
+            some: {
+              name: {
+                in: tags,
+              },
+            },
+          },
+        },
+        include: {
+          versions: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+          },
+          owners: {
+            include: {
+              user: true,
+            },
+          },
+          tags: true,
+        },
+        take: limit,
+        orderBy: {
+          updatedAt: "desc",
+        },
+      });
+
+      return {
+        relatedServices: services,
+        foundRelated: services.length > 0,
+        message:
+          services.length > 0
+            ? "Found related services"
+            : "No related services found",
       };
     }),
 });
