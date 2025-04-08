@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
+import { ServiceCard } from "~/components/service/ServiceCard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +49,19 @@ export default function ServicePage() {
     error: serviceError,
   } = api.service.getServiceMetadataById.useQuery({ serviceId });
 
+  // Fetch related services
+  const { data: relatedServicesData, isLoading: relatedServicesLoading } =
+    api.service.getRelatedServices.useQuery(
+      {
+        currentServiceId: serviceId,
+        tags: service?.tags.map((tag) => tag.name) ?? [],
+        limit: 6,
+      },
+      {
+        enabled: !!service, // Only run query when service data is available
+      },
+    );
+
   // Fetch version data from backend
   const {
     data: versionData,
@@ -79,7 +93,7 @@ export default function ServicePage() {
   }
 
   // Show error state
-  if (serviceError || !service) {
+  if (serviceError ?? !service) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="text-center">
@@ -269,13 +283,15 @@ export default function ServicePage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-1/3">Method/Code</TableHead>
+                            <TableHead className="w-36">Method</TableHead>
+                            <TableHead>Route</TableHead>
                             <TableHead>Description</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {content.rows.map((row) => (
                             <TableRow key={row.id}>
+                              <TableCell>{row.method}</TableCell>
                               <TableCell className="font-mono">
                                 {row.routeName}
                               </TableCell>
@@ -293,6 +309,40 @@ export default function ServicePage() {
             <div className="py-10 text-center">
               <p className="text-muted-foreground">
                 No content available for this version
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Related Services Section */}
+        <div className="p-6">
+          <Separator className="mb-8" />
+          <h2 className="mb-6 text-2xl font-bold">Related Services</h2>
+
+          {relatedServicesLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : relatedServicesData?.foundRelated ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {relatedServicesData.relatedServices.map((relatedService) => (
+                <ServiceCard
+                  key={relatedService.id}
+                  service={{
+                    id: relatedService.id,
+                    name: relatedService.name,
+                    owner: relatedService.owners[0]?.user.name ?? "",
+                    tags: relatedService.tags.map((tag) => tag.name),
+                    latestVersionId: relatedService.versions[0]?.id ?? "",
+                    latestVersion: relatedService.versions[0]?.version ?? "",
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <p>
+                {relatedServicesData?.message ?? "No related services found"}
               </p>
             </div>
           )}

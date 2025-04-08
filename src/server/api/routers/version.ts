@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
-import { ChangeLogPointType } from "@prisma/client";
+import { ChangeLogPointType, RestMethod } from "@prisma/client";
 // Note that documentation will be contained under versions
 export const versionRouter = createTRPCRouter({
   create: protectedProcedure
@@ -18,6 +18,7 @@ export const versionRouter = createTRPCRouter({
               z.object({
                 routeName: z.string().min(1),
                 description: z.string().min(1),
+                method: z.nativeEnum(RestMethod),
               }),
             ),
           }),
@@ -102,6 +103,7 @@ export const versionRouter = createTRPCRouter({
                 create: content.rows.map((row) => ({
                   routeName: row.routeName,
                   description: row.description,
+                  method: row.method,
                 })),
               },
             })),
@@ -149,6 +151,7 @@ export const versionRouter = createTRPCRouter({
                   id: true,
                   routeName: true,
                   description: true,
+                  method: true,
                 },
               },
             },
@@ -188,6 +191,7 @@ export const versionRouter = createTRPCRouter({
                 id: z.string().min(1),
                 routeName: z.string().min(1),
                 description: z.string().min(1),
+                method: z.nativeEnum(RestMethod),
               }),
             ),
           }),
@@ -252,10 +256,12 @@ export const versionRouter = createTRPCRouter({
                     update: {
                       routeName: row.routeName,
                       description: row.description,
+                      method: row.method,
                     },
                     create: {
                       routeName: row.routeName,
                       description: row.description,
+                      method: row.method,
                     },
                   })),
                 },

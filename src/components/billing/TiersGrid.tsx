@@ -12,11 +12,11 @@ interface TiersGridProps {
 }
 
 const placeholderFeatures = [
-  "Direct Phone Numbers",
-  "Landline Phone Numbers",
-  "Corporate email addresses",
-  "Prospects",
-  "Chrome Extension",
+  "10,000 API calls/month",
+  "24/7 Customer Service",
+  "All end routes",
+  "Detailed Analytics",
+  "0.04c per additional API call",
 ];
 
 const TiersGrid: React.FC<TiersGridProps> = ({

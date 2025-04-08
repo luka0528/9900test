@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
-import type { Prisma, Service } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { RestMethod } from "@prisma/client";
 
 import {
   createTRPCRouter,
@@ -32,10 +33,13 @@ export const serviceRouter = createTRPCRouter({
             title: z.string().min(1),
             description: z.string().min(1),
             rows: z.array(
-              z.object({
-                routeName: z.string().min(1),
-                description: z.string().min(1),
-              }),
+              z
+                .object({
+                  routeName: z.string().min(1),
+                  description: z.string().min(1),
+                  method: z.nativeEnum(RestMethod),
+                })
+                .strict(),
             ),
           }),
         ),
@@ -88,8 +92,9 @@ export const serviceRouter = createTRPCRouter({
                   description: content.description,
                   rows: {
                     create: content.rows.map((row) => ({
-                      routeName: row.routeName,
-                      description: row.description,
+                      method: row.method as RestMethod,
+                      routeName: row.routeName as string,
+                      description: row.description as string,
                     })),
                   },
                 })),
@@ -102,9 +107,25 @@ export const serviceRouter = createTRPCRouter({
         },
       });
 
+      if (!service.versions || service.versions.length === 0) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Service version was not created properly",
+        });
+      }
+
+      const firstVersion = service.versions[0];
+
+      if (!firstVersion || typeof firstVersion.id !== "string") {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Service version ID is invalid",
+        });
+      }
+
       return {
         serviceId: service.id,
-        versionId: service.versions[0]!.id,
+        versionId: firstVersion.id,
       };
     }),
 
@@ -236,33 +257,6 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return { success: true };
-    }),
-
-  getInfiniteServices: publicProcedure
-    .input(
-      z.object({
-        query: z.custom<Query>(),
-        cursor: z.number().nullish(),
-      }),
-    )
-    .query(async ({ input }) => {
-      const cursor = input.cursor ?? 0;
-      const limit = 12;
-
-      // Generates fake services as mock data.
-      const services: Service[] = Array.from({ length: limit }, (_, i) => {
-        const id = cursor + i;
-        return {
-          id: id.toString(),
-          name: `Service ${id}`,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      });
-
-      const nextCursor = services.length ? cursor + limit : null;
-
-      return { services, nextCursor };
     }),
 
   getAll: publicProcedure.query(async ({ ctx }) => {
@@ -714,6 +708,8 @@ export const serviceRouter = createTRPCRouter({
         take: limit,
       });
 
+      console.log(JSON.stringify(services));
+
       const nextCursor = services.length > limit ? services.pop()?.id : null;
       return { services, nextCursor };
     }),
@@ -771,6 +767,60 @@ export const serviceRouter = createTRPCRouter({
             message: "Payment method is required for this subscription",
           });
         }
+      }
+      // 3. If currentTierId is provided, remove (or update) the old subscription
+      if (currentTierId) {
+        if (currentTierId === newTier.id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot subscribe to the same tier",
+          });
+        }
+        // Find the existing subscription to the current tier
+        const oldSubscription = await ctx.db.serviceConsumer.findFirst({
+          where: {
+            userId: ctx.session.user.id,
+            subscriptionTierId: currentTierId,
+          },
+        });
+        if (!oldSubscription) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No existing subscription found for currentTierId",
+          });
+        }
+        // Update the existing subscription to the new tier
+        await ctx.db.serviceConsumer.update({
+          where: { id: oldSubscription.id },
+          data: { subscriptionTierId: newTier.id },
+        });
+      } else {
+        // className={`rounded-md p-5 text-left shadow-inner ${isCurrent ? "bg-gray-300" : "bg-gray-50"}`}
+        // check if user is already subscribed to the new tier
+        const existingSubscriptionToNewTier =
+          await ctx.db.serviceConsumer.findFirst({
+            where: {
+              userId: ctx.session.user.id,
+              subscriptionTierId: newTier.id,
+            },
+          });
+        if (existingSubscriptionToNewTier) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "User already subscribed to the new tier",
+          });
+        }
+        // Create a new subscription to the new tier
+        await ctx.db.serviceConsumer.create({
+          data: {
+            userId: ctx.session.user.id,
+            subscriptionTierId: newTier.id,
+          },
+        });
+      }
+
+      // 5. Hhandle payment logic
+      if (paymentMethodId) {
         // a) Verify the payment method belongs to the user
         const paymentMethod = await ctx.db.paymentMethod.findUnique({
           where: { id: paymentMethodId },
@@ -781,6 +831,7 @@ export const serviceRouter = createTRPCRouter({
             message: "Payment method not found or doesn't belong to user",
           });
         }
+
         // b) TODO: Call Stripe
 
         // c) Create a billing receipt
@@ -904,6 +955,8 @@ export const serviceRouter = createTRPCRouter({
       // 3) (Optional) Handle additional logic (e.g. update auto-renew, create a billing receipt, etc.)
 
       // 4) Update the subscription with the new payment method
+      // NOTE: This requires that your ServiceConsumer model has a field for paymentMethodId.
+      // If not, you'll need to add it in your Prisma schema.
       await ctx.db.serviceConsumer.update({
         where: { id: subscription.id, subscriptionTierId: subscriptionTierId },
         data: { paymentMethodId: paymentMethod.id },
@@ -988,6 +1041,7 @@ export const serviceRouter = createTRPCRouter({
         where: { id: subscription.id },
         data: { subscriptionTierId: newTier.id },
       });
+      // (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
 
       return { success: true };
     }),
@@ -1031,5 +1085,67 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return consumers;
+    }),
+  getRelatedServices: publicProcedure
+    .input(
+      z.object({
+        currentServiceId: z.string(),
+        tags: z.array(z.string()).default([]),
+        limit: z.number().default(6),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const { currentServiceId, tags, limit } = input;
+
+      if (tags.length === 0) {
+        return {
+          relatedServices: [],
+          foundRelated: false,
+          message:
+            "Cannot find similar services due to current service having no tags",
+        };
+      }
+
+      const services = await ctx.db.service.findMany({
+        where: {
+          id: {
+            not: currentServiceId,
+          },
+          tags: {
+            some: {
+              name: {
+                in: tags,
+              },
+            },
+          },
+        },
+        include: {
+          versions: {
+            orderBy: {
+              createdAt: "desc",
+            },
+            take: 1,
+          },
+          owners: {
+            include: {
+              user: true,
+            },
+          },
+          tags: true,
+        },
+        take: limit,
+        orderBy: {
+          updatedAt: "desc",
+        },
+      });
+
+      return {
+        relatedServices: services,
+        foundRelated: services.length > 0,
+        message:
+          services.length > 0
+            ? "Found related services"
+            : "No related services found",
+      };
     }),
 });
