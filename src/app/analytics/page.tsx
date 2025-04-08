@@ -6,12 +6,12 @@ import { AnalyticsPieChart } from "~/components/analytics/AnalyticsPieChart";
 
 export default function Analytics() {
   return (
-    <div className="flex h-full w-full xl:max-w-[96rem]">
+    <div className="flex h-full w-full xl:max-w-[96rem] overflow-hidden">
       <AnalyticsSideBar />
-      <div className="flex h-full grow flex-col">
+      <div className="flex h-full grow flex-col m-4">
         <AnalyticsCards />
         <AnalyticsChart />
-        <div className="m-4 flex space-x-4">
+        <div className="flex space-x-4">
           <AnalyticsReviewSection />
           <AnalyticsPieChart />
         </div>
