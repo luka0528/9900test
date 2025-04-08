@@ -45,7 +45,7 @@ const UserProfilePage = () => {
   // Queries & Mutations
   const { data: userData, isLoading: isLoadingUserProfile } =
     api.user.getUserProfile.useQuery(
-      { userId: userId as string },
+      { userId: userId! },
       { enabled: !!userId },
     );
   const { mutate: updateUser } = api.user.update.useMutation();
@@ -84,7 +84,7 @@ const UserProfilePage = () => {
 
     try {
       // Update profile information
-      await updateUser({
+      updateUser({
         name: values.name,
         email: values.email,
         bio: values.bio,

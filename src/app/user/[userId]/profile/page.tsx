@@ -67,21 +67,21 @@ const UserProfilePage = () => {
             <div>
               <h3 className="text-sm font-medium">Name</h3>
               <p className="mt-1 rounded-lg border px-3 py-2 text-sm">
-                {userData?.user?.name || "Not provided"}
+                {userData?.user?.name ?? "Not provided"}
               </p>
             </div>
 
             <div>
               <h3 className="text-sm font-medium">Email</h3>
               <p className="mt-1 rounded-lg border px-3 py-2 text-sm">
-                {userData?.user?.email || "Not provided"}
+                {userData?.user?.email ?? "Not provided"}
               </p>
             </div>
 
             <div>
               <h3 className="text-sm font-medium">Bio</h3>
               <div className="mt-1 min-h-24 rounded-lg border px-3 py-2 text-sm">
-                {userData?.user?.bio || "No bio provided"}
+                {userData?.user?.bio ?? "No bio provided"}
               </div>
             </div>
           </div>
