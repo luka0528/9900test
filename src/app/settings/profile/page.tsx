@@ -50,7 +50,7 @@ const profileSchema = z
 
 const UserProfilePage = () => {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const userId = session?.user?.id; // will always exist as cant enter settings without profile
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingPrivacy, setIsEditingPrivacy] = useState(false);
@@ -155,12 +155,7 @@ const UserProfilePage = () => {
     }
   };
 
-  if (status === "unauthenticated") {
-    router.replace("/login");
-    return null;
-  }
-
-  if (status === "loading" || isLoadingUserProfile) {
+  if (isLoadingUserProfile) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="flex w-3/4 max-w-4xl flex-col items-center">
