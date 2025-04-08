@@ -17,7 +17,7 @@ export const AnalyticsAvgRatingCard = () => {
   const { data: avgRating, isLoading } = api.analytics.getAvgRating.useQuery();
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card>
       <CardHeader className="">
         <CardDescription>Average Rating</CardDescription>
       </CardHeader>
