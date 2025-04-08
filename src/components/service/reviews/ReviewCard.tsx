@@ -3,6 +3,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { Reply, Star } from "lucide-react";
 import { Button } from "../../ui/button";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { ReviewReplyCard } from "./ReviewReplyCard";
 import { ReviewReplyCardForm } from "./ReviewReplyCardForm";
 import OptionsDropdown from "./OptionsDropdown";
@@ -30,6 +31,8 @@ interface ReviewCardProps {
 }
 
 export const ReviewCard = ({ review }: ReviewCardProps) => {
+  const { data: session } = useSession();
+
   const {
     id,
     reviewerId,
@@ -56,7 +59,8 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
             <div className="text-xs text-muted-foreground">{`${postedAt.toLocaleString()}`}</div>
           </div>
           <div className="ml-auto flex items-end gap-1">
-            <OptionsDropdown />
+            {/* Only display edit button if logged in user is the one who posted it */}
+            {session && session.user.id === reviewerId && <OptionsDropdown />}
           </div>
         </div>
         <div className="text-sm leading-loose text-muted-foreground">

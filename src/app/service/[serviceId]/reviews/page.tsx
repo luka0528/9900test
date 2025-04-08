@@ -42,8 +42,20 @@ export default function ReviewsPage() {
 
   const { mutate: createReview, isPending: isCreatingReview } =
     api.service.createReview.useMutation({
-      onSuccess: (_) => {
+      onSuccess: (data) => {
         toast.success("Review posted");
+        setReviews([
+          {
+            id: data.id,
+            reviewerId: data.reviewerId,
+            reviewerName: data.reviewerId,
+            starValue: data.starValue,
+            content: data.content,
+            postedAt: data.createdAt,
+            replies: [],
+          },
+          ...reviews,
+        ]);
       },
       onError: (error) => {
         toast.error("Failed to create review", {
@@ -55,7 +67,6 @@ export default function ReviewsPage() {
   // New review
   useEffect(() => {
     if (newCardData.isVisible && newCardData.starValue !== null) {
-      // todo, create the review
       createReview({
         serviceId: serviceId,
         content: newCardData.content ? newCardData.content : "",
@@ -68,6 +79,8 @@ export default function ReviewsPage() {
         starValue: null,
         content: null,
       });
+
+      // Update the reviews state
     }
   }, [newCardData]);
 

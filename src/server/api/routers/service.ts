@@ -800,11 +800,18 @@ export const serviceRouter = createTRPCRouter({
         where: { id: input.serviceId },
         select: {
           subscriptionTiers: {
-            select: {
+            where: {
               consumers: {
-                where: {
+                some: {
                   userId: ctx.session.user.id,
                 },
+              },
+            },
+          },
+          ratings: {
+            where: {
+              consumer: {
+                userId: ctx.session.user.id,
               },
             },
           },
@@ -823,30 +830,62 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      // These errors should never occur (due to frontend verifying this already)
-      if (service.owners.length >= 1) {
+      // These errors should never occur (due to frontend verifying this already) (todo - uncomment)
+      // if (service.owners.length >= 1) {
+      //   throw new TRPCError({
+      //     code: "UNAUTHORIZED",
+      //     message: "You cannot review your own service",
+      //   });
+      // }
+      if (service.subscriptionTiers.length == 0) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
-          message: "You cannot review your own service",
+          message: "You cannot review a service that you are not subscribed to",
         });
       }
-      if (service.subscriptionTiers.length >= 1) {
+
+      // Already reviewed
+      if (service.ratings.length >= 1) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "You have already posted a review",
         });
       }
 
+      // Find the consumerId
+      const consumer = await ctx.db.serviceConsumer.findFirst({
+        select: {
+          id: true,
+        },
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTier: {
+            serviceId: input.serviceId,
+          },
+        },
+      });
+
+      if (!consumer) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You are not a service consumer",
+        });
+      }
+
       // Post the review
-      await ctx.db.serviceRating.create({
+      const rating = await ctx.db.serviceRating.create({
         data: {
           starValue: input.starValue,
           content: input.content,
           serviceId: input.serviceId,
-          consumerId: ctx.session.user.id,
+          consumerId: consumer.id,
         },
       });
 
-      return { success: true };
+      return {
+        reviewerId: ctx.session.user.id,
+        reviewername: ctx.session.user.name,
+        ...rating,
+      };
     }),
 });
