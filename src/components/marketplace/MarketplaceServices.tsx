@@ -18,7 +18,7 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [ref, inView] = useInView();
-  
+
   // The Marketplace is unidirection, so we only req. the fields related
   // to the 'next' page.
   const { status, data, fetchNextPage } =
@@ -52,36 +52,36 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
   };
 
   return (
-    <div className="h-screen overflow-y-auto">
+    <div className="h-full overflow-y-auto p-4">
       {status === "pending" || status === "error" ? (
         <MarketplaceServicesSkeleton />
       ) : (
         <>
           {data.pages.map((page) => (
-            <div key={page.nextCursor ?? 'no-cursor'}>
+            <div key={page.nextCursor ?? "no-cursor"}>
               {page.services.length === 0 ? (
                 <MarketplaceServicesNoResults />
               ) : (
                 <div>
-                  <div className="mt-2 grid grow grid-cols-1 gap-8 px-8 pb-8 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     {page.services.map((service) => (
-                      <MarketplaceService
-                        key={service.id}
-                        service={{
-                          ...service,
-                          // Make sure subscriptionTiers is included in the passed props
-                          subscriptionTiers: service.subscriptionTiers || [],
-                        }}
-                        onClick={() =>
-                          handleServiceClick(
-                            service.id,
-                            service.versions[0]?.id ?? "",
-                          )
-                        }
-                      />
+                      <div key={service.id} className="h-full">
+                        <MarketplaceService
+                          service={{
+                            ...service,
+                            subscriptionTiers: service.subscriptionTiers || [],
+                          }}
+                          onClick={() =>
+                            handleServiceClick(
+                              service.id,
+                              service.versions[0]?.id ?? "",
+                            )
+                          }
+                        />
+                      </div>
                     ))}
                   </div>
-                  <button ref={ref} />
+                  <div ref={ref} className="h-4" />
                 </div>
               )}
             </div>

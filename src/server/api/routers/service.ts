@@ -568,7 +568,7 @@ export const serviceRouter = createTRPCRouter({
       return { success: true };
     }),
 
-    getServiceByQuery: publicProcedure
+  getServiceByQuery: publicProcedure
     .input(
       z.object({
         search: z.string().nullish(),
@@ -588,14 +588,14 @@ export const serviceRouter = createTRPCRouter({
           ? dates
           : [dates]
         : [];
-  
+
       // Define the order by logic based on sort parameter
       let orderBy: Prisma.ServiceOrderByWithRelationInput = {
         consumerEvents: {
           _count: "desc",
         },
       };
-  
+
       // For price sorting, we'll handle it after the query
       // Only set orderBy for non-price sorting options
       if (sort === "New-to-Old") {
@@ -615,7 +615,7 @@ export const serviceRouter = createTRPCRouter({
       } else if (sort === "Name-Desc") {
         orderBy = { name: "desc" };
       }
-  
+
       // Date filtering logic
       let dateFilter: Prisma.ServiceWhereInput = {};
       if (dates && dates.length > 0) {
@@ -635,7 +635,7 @@ export const serviceRouter = createTRPCRouter({
           OR: dateConditions,
         };
       }
-  
+
       // Build the where clause
       const whereClause: Prisma.ServiceWhereInput = {
         ...(search && {
@@ -656,12 +656,12 @@ export const serviceRouter = createTRPCRouter({
           }),
         ...dateFilter,
       };
-  
+
       // Handle price range filtering by looking at the minimum subscription tier price
       if (price && price.length === 2) {
         const minPrice = parseFloat(price[0] ?? "0");
         const maxPrice = parseFloat(price[1] ?? MAX_FLOAT);
-  
+
         // First, get IDs of services that have at least one subscription tier within the price range
         const servicesWithinPriceRange = await ctx.db.service.findMany({
           where: {
@@ -686,23 +686,24 @@ export const serviceRouter = createTRPCRouter({
             },
           },
         });
-  
+
         // Filter services that have their lowest subscription tier within the price range
         const serviceIdsWithLowestTierInRange = servicesWithinPriceRange
-          .filter(service => 
-            service.subscriptionTiers.length > 0 && 
-            service.subscriptionTiers[0] && 
-            service.subscriptionTiers[0].price >= minPrice && 
-            service.subscriptionTiers[0].price <= maxPrice
+          .filter(
+            (service) =>
+              service.subscriptionTiers.length > 0 &&
+              service.subscriptionTiers[0] &&
+              service.subscriptionTiers[0].price >= minPrice &&
+              service.subscriptionTiers[0].price <= maxPrice,
           )
-          .map(service => service.id);
-  
+          .map((service) => service.id);
+
         // Add this to the where clause
         whereClause.id = {
           in: serviceIdsWithLowestTierInRange,
         };
       }
-  
+
       // Query services with the where clause and order by (for non-price sorting)
       let services = await ctx.db.service.findMany({
         where: whereClause,
@@ -749,26 +750,30 @@ export const serviceRouter = createTRPCRouter({
         cursor: cursor ? { id: cursor } : undefined,
         take: limit + 1, // Take one extra to determine if there's a next page
       });
-  
+
       // Handle price-based sorting in memory
       if (sort === "Price-Asc" || sort === "Price-Desc") {
         services = services.sort((a, b) => {
-          const aPrice = a.subscriptionTiers.length > 0 ? a.subscriptionTiers[0]?.price ?? Infinity : Infinity;
-          const bPrice = b.subscriptionTiers.length > 0 ? b.subscriptionTiers[0]?.price ?? Infinity : Infinity;
-          
-          return sort === "Price-Asc" 
-            ? aPrice - bPrice 
-            : bPrice - aPrice;
+          const aPrice =
+            a.subscriptionTiers.length > 0
+              ? (a.subscriptionTiers[0]?.price ?? Infinity)
+              : Infinity;
+          const bPrice =
+            b.subscriptionTiers.length > 0
+              ? (b.subscriptionTiers[0]?.price ?? Infinity)
+              : Infinity;
+
+          return sort === "Price-Asc" ? aPrice - bPrice : bPrice - aPrice;
         });
       }
-  
+
       const nextCursor = services.length > limit ? services[limit]?.id : null;
-      
+
       // Return only the requested number of services
       if (services.length > limit) {
         services = services.slice(0, limit);
       }
-  
+
       return { services, nextCursor };
     }),
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
