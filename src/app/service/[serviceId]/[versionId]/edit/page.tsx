@@ -69,6 +69,26 @@ const formSchema = z.object({
     .default([]),
 });
 
+interface DocumentationData {
+  description: string;
+  contents: Array<{
+    id: string;
+    title: string;
+    description: string;
+    rows: Array<{
+      id: string;
+      routeName: string;
+      description: string;
+      method: RestMethod;
+    }>;
+  }>;
+  changelogPoints: Array<{
+    id: string;
+    type: ChangeLogPointType;
+    description: string;
+  }>;
+}
+
 export default function EditServicePage() {
   const router = useRouter();
   const { serviceId: serviceIdParam, versionId: versionIdParam } = useParams();
@@ -96,10 +116,11 @@ export default function EditServicePage() {
   useEffect(() => {
     if (versionData) {
       // Set form values from loaded data
+      const data = versionData as DocumentationData;
       form.reset({
         description: versionData.description || "",
         contents:
-          versionData.contents?.map((content) => ({
+          data.contents?.map((content) => ({
             id: content.id,
             title: content.title || "",
             description: content.description || "",
