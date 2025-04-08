@@ -596,39 +596,24 @@ export const serviceRouter = createTRPCRouter({
         },
       };
   
-      // Define sorting based on the lowest subscription tier price
-      if (sort === "Price-Desc") {
-        orderBy = {
-          subscriptionTiers: {
-            _min: {
-              price: "desc",
-            },
-          },
-        } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort === "Price-Asc") {
-        orderBy = {
-          subscriptionTiers: {
-            _min: {
-              price: "asc",
-            },
-          },
-        } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort === "New-to-Old") {
+      // For price sorting, we'll handle it after the query
+      // Only set orderBy for non-price sorting options
+      if (sort === "New-to-Old") {
         orderBy = {
           createdAt: "desc",
-        } as Prisma.ServiceOrderByWithRelationInput;
+        };
       } else if (sort === "Old-to-New") {
         orderBy = {
           createdAt: "asc",
-        } as Prisma.ServiceOrderByWithRelationInput;
+        };
       } else if (sort === "Last-Updated") {
         orderBy = {
           updatedAt: "desc",
-        } as Prisma.ServiceOrderByWithRelationInput;
+        };
       } else if (sort === "Name-Asc") {
-        orderBy = { name: "asc" } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = { name: "asc" };
       } else if (sort === "Name-Desc") {
-        orderBy = { name: "desc" } as Prisma.ServiceOrderByWithRelationInput;
+        orderBy = { name: "desc" };
       }
   
       // Date filtering logic
@@ -718,8 +703,8 @@ export const serviceRouter = createTRPCRouter({
         };
       }
   
-      // Query services with the where clause and order by
-      const services = await ctx.db.service.findMany({
+      // Query services with the where clause and order by (for non-price sorting)
+      let services = await ctx.db.service.findMany({
         where: whereClause,
         orderBy: orderBy,
         include: {
@@ -727,7 +712,6 @@ export const serviceRouter = createTRPCRouter({
             orderBy: {
               price: "asc",
             },
-            take: 1,
             select: {
               id: true,
               name: true,
@@ -766,7 +750,25 @@ export const serviceRouter = createTRPCRouter({
         take: limit + 1, // Take one extra to determine if there's a next page
       });
   
-      const nextCursor = services.length > limit ? services.pop()?.id : null;
+      // Handle price-based sorting in memory
+      if (sort === "Price-Asc" || sort === "Price-Desc") {
+        services = services.sort((a, b) => {
+          const aPrice = a.subscriptionTiers.length > 0 ? a.subscriptionTiers[0]?.price ?? Infinity : Infinity;
+          const bPrice = b.subscriptionTiers.length > 0 ? b.subscriptionTiers[0]?.price ?? Infinity : Infinity;
+          
+          return sort === "Price-Asc" 
+            ? aPrice - bPrice 
+            : bPrice - aPrice;
+        });
+      }
+  
+      const nextCursor = services.length > limit ? services[limit]?.id : null;
+      
+      // Return only the requested number of services
+      if (services.length > limit) {
+        services = services.slice(0, limit);
+      }
+  
       return { services, nextCursor };
     }),
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
