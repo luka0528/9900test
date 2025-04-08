@@ -10,6 +10,7 @@ import {
 import StarRating from "./StarRating";
 import { useEffect, useRef, useState } from "react";
 import { Textarea } from "~/components/ui/textarea";
+import type { setUpdateReviewType } from "./helper";
 
 interface props {
   originalRating: number | null;
@@ -18,6 +19,7 @@ interface props {
   setModalOpen: (open: boolean) => void;
   reviewId: string | null;
   replyId: string | null;
+  setUpdatedPost: setUpdateReviewType;
 }
 
 export function EditReviewModal({
@@ -27,6 +29,7 @@ export function EditReviewModal({
   setModalOpen,
   reviewId,
   replyId,
+  setUpdatedPost,
 }: props) {
   const [selectedRating, setSelectedRating] = useState(
     originalRating ? originalRating : 0,
@@ -34,14 +37,29 @@ export function EditReviewModal({
   const [hoveredRating, setHoveredRating] = useState(0);
   const [inputType, setInputType] = useState(!reviewId ? "reply" : "review");
 
-  const textAreaRef = useRef(null);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = () => {
     if (inputType === "review") {
       // handle editing review
+      setUpdatedPost({
+        ready: true,
+        isUpdateDelete: false,
+        updatedContent: textAreaRef.current ? textAreaRef.current.value : "",
+        updatedRating: selectedRating,
+        id: reviewId,
+      });
     } else {
       // handle editing reply
+      setUpdatedPost({
+        ready: true,
+        isUpdateDelete: false,
+        updatedContent: textAreaRef.current ? textAreaRef.current.value : "",
+        updatedRating: null,
+        id: replyId,
+      });
     }
+    setModalOpen(false);
   };
 
   return (
@@ -75,7 +93,9 @@ export function EditReviewModal({
         </div>
         <DialogFooter>
           {/* TODO - add onclick behavior */}
-          <Button type="submit">Save changes</Button>
+          <Button type="submit" onClick={handleSubmit}>
+            Save changes
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

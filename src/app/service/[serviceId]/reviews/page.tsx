@@ -15,7 +15,10 @@ import { ReviewCard } from "~/components/service/reviews/ReviewCard";
 import { ReviewCardForm } from "~/components/service/reviews/ReviewCardForm";
 import { useEffect, useState } from "react";
 import { EditReviewModal } from "~/components/service/reviews/EditReviewModal";
-import { type ReviewContent } from "~/components/service/reviews/helper";
+import {
+  updateReviewType,
+  type ReviewContent,
+} from "~/components/service/reviews/helper";
 import { toast } from "sonner";
 import React from "react";
 
@@ -47,7 +50,95 @@ export default function ReviewsPage() {
 
   const [editModalOpen, setEditModalOpen] = useState(false);
 
-  // Haven't reviewed - add, reviewed - edit, owner - owned, not subscribed - null (disabled)
+  // State for editing/deleting reviews
+  const [updatedReview, setUpdatedReview] = useState<updateReviewType>({
+    ready: false,
+    isUpdateDelete: null,
+    updatedContent: null,
+    updatedRating: null,
+    id: null,
+  });
+
+  // Editing a review
+  const { mutate: editReview, isPending: isEditingReview } =
+    api.service.editReview.useMutation({
+      onSuccess: (data) => {
+        setReviews((prevState) =>
+          prevState.map((review) =>
+            review.id === data.id
+              ? {
+                  ...review,
+
+                  // overwrite the content and star value
+                  content: data.content,
+                  starValue: data.starValue,
+                }
+              : review,
+          ),
+        );
+        toast.success("Review edited");
+      },
+      onError: (error) => {
+        toast.error("Failed to edit review", {
+          description: error.message,
+        });
+      },
+    });
+
+  // Deleting a review
+  const { mutate: deleteReview, isPending: isDeletingReview } =
+    api.service.deleteReview.useMutation({
+      onSuccess: (data) => {
+        setReviews((prev) =>
+          prev.filter((review) => review.id !== data.deleted),
+        );
+        toast.success("Review deleted");
+      },
+      onError: (error) => {
+        toast.error("Failed to delete review", {
+          description: error.message,
+        });
+      },
+    });
+
+  // Editing or deleting a review
+  useEffect(() => {
+    console.log("has been updated!", updatedReview);
+    if (
+      updatedReview.ready &&
+      updatedReview.id !== null &&
+      updatedReview.isUpdateDelete !== null
+    ) {
+      // Delete
+      console.log("trigered asoidjanosdia");
+      if (updatedReview.isUpdateDelete) {
+        deleteReview({
+          reviewId: updatedReview.id,
+        });
+      } else {
+        // Edit review
+        if (!updatedReview.updatedRating || updatedReview.updatedRating == 0) {
+          toast.error("Your rating must be at least 1");
+        } else {
+          editReview({
+            reviewId: updatedReview.id,
+            newContent: updatedReview.updatedContent || "",
+            newRating: updatedReview.updatedRating,
+          });
+        }
+      }
+      // Finally reset data
+      setUpdatedReview({
+        ready: false,
+        isUpdateDelete: null,
+        updatedContent: null,
+        updatedRating: null,
+        id: null,
+      });
+    }
+  }, [updatedReview]);
+
+  // Haven't reviewed = add, reviewed = edit, owner = owned (disabled), not subscribed = null (disabled)
   type buttonType = "Add" | "Edit" | "Owned" | null;
   const [topButton, setTopButton] = useState<buttonType>(null);
 
@@ -93,9 +184,20 @@ export default function ReviewsPage() {
     }
   }, [newCardData.starValue]);
 
+  const [isUserOwner, setIsUserOwner] = useState(false);
+
+  useEffect(() => {
+    if (
+      session &&
+      service &&
+      service.owners.some((owner) => owner.user.id === session.user.id)
+    ) {
+      setIsUserOwner(true);
+    }
+  }, [session, service]);
+
   // Load review cards
   useEffect(() => {
-    console.log("useEffect triggered");
     if (service) {
       if (service.ratings.length > 0) {
         const reviewContents = service.ratings.map((review) => ({
@@ -218,6 +320,7 @@ export default function ReviewsPage() {
           {/* Edit review modal */}
           {editModalOpen && (
             <EditReviewModal
+              setUpdatedPost={setUpdatedReview}
               originalRating={1} // todo - get rating
               originalContent={"hello"} // todo - get review
               isModalOpen={editModalOpen}
@@ -236,7 +339,12 @@ export default function ReviewsPage() {
               />
             )}
             {reviews.map((review) => (
-              <ReviewCard review={review} key={review.id} />
+              <ReviewCard
+                isUserOwner={isUserOwner}
+                review={review}
+                setUpdatedReview={setUpdatedReview}
+                key={review.id}
+              />
             ))}
           </div>
         </div>

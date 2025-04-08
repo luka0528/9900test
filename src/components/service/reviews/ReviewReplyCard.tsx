@@ -2,6 +2,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { Card } from "../../ui/card";
 import { Badge } from "~/components/ui/badge";
 import OptionsDropdown from "./OptionsDropdown";
+import type { setUpdateReviewType } from "./helper";
 
 // Assumption - only owners can reply
 interface ReplyCardProps {
@@ -12,9 +13,10 @@ interface ReplyCardProps {
     content: string;
     postedAt: Date;
   };
+  setUpdatedReply: setUpdateReviewType;
 }
 
-export const ReviewReplyCard = ({ reply }: ReplyCardProps) => {
+export const ReviewReplyCard = ({ reply, setUpdatedReply }: ReplyCardProps) => {
   const { id, replierId, replierName, content, postedAt } = reply;
 
   return (
@@ -39,6 +41,7 @@ export const ReviewReplyCard = ({ reply }: ReplyCardProps) => {
             originalContent={content}
             reviewId={null}
             replyId={id}
+            setUpdatedPost={setUpdatedReply}
           />
         </div>
       </div>

@@ -1245,8 +1245,10 @@ export const serviceRouter = createTRPCRouter({
         },
       });
 
+      console.log("todo - deleted", input.reviewId);
+
       return {
-        success: true,
+        deleted: input.reviewId,
       };
     }),
 
@@ -1345,7 +1347,7 @@ export const serviceRouter = createTRPCRouter({
         },
       });
 
-      return { success: true };
+      return { deleted: input.commentId };
     }),
 
   getRelatedServices: publicProcedure

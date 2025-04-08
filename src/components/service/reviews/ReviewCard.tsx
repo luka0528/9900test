@@ -9,7 +9,11 @@ import { ReviewReplyCard } from "./ReviewReplyCard";
 import { ReviewReplyCardForm } from "./ReviewReplyCardForm";
 import OptionsDropdown from "./OptionsDropdown";
 import { Separator } from "~/components/ui/separator";
-import { ReviewContent } from "~/components/service/reviews/helper";
+import type {
+  ReviewContent,
+  updateReviewType,
+  setUpdateReviewType,
+} from "~/components/service/reviews/helper";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 
@@ -31,6 +35,8 @@ const Stars = ({ rating }: { rating: number }) => {
 
 interface ReviewCardProps {
   review: ReviewContent;
+  isUserOwner: boolean;
+  setUpdatedReview: setUpdateReviewType;
 }
 
 interface ReplyCard {
@@ -38,7 +44,11 @@ interface ReplyCard {
   content: string | null;
 }
 
-export const ReviewCard = ({ review }: ReviewCardProps) => {
+export const ReviewCard = ({
+  review,
+  isUserOwner,
+  setUpdatedReview,
+}: ReviewCardProps) => {
   const { data: session } = useSession();
   const serviceId = useParams().serviceId as string;
 
@@ -56,6 +66,86 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
     isVisible: false,
     content: null,
   });
+
+  const [updatedReply, setUpdatedReply] = useState<updateReviewType>({
+    ready: false,
+    isUpdateDelete: null,
+    updatedRating: null,
+    updatedContent: null,
+    id: null,
+  });
+
+  // Editing a reply
+  const { mutate: editReply, isPending: isEditingReply } =
+    api.service.editReviewReply.useMutation({
+      onSuccess: (data) => {
+        setAllReplies((prevState) =>
+          prevState.map((reply) =>
+            reply.id === data.id
+              ? {
+                  ...reply,
+                  content: data.content, // overwrite the content with the updated content
+                }
+              : reply,
+          ),
+        );
+        toast.success("Reply edited");
+      },
+      onError: (error) => {
+        toast.error("Failed to edit reply", {
+          description: error.message,
+        });
+      },
+    });
+
+  // Deleting a reply
+  const { mutate: deleteReply, isPending: isDeletingReply } =
+    api.service.deleteReviewReply.useMutation({
+      onSuccess: (data) => {
+        setAllReplies((prev) =>
+          prev.filter((reply) => reply.id !== data.deleted),
+        );
+        toast.success("Reply deleted");
+      },
+      onError: (error) => {
+        toast.error("Failed to delete reply", {
+          description: error.message,
+        });
+      },
+    });
+
+  useEffect(() => {
+    if (
+      updatedReply.ready &&
+      updatedReply.id !== null &&
+      updatedReply.isUpdateDelete !== null
+    ) {
+      // Delete
+      if (updatedReply.isUpdateDelete) {
+        deleteReply({
+          commentId: updatedReply.id,
+        });
+      } else if (updatedReply.updatedContent !== null) {
+        if (updatedReply.updatedContent.length == 0) {
+          toast.error("Your reply cannot be empty");
+        } else {
+          // Edit reply
+          editReply({
+            commentId: updatedReply.id,
+            newContent: updatedReply.updatedContent || "",
+          });
+        }
+      }
+      // Finally reset data
+      setUpdatedReply({
+        ready: false,
+        isUpdateDelete: null,
+        updatedContent: null,
+        updatedRating: null,
+        id: null,
+      });
+    }
+  }, [updatedReply.id]);
 
   const [allReplies, setAllReplies] = useState(replies);
 
@@ -115,6 +205,7 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
             {/* Only display edit button if logged in user is the one who posted it */}
             {session && session.user.id === reviewerId && (
               <OptionsDropdown
+                setUpdatedPost={setUpdatedReview}
                 originalRating={starValue}
                 originalContent={content}
                 reviewId={id}
@@ -130,20 +221,22 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
           {content}
         </div>
         <div>
-          {/* TODO - only render reply button if curr user is the owner */}
-          <Button
-            className="size-min"
-            variant="outline"
-            onClick={() =>
-              setReplyData({
-                isVisible: true,
-                content: null,
-              })
-            }
-          >
-            <Reply />
-            Reply
-          </Button>
+          {/* Only render reply button if curr user is the owner */}
+          {isUserOwner && (
+            <Button
+              className="size-min"
+              variant="outline"
+              onClick={() =>
+                setReplyData({
+                  isVisible: true,
+                  content: null,
+                })
+              }
+            >
+              <Reply />
+              Reply
+            </Button>
+          )}
         </div>
         {replyData.isVisible && session && (
           <ReviewReplyCardForm
@@ -162,6 +255,7 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
                 content: reply.content,
                 postedAt: reply.postedAt,
               }}
+              setUpdatedReply={setUpdatedReply}
             />
           ))}
       </Card>

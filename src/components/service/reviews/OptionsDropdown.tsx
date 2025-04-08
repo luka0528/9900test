@@ -11,27 +11,41 @@ import { EllipsisVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useState } from "react";
 import { EditReviewModal } from "./EditReviewModal";
+import type { setUpdateReviewType } from "./helper";
 
-interface props1 {
+interface props {
   originalRating: number | null;
   originalContent: string | null;
   reviewId: string | null;
   replyId: string | null;
+  setUpdatedPost: setUpdateReviewType;
 }
-// pass in either state for review or reply
 
 export default function OptionsDropdown({
   originalRating,
   originalContent,
   reviewId,
   replyId,
-}: props1) {
+  setUpdatedPost,
+}: props) {
   const [editModalOpen, setEditModalOpen] = useState(false);
+
+  const handleDelete = () => {
+    console.log(`looking to delete ${reviewId} or ${replyId}`);
+    setUpdatedPost({
+      ready: true,
+      isUpdateDelete: true,
+      updatedContent: null,
+      updatedRating: null,
+      id: reviewId || replyId, // whichever isn't null is the one to delete
+    });
+  };
 
   return (
     <DropdownMenu>
       {editModalOpen && (
         <EditReviewModal
+          setUpdatedPost={setUpdatedPost}
           originalRating={originalRating}
           originalContent={originalContent}
           isModalOpen={editModalOpen}
@@ -56,7 +70,10 @@ export default function OptionsDropdown({
             <span>Edit</span>
             <Pencil />
           </DropdownMenuItem>
-          <DropdownMenuItem className="group flex justify-between hover:text-red-500">
+          <DropdownMenuItem
+            className="group flex justify-between hover:text-red-500"
+            onClick={handleDelete}
+          >
             <span className="group-hover:text-red-500">Delete</span>
             <Trash2 className="group-hover:text-red-500" />
           </DropdownMenuItem>
