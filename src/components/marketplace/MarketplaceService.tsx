@@ -17,7 +17,7 @@ interface MarketplaceServiceProps {
       name: string;
     }[];
     versions: {
-      id: string; 
+      id: string;
       description: string;
       version: string;
     }[];
@@ -30,7 +30,10 @@ interface MarketplaceServiceProps {
   onClick: () => void;
 }
 
-export const MarketplaceService = ({ service, onClick }: MarketplaceServiceProps) => {
+export const MarketplaceService = ({
+  service,
+  onClick,
+}: MarketplaceServiceProps) => {
   const { name, tags, versions } = service;
   const latestVersion = versions[0] ?? {
     id: "",
@@ -40,7 +43,7 @@ export const MarketplaceService = ({ service, onClick }: MarketplaceServiceProps
   const creatorName = service.owners[0]?.user?.name;
 
   return (
-    <div 
+    <div
       onClick={onClick}
       className="cursor-pointer rounded-lg border bg-card p-6 text-card-foreground shadow-sm transition-all hover:shadow-md"
     >

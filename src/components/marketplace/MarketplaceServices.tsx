@@ -45,9 +45,9 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
   const handleServiceClick = (serviceId: string, latestVersionId: string) => {
     const currentParams = searchParams.toString();
     // Add fromMarketplace flag to the URL
-    const queryString = currentParams 
-      ? `${currentParams}&fromMarketplace=true` 
-      : 'fromMarketplace=true';
+    const queryString = currentParams
+      ? `${currentParams}&fromMarketplace=true`
+      : "fromMarketplace=true";
     router.push(`/service/${serviceId}/${latestVersionId}?${queryString}`);
   };
 
@@ -65,10 +65,15 @@ export const MarketplaceServices = ({ query }: MarketplaceServicesProps) => {
                 <div>
                   <div className="mt-2 grid grow grid-cols-1 gap-8 px-8 pb-8 md:grid-cols-2">
                     {page.services.map((service) => (
-                      <MarketplaceService 
-                        key={service.id} 
+                      <MarketplaceService
+                        key={service.id}
                         service={service}
-                        onClick={() => handleServiceClick(service.id, service.versions[0]?.id ?? "")}
+                        onClick={() =>
+                          handleServiceClick(
+                            service.id,
+                            service.versions[0]?.id ?? "",
+                          )
+                        }
                       />
                     ))}
                   </div>
