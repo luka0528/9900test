@@ -2,13 +2,16 @@ import { Card } from "~/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "~/components/ui/avatar";
 import { Reply, Star } from "lucide-react";
 import { Button } from "../../ui/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ReviewReplyCard } from "./ReviewReplyCard";
 import { ReviewReplyCardForm } from "./ReviewReplyCardForm";
 import OptionsDropdown from "./OptionsDropdown";
 import { Separator } from "~/components/ui/separator";
 import { ReviewContent } from "~/components/service/reviews/helper";
+import { toast } from "sonner";
+import { api } from "~/trpc/react";
 
 const Stars = ({ rating }: { rating: number }) => {
   return (
@@ -30,8 +33,14 @@ interface ReviewCardProps {
   review: ReviewContent;
 }
 
+interface ReplyCard {
+  isVisible: boolean;
+  content: string | null;
+}
+
 export const ReviewCard = ({ review }: ReviewCardProps) => {
   const { data: session } = useSession();
+  const serviceId = useParams().serviceId as string;
 
   const {
     id,
@@ -43,7 +52,51 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
     replies,
   } = review;
 
-  const [isReplyOpen, setIsReplyOpen] = useState(false);
+  const [replyData, setReplyData] = useState<ReplyCard>({
+    isVisible: false,
+    content: null,
+  });
+
+  const [allReplies, setAllReplies] = useState(replies);
+
+  const { mutate: createReply, isPending: isCreatingReply } =
+    api.service.createReviewReply.useMutation({
+      onSuccess: (data) => {
+        toast.success("Reply posted");
+        setAllReplies([
+          {
+            id: data.id,
+            replierId: data.replierId,
+            replierName: data.replierName,
+            content: data.content,
+            postedAt: data.createdAt,
+          },
+          ...allReplies,
+        ]);
+      },
+      onError: (error) => {
+        toast.error("Failed to create reply", {
+          description: error.message,
+        });
+      },
+    });
+
+  useEffect(() => {
+    if (replyData.isVisible && replyData.content !== null) {
+      // Create reply
+      createReply({
+        serviceId: serviceId,
+        reviewId: id,
+        content: replyData.content,
+      });
+
+      // Finally reset data
+      setReplyData({
+        isVisible: false,
+        content: null,
+      });
+    }
+  }, [replyData.content]);
 
   return (
     <>
@@ -74,20 +127,25 @@ export const ReviewCard = ({ review }: ReviewCardProps) => {
           <Button
             className="size-min"
             variant="outline"
-            onClick={() => setIsReplyOpen(true)}
+            onClick={() =>
+              setReplyData({
+                isVisible: true,
+                content: null,
+              })
+            }
           >
             <Reply />
             Reply
           </Button>
         </div>
-        {isReplyOpen && (
+        {replyData.isVisible && session && (
           <ReviewReplyCardForm
-            isReplyOpen={isReplyOpen}
-            setIsReplyOpen={setIsReplyOpen}
+            replierName={session.user.name}
+            setReplyData={setReplyData}
           />
         )}
-        {review.replies &&
-          review.replies.map((reply) => (
+        {allReplies &&
+          allReplies.map((reply) => (
             <ReviewReplyCard
               key={reply.id}
               reply={{

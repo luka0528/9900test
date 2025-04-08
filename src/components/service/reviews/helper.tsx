@@ -8,7 +8,7 @@ export interface ReviewContent {
   replies: {
     id: string;
     replierId: string;
-    replierName: string | null;
+    replierName: string | null | undefined;
     content: string;
     postedAt: Date;
   }[];

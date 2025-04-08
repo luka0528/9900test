@@ -79,10 +79,8 @@ export default function ReviewsPage() {
         starValue: null,
         content: null,
       });
-
-      // Update the reviews state
     }
-  }, [newCardData]);
+  }, [newCardData.starValue]);
 
   // Haven't reviewed - add, reviewed - edit, owner - owned, not subscribed - null (disabled)
   type buttonType = "Add" | "Edit" | "Owned" | null;

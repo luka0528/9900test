@@ -6,7 +6,6 @@ import StarRating from "./StarRating";
 import { Textarea } from "../../ui/textarea";
 import { useRef, useState } from "react";
 import { Separator } from "~/components/ui/separator";
-import { error } from "console";
 import { toast } from "sonner";
 
 interface ReviewCardFormProps {

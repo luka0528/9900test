@@ -888,4 +888,54 @@ export const serviceRouter = createTRPCRouter({
         ...rating,
       };
     }),
+
+  createReviewReply: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string().min(1),
+        reviewId: z.string().min(1),
+        content: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check that the current user owns the service (and get their ownerId)
+      const owner = await ctx.db.serviceOwner.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          serviceId: input.serviceId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!owner) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You are not a service owner",
+        });
+      }
+
+      // Create the reply
+      const review = await ctx.db.serviceComment.create({
+        data: {
+          ownerId: owner.id,
+          content: input.content,
+          ratingId: input.reviewId,
+        },
+      });
+
+      if (!review) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The review you are trying to reply to does not exist",
+        });
+      }
+
+      return {
+        replierId: ctx.session.user.id,
+        replierName: ctx.session.user.name,
+        ...review,
+      };
+    }),
 });

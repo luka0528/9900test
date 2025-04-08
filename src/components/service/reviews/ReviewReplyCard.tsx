@@ -8,7 +8,7 @@ interface ReplyCardProps {
   reply: {
     id: string;
     replierId: string; // to check if we can edit this reply
-    replierName: string | null;
+    replierName: string | null | undefined;
     content: string;
     postedAt: Date;
   };
