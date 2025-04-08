@@ -188,7 +188,7 @@ model ServiceConsumer {
   createdAt             DateTime          @default(now())
   
   renewingSubscription  Boolean           @default(false)
-  lastRenewed           DateTime?
+  lastRenewed           DateTime?         @default(now())
   subscriptionStartDate DateTime? 
 
   ratings               ServiceRating[]
@@ -271,7 +271,6 @@ model User {
 
   stripeCustomerId String?
   paymentMethods   PaymentMethod[]
-  billingHistory   BillingReceipt[]
 
   billingReceiptsIncoming BillingReceipt[] @relation("BillingFrom")
   billingReceiptsOutgoing   BillingReceipt[] @relation("BillingTo")
@@ -312,8 +311,6 @@ model BillingReceipt {
   status                BillingStatus
   paymentMethodId       String?
   paymentMethod         PaymentMethod?  @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
-  userId                String
-  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   subscriptionTierId    String
   subscriptionTier      SubscriptionTier @relation(fields: [subscriptionTierId], references: [id], onDelete: Cascade)
