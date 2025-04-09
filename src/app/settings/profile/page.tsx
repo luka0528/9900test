@@ -299,7 +299,7 @@ const UserProfilePage = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push("/settings/security")}
+                      onClick={() => router.push("/settings/credentials")}
                       type="button"
                     >
                       Manage

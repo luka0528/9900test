@@ -21,7 +21,7 @@ export default function ProfileLayout({
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
       <DefaultSideBar items={items} />
-      <main className="h-full flex-1 p-0">{children}</main>
+      <main className="h-full flex-1 overflow-hidden p-0">{children}</main>
     </div>
   );
 }
