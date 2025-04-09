@@ -109,7 +109,10 @@ export default function NavBar() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={() => signOut()}
+                  onClick={async () => {
+                    await signOut({ redirect: false });
+                    router.push(`/marketplace`);
+                  }}
                 >
                   <LogOut className="h-4 w-4" />
                   Logout
