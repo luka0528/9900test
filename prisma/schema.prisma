@@ -102,6 +102,7 @@ model Service {
   versions          ServiceVersion[]
   owners            ServiceOwner[]
   consumerEvents    ConsumerEvent[]
+  listeners         ServiceListener[]
 }
 
 model ServiceVersion {
@@ -274,6 +275,8 @@ model User {
 
   billingReceiptsIncoming BillingReceipt[] @relation("BillingFrom")
   billingReceiptsOutgoing   BillingReceipt[] @relation("BillingTo")
+
+  listeningTo ServiceListener[]
 }
 
 enum UserRole {
@@ -346,4 +349,15 @@ model PaymentMethod {
 
   billingReceipts  BillingReceipt[]
   serviceConsumers ServiceConsumer[]
+}
+
+model ServiceListener {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceId String  
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, serviceId])
 }
