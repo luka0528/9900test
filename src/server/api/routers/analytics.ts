@@ -174,16 +174,12 @@ export const analyticsRouter = createTRPCRouter({
             },
         });
         
-
         const serviceNames = new Set(
           receipts
             .map(receipt => receipt.subscriptionTier?.service?.name)
         );
         
         const groupedByDate = new Map<string, Map<string, number>>();
-
-        
-
         const today = new Date();
         const startDate = new Date(today.getFullYear() - 1, today.getMonth(), today.getDay());
 
