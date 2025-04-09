@@ -35,7 +35,7 @@ export const ServiceCard = ({ service }: ServiceCardProps) => {
 
   return (
     <Card
-      className="flex flex-col h-full overflow-hidden transition-all duration-300 hover:cursor-pointer hover:shadow-lg"
+      className="flex h-full flex-col overflow-hidden transition-all duration-300 hover:cursor-pointer hover:shadow-lg"
       onClick={navigateToService}
     >
       <CardHeader className="pb-2">
