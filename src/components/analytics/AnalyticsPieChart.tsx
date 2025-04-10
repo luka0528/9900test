@@ -108,7 +108,7 @@ export const AnalyticsPieChart = () => {
                 <SelectTrigger className="flex w-40">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-xl" align="end">
                   {allServices?.map((service) => (
                     <SelectItem
                       key={service.id}
