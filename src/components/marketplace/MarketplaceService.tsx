@@ -1,11 +1,11 @@
 import { Badge } from "~/components/ui/badge";
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
 } from "~/components/ui/card";
 import { Download, Package, Calendar, Users } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -14,12 +14,11 @@ interface MarketplaceServiceProps {
   service: {
     id: string;
     name: string;
-    createdAt: Date;
-    updatedAt: Date;
     tags: {
       name: string;
     }[];
     versions: {
+      id: string;
       description: string;
       version: string;
     }[];
@@ -29,17 +28,26 @@ interface MarketplaceServiceProps {
       };
     }[];
   };
+  onClick: () => void;
 }
 
-export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
-  const { name, createdAt, versions, tags } = service;
-  const { description, version } = versions[0] ?? {
+export const MarketplaceService = ({
+  service,
+  onClick,
+}: MarketplaceServiceProps) => {
+  const { name, tags, versions } = service;
+  const latestVersion = versions[0] ?? {
+    id: "",
     description: "",
     version: "",
   };
   const creatorName = service.owners[0]?.user?.name;
+
   return (
-    <Card className="group overflow-hidden transition-all duration-300 hover:scale-105 hover:cursor-pointer hover:shadow-xl">
+    <Card
+      onClick={onClick}
+      className="overflow-hidden transition-all duration-300 hover:cursor-pointer hover:shadow-lg"
+    >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -48,10 +56,10 @@ export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
               {name}
             </CardTitle>
           </div>
-          <Badge variant="outline">{version}</Badge>
+          <Badge variant="outline">{latestVersion.version}</Badge>
         </div>
         <CardDescription className="line-clamp-2 h-10 text-sm">
-          {description}
+          {latestVersion.description}
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-2">
@@ -62,7 +70,7 @@ export const MarketplaceService = ({ service }: MarketplaceServiceProps) => {
           </div>
           <div className="flex items-center gap-1.5">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span>{createdAt.toDateString()}</span>
+            <span>{new Date().toDateString()}</span>
           </div>
         </div>
 

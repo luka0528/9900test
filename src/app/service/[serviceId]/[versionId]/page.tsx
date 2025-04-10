@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
 import { ServiceCard } from "~/components/service/ServiceCard";
@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   HandPlatter,
   FileText,
+  ChevronLeft,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
@@ -41,15 +42,23 @@ export default function ServicePage() {
   const versionId = params.versionId as string;
   const router = useRouter();
   const utils = api.useUtils();
+  const searchParams = useSearchParams();
+  const isFromMarketplace = searchParams.get("fromMarketplace") === "true";
 
-  // Fetch service data from backend
+  const handleBackToSearch = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("fromMarketplace");
+    const queryString = params.toString();
+
+    router.push(`/marketplace${queryString ? `?${queryString}` : ""}`);
+  };
+
   const {
     data: service,
     isLoading: serviceLoading,
     error: serviceError,
   } = api.service.getServiceMetadataById.useQuery({ serviceId });
 
-  // Fetch related services
   const { data: relatedServicesData, isLoading: relatedServicesLoading } =
     api.service.getRelatedServices.useQuery(
       {
@@ -58,11 +67,10 @@ export default function ServicePage() {
         limit: 6,
       },
       {
-        enabled: !!service, // Only run query when service data is available
+        enabled: !!service,
       },
     );
 
-  // Fetch version data from backend
   const {
     data: versionData,
     isLoading: versionLoading,
@@ -83,7 +91,7 @@ export default function ServicePage() {
         toast.error(error.message);
       },
     });
-  // Show loading state
+
   if (serviceLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
@@ -92,7 +100,6 @@ export default function ServicePage() {
     );
   }
 
-  // Show error state
   if (serviceError ?? !service) {
     return (
       <div className="flex h-full w-full items-center justify-center">
@@ -118,6 +125,20 @@ export default function ServicePage() {
       <ServiceSidebar serviceId={serviceId} />
       <div className="flex h-full grow flex-col overflow-y-auto">
         <div className="p-6">
+          {/* Show button if we came from marketplace */}
+          {isFromMarketplace && (
+            <div className="mb-4">
+              <Button
+                variant="ghost"
+                onClick={handleBackToSearch}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back to Marketplace
+              </Button>
+            </div>
+          )}
+
           {/* Service Header with Name and Actions */}
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -131,7 +152,6 @@ export default function ServicePage() {
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Support
               </Button>
-              {/* Only show edit button for service creator */}
               {session &&
                 service.owners.some(
                   (owner) => owner.user.id === session.user.id,
@@ -187,7 +207,6 @@ export default function ServicePage() {
                   </DropdownMenu>
                 )}
 
-              {/* Version selector */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
@@ -214,7 +233,6 @@ export default function ServicePage() {
             </div>
           </div>
 
-          {/* Tags */}
           <div className="mb-6 flex flex-wrap gap-2">
             {service.tags.map((tag) => (
               <Badge key={tag.id} variant="secondary">
@@ -223,7 +241,6 @@ export default function ServicePage() {
             ))}
           </div>
 
-          {/* Last updated info */}
           <div className="mb-4 text-sm text-muted-foreground">
             Last updated:{" "}
             {versionData?.createdAt
@@ -231,7 +248,6 @@ export default function ServicePage() {
               : "N/A"}
           </div>
 
-          {/* Service description */}
           <div className="mb-8">
             {versionData ? (
               versionLoading ? (
@@ -255,7 +271,6 @@ export default function ServicePage() {
 
           <Separator className="my-8" />
 
-          {/* Version Content */}
           {versionLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -273,11 +288,7 @@ export default function ServicePage() {
                   <h2 className="mb-4 text-xl font-semibold">
                     {content.title}
                   </h2>
-
-                  {/* Content description */}
                   <p className="mb-6">{content.description}</p>
-
-                  {/* If content has table rows, display them */}
                   {content.rows && content.rows.length > 0 && (
                     <div className="rounded-md border">
                       <Table>
@@ -314,7 +325,6 @@ export default function ServicePage() {
           )}
         </div>
 
-        {/* Related Services Section */}
         <div className="p-6">
           <Separator className="mb-8" />
           <h2 className="mb-6 text-2xl font-bold">Related Services</h2>
