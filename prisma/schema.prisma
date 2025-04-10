@@ -61,7 +61,7 @@ model SubscriptionTier {
   id        String   @id @default(cuid())
   serviceId String
   service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  name      String   @unique
+  name      String
   price     Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -275,8 +275,6 @@ model User {
 
   billingReceiptsIncoming BillingReceipt[] @relation("BillingFrom")
   billingReceiptsOutgoing   BillingReceipt[] @relation("BillingTo")
-
-  listeningTo ServiceListener[]
 }
 
 enum UserRole {

@@ -53,7 +53,7 @@ export const ServiceCard = ({ service }: ServiceCardProps) => {
 
   return (
     <Card
-      className="overflow-hidden transition-all duration-300 hover:cursor-pointer hover:shadow-lg"
+      className="flex h-full flex-col overflow-hidden transition-all duration-300 hover:cursor-pointer hover:shadow-lg"
       onClick={navigateToService}
     >
       <CardHeader className="pb-2">
@@ -65,7 +65,7 @@ export const ServiceCard = ({ service }: ServiceCardProps) => {
           <Badge variant="outline">{latestVersion}</Badge>
         </div>
       </CardHeader>
-      <CardContent className="pb-2">
+      <CardContent className="flex-grow pb-2">
         <div className="mb-4 flex items-center gap-1.5 text-sm">
           <User className="h-4 w-4 text-muted-foreground" />
           <span>{owner}</span>
