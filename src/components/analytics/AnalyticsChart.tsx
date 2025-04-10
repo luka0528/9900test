@@ -87,15 +87,9 @@ export const AnalyticsChart = () => {
   }, [serviceRevenueData, timeRange]);
 
   return (
-<<<<<<< HEAD
-    <Card className="@container/card my-4">
-      <CardHeader className="relative">
-        <CardTitle>Total Visitors</CardTitle>
-=======
     <Card className="my-4">
       <CardHeader className="relative pb-0">
         <CardTitle>Revenue Chart</CardTitle>
->>>>>>> dev
         <CardDescription>
           <div className="absolute right-4 top-4">
             <ToggleGroup

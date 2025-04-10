@@ -83,9 +83,12 @@ const PurchasePage: React.FC = () => {
         autoRenewal: autoRenew,
       });
       setCurrentTierId(selectedTier);
-      subscriptionStatus?.isSubscribed
-        ? toast.success("Successfully updated subscription.")
-        : toast.success("Successfully subscribed.");
+      if (subscriptionStatus?.isSubscribed) {
+        toast.success("Successfully updated subscription.");
+      } else {
+        toast.success("Successfully subscribed.");
+      }
+      void subscriptionStatusRefetch();
     } catch (err) {
       console.error(err);
       toast.error("Error subscribing to service.");

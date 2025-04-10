@@ -15,10 +15,9 @@ import BillingHistory from "~/components/billing/BillingHistory";
 import SavedPaymentMethods from "~/components/billing/SavedPaymentMethods";
 import PaymentMethodForm from "~/components/billing/PaymentMethodForm";
 import { useSession } from "next-auth/react";
-import { useParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Plus } from "lucide-react"; // Lucide icon
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 const BillingPage: React.FC = () => {
   const { status } = useSession();

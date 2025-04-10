@@ -127,6 +127,12 @@ const BillingHistory: React.FC = () => {
                 {receipt.status}
               </Badge>
             </TableCell>
+            <TableCell>{`Yes`}</TableCell>
+            <TableCell>
+              {new Date(
+                Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000,
+              ).toLocaleDateString()}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

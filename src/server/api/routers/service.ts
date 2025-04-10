@@ -8,7 +8,6 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import type { Query } from "~/components/marketplace/MarketplaceQuery";
 import { BillingStatus } from "@prisma/client";
 
 // make a max float string
@@ -92,9 +91,9 @@ export const serviceRouter = createTRPCRouter({
                   description: content.description,
                   rows: {
                     create: content.rows.map((row) => ({
-                      method: row.method as RestMethod,
-                      routeName: row.routeName as string,
-                      description: row.description as string,
+                      method: row.method,
+                      routeName: row.routeName,
+                      description: row.description,
                     })),
                   },
                 })),
@@ -900,6 +899,9 @@ export const serviceRouter = createTRPCRouter({
           data: {
             subscriptionTierId: newTier.id,
             paymentMethodId: paymentMethodId,
+            lastRenewed: new Date(),
+            renewingSubscription: autoRenewal,
+            subscriptionStartDate: new Date(),
           },
         });
       } else {
@@ -908,6 +910,8 @@ export const serviceRouter = createTRPCRouter({
             userId: ctx.session.user.id,
             subscriptionTierId: newTier.id,
             paymentMethodId: newTier.price ? paymentMethodId : undefined,
+            renewingSubscription: autoRenewal,
+            subscriptionStartDate: new Date(),
           },
         });
       }

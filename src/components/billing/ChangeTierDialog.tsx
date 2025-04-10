@@ -71,9 +71,8 @@ const ChangeTierDialog: React.FC<ChangeTierDialogProps> = ({
 
       await subscribeMutation.mutateAsync({
         serviceId,
-        newTierId: selectedTierId,
-        currentTierId: subscriptionTier.id,
-        paymentMethodId: paymentMethodId ?? undefined,
+        tierId: selectedTierId,
+        paymentMethodId: paymentMethodId!,
         autoRenewal: false, // or true if you want
       });
 
