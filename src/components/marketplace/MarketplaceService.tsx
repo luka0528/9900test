@@ -114,8 +114,8 @@ export const MarketplaceService = ({
             size="sm"
             className={`min-w-20 text-sm font-medium ${
               isPaid
-                ? "border-blue-500 hover:bg-blue-50 hover:text-blue-600"
-                : "border-green-500 hover:bg-green-50 hover:text-green-600"
+                ? "border-blue-500 hover:bg-blue-900/50 hover:text-blue-300 dark:hover:bg-blue-900/50 dark:hover:text-blue-300"
+                : "border-green-500 hover:bg-green-900/50 hover:text-green-300 dark:hover:bg-green-900/50 dark:hover:text-green-300"
             }`}
           >
             {priceDisplay}
