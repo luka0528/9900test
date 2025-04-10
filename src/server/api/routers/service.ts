@@ -201,60 +201,68 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      await ctx.db.service.update({
-        where: { id: input.serviceId },
-        data: {
-          name: input.newName,
-          subscriptionTiers: {
-            deleteMany: {
-              id: {
-                notIn: input.subscriptionTiers
-                  .filter((tier) => tier.id)
-                  .map((tier) => tier.id),
-              },
-            },
-            upsert: input.subscriptionTiers.map((tier) => ({
-              where: {
-                id: tier.id ?? "",
-              },
-              create: {
-                name: tier.name,
-                price: tier.price,
-                features: {
-                  create: tier.features.map((feature) => ({
-                    feature,
-                  })),
+      try {
+        await ctx.db.service.update({
+          where: { id: input.serviceId },
+          data: {
+            name: input.newName,
+            subscriptionTiers: {
+              deleteMany: {
+                id: {
+                  notIn: input.subscriptionTiers
+                    .filter((tier) => tier.id)
+                    .map((tier) => tier.id),
                 },
               },
-              update: {
-                name: tier.name,
-                price: tier.price,
-                features: {
-                  deleteMany: {},
-                  create: tier.features.map((feature) => ({
-                    feature,
-                  })),
+              upsert: input.subscriptionTiers.map((tier) => ({
+                where: {
+                  id: tier.id ?? "",
                 },
-              },
-            })),
-          },
-          tags: {
-            disconnect: input.tags
-              ? await ctx.db.tag.findMany({
-                  where: {
-                    services: { some: { id: input.serviceId } },
-                    name: { notIn: input.tags },
+                create: {
+                  name: tier.name,
+                  price: tier.price,
+                  features: {
+                    create: tier.features.map((feature) => ({
+                      feature,
+                    })),
                   },
-                  select: { id: true },
-                })
-              : [],
-            connectOrCreate: input.tags.map((tag) => ({
-              where: { name: tag },
-              create: { name: tag },
-            })),
+                },
+                update: {
+                  name: tier.name,
+                  price: tier.price,
+                  features: {
+                    deleteMany: {},
+                    create: tier.features.map((feature) => ({
+                      feature,
+                    })),
+                  },
+                },
+              })),
+            },
+            tags: {
+              disconnect: input.tags
+                ? await ctx.db.tag.findMany({
+                    where: {
+                      services: { some: { id: input.serviceId } },
+                      name: { notIn: input.tags },
+                    },
+                    select: { id: true },
+                  })
+                : [],
+              connectOrCreate: input.tags.map((tag) => ({
+                where: { name: tag },
+                create: { name: tag },
+              })),
+            },
           },
-        },
-      });
+        });
+      } catch (error) {
+        console.error("Error updating service metadata:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update service metadata",
+        });
+      }
 
       return { success: true };
     }),
