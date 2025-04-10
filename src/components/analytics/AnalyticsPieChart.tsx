@@ -1,17 +1,13 @@
 "use client"
 
 import React from "react"
-import { TrendingUp } from "lucide-react"
 import { Label, Pie, PieChart } from "recharts"
 import { api } from "~/trpc/react"
 
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
-  CardTitle,
 } from "~/components/ui/card"
 import {
   ChartConfig,
@@ -23,15 +19,7 @@ import {
 } from "~/components/ui/charts"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
-import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group"
 
-// const chartData = [
-//   { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
-//   { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
-//   { browser: "firefox", visitors: 287, fill: "var(--color-firefox)" },
-//   { browser: "edge", visitors: 173, fill: "var(--color-edge)" },
-//   { browser: "other", visitors: 190, fill: "var(--color-other)" },
-// ]
 type ChartDataPoint = {
   browser: string
   visitors: number
@@ -46,6 +34,11 @@ export const AnalyticsPieChart = () => {
     data: userServiceData,
     isLoading
   } = api.analytics.getNumCustomersPerServiceTier.useQuery();
+
+  const {
+    data: allServices,
+    isLoading: allServicesLoading
+  } = api.service.getAllByUserId.useQuery();
 
   const chartConfig = React.useMemo(() => {
     const colors = [
@@ -109,39 +102,28 @@ export const AnalyticsPieChart = () => {
   return (
     <Card className="flex flex-col h-64 w-1/3">
       {
-        isLoading ? (
+        isLoading || allServicesLoading ? (
           <div className="flex h-full w-full items-center justify-center">
             Loading...
           </div>
         ) : (
           <>
-          <CardHeader className="p-0 h-8">
-          <div className="absolute right-4 top-4">
-            <ToggleGroup
-              type="single"
-              value={currService}
-              onValueChange={setCurrService}
-              variant="outline"
-              className="@[767px]/card:flex hidden"
-            >
-              <ToggleGroupItem value="365d" className="h-8 px-2.5">
-                Last Year
-              </ToggleGroupItem>
-              <ToggleGroupItem value="30d" className="h-8 px-2.5">
-                Last 30 days
-              </ToggleGroupItem>
-            </ToggleGroup>
+          <CardHeader className="p-0 h-8 relative">
+          <div className="absolute right-4 top-4 z-10">
             <Select value={currService} onValueChange={setCurrService}>
               <SelectTrigger className="flex w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                <SelectItem value="365d" className="rounded-lg">
-                  Last Year
-                </SelectItem>
-                <SelectItem value="30d" className="rounded-lg">
-                  Last 30 days
-                </SelectItem>
+                {allServices?.map((service) => (
+                  <SelectItem
+                    key={service.id}
+                    value={service.name}
+                    className="rounded-xl"
+                  >
+                    {service.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
