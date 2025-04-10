@@ -13,6 +13,7 @@ import { EditReviewModal } from "~/components/service/reviews/EditReviewModal";
 import {
   type updateReviewType,
   type ReviewContent,
+  type topButtonType,
 } from "~/components/service/reviews/helper";
 import { toast } from "sonner";
 
@@ -82,6 +83,7 @@ export default function ReviewsPage() {
   const { mutate: deleteReview } = api.service.deleteReview.useMutation({
     onSuccess: (data) => {
       setReviews((prev) => prev.filter((review) => review.id !== data.deleted));
+      setTopButton("Add");
       toast.success("Review deleted");
     },
     onError: (error) => {
@@ -127,8 +129,7 @@ export default function ReviewsPage() {
   }, [updatedReview, deleteReview, editReview]);
 
   // Haven't reviewed = add, reviewed = edit, owner = owned (disabled), not subscribed = null (disabled)
-  type buttonType = "Add" | "Edit" | "Owned" | null;
-  const [topButton, setTopButton] = useState<buttonType>(null);
+  const [topButton, setTopButton] = useState<topButtonType>(null);
 
   const { mutate: createReview } = api.service.createReview.useMutation({
     onSuccess: (data) => {
@@ -327,6 +328,7 @@ export default function ReviewsPage() {
               <ReviewCardForm
                 reviewerName={session.user.name}
                 setNewCardData={setNewCardData}
+                setTopButton={setTopButton}
               />
             )}
             {reviews.map((review) => (

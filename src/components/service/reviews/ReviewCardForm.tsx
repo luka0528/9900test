@@ -7,6 +7,7 @@ import { Textarea } from "../../ui/textarea";
 import { useRef, useState } from "react";
 import { Separator } from "~/components/ui/separator";
 import { toast } from "sonner";
+import { type topButtonType } from "./helper";
 
 interface ReviewCardFormProps {
   reviewerName: string | null | undefined;
@@ -15,11 +16,13 @@ interface ReviewCardFormProps {
     starValue: number | null;
     content: string | null;
   }) => void;
+  setTopButton: (state: topButtonType) => void;
 }
 
 export const ReviewCardForm = ({
   reviewerName,
   setNewCardData,
+  setTopButton,
 }: ReviewCardFormProps) => {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedRating, setSelectedRating] = useState(0);
@@ -34,6 +37,7 @@ export const ReviewCardForm = ({
         starValue: selectedRating,
         content: textAreaRef.current ? textAreaRef.current.value : null,
       });
+      setTopButton(null);
     }
   };
 

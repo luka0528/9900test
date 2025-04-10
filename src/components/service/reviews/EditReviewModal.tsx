@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import StarRating from "./StarRating";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Textarea } from "~/components/ui/textarea";
 import type { setUpdateReviewType } from "./helper";
 
@@ -34,6 +34,14 @@ export function EditReviewModal({
   const [selectedRating, setSelectedRating] = useState(originalRating ?? 0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [inputType, setInputType] = useState(!reviewId ? "reply" : "review");
+
+  useEffect(() => {
+    if (!reviewId) {
+      setInputType("reply");
+    } else {
+      setInputType("review");
+    }
+  }, [reviewId]);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 

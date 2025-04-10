@@ -246,6 +246,7 @@ export const ReviewCard = ({
             key={reply.id}
             reply={{
               id: reply.id,
+              replierId: reply.replierId,
               replierName: reply.replierName,
               content: reply.content,
               postedAt: reply.postedAt,
