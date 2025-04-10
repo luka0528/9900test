@@ -74,31 +74,18 @@ const PurchasePage: React.FC = () => {
   // 5. The purchase/update flow
   const handlePurchase = async () => {
     if (!selectedTier || !selectedPaymentMethod) return;
+
     try {
-      // If user is already subscribed, pass currentTierId
-      if (subscriptionStatus?.isSubscribed) {
-        await subscribeMutation.mutateAsync({
-          serviceId,
-          newTierId: selectedTier,
-          currentTierId: currentTierId ?? undefined,
-          paymentMethodId: selectedPaymentMethod,
-          autoRenewal: autoRenew,
-        });
-        toast.success("Successfully updated subscription.");
-        setCurrentTierId(selectedTier); // reflect new plan immediately
-      } else {
-        // brand new subscription
-        await subscribeMutation.mutateAsync({
-          serviceId,
-          newTierId: selectedTier,
-          paymentMethodId: selectedPaymentMethod,
-          autoRenewal: autoRenew,
-        });
-        toast.success("Successfully subscribed.");
-        setCurrentTierId(selectedTier);
-      }
-      void subscriptionStatusRefetch();
-      router.refresh(); // or redirect, if desired
+      await subscribeMutation.mutateAsync({
+        serviceId,
+        tierId: selectedTier,
+        paymentMethodId: selectedPaymentMethod,
+        autoRenewal: autoRenew,
+      });
+      setCurrentTierId(selectedTier);
+      subscriptionStatus?.isSubscribed
+        ? toast.success("Successfully updated subscription.")
+        : toast.success("Successfully subscribed.");
     } catch (err) {
       console.error(err);
       toast.error("Error subscribing to service.");

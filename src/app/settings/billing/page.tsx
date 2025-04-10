@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
@@ -18,26 +18,21 @@ import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Plus } from "lucide-react"; // Lucide icon
+import { useRouter } from "next/router";
 
 const BillingPage: React.FC = () => {
-  const params = useParams();
-  const userId = params.userId as string;
-  const sessionId = useSession().data?.user?.id;
+  const { status } = useSession();
+  const router = useRouter();
 
   // Show/hide the "Add Payment Method" form
   const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false);
 
-  // Ensure user is authenticated & is viewing their own billing page
-  // useEffect(() => {
-  //   if (sessionId && userId && sessionId !== userId) {
-  //     router.push(`/user/${userId}/profile`);
-  //   }
-  // }, [sessionId, userId, router]);
-
   // If not authorized or still loading session
-  if (!sessionId || !userId || sessionId !== userId) {
-    return null;
-  }
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login"); // or wherever you want to redirect
+    }
+  }, [status, router]);
 
   const stripePromise = loadStripe(
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,

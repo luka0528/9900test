@@ -6,7 +6,7 @@ import {
   type SidebarItem,
 } from "~/components/sidebar/DefaultSideBar";
 
-export default function ProfileLayout({
+export default function SubscriptionLayout({
   children,
 }: {
   children: React.ReactNode;

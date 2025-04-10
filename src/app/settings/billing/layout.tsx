@@ -1,12 +1,12 @@
 "use client";
 
-import { EyeIcon, Package, PlusSquare, ReceiptText } from "lucide-react";
+import { EyeIcon, Package, ReceiptText, PlusSquare } from "lucide-react";
 import {
   DefaultSideBar,
   type SidebarItem,
 } from "~/components/sidebar/DefaultSideBar";
 
-export default function ProfileLayout({
+export default function BillingLayout({
   children,
 }: {
   children: React.ReactNode;

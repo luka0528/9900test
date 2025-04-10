@@ -719,20 +719,13 @@ export const serviceRouter = createTRPCRouter({
     .input(
       z.object({
         serviceId: z.string(),
-        newTierId: z.string(),
-        currentTierId: z.string().optional(), // used if changing tiers
-        paymentMethodId: z.string().optional(),
+        tierId: z.string(),
+        paymentMethodId: z.string(),
         autoRenewal: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const {
-        serviceId,
-        newTierId,
-        currentTierId,
-        paymentMethodId,
-        autoRenewal,
-      } = input;
+      const { serviceId, tierId, paymentMethodId, autoRenewal } = input;
 
       // 1. Validate the service
       const service = await ctx.db.service.findUnique({
@@ -749,163 +742,77 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      // 2. Validate the new tier
-      const newTier = await ctx.db.subscriptionTier.findUnique({
-        where: { id: newTierId },
-      });
-      if (!newTier || newTier.serviceId !== service.id) {
+      // 2. Validate the tier
+      const newTier = service.subscriptionTiers.find(
+        (tier) => tier.id === tierId,
+      );
+      if (!newTier) {
         throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid tier for this service",
+          code: "NOT_FOUND",
+          message: "Tier not found",
         });
       }
 
-      // 5. If a paymentMethodId is provided, handle payment/charge logic
-      if (newTier.price != 0) {
-        // a) Check if the payment method is valid
-        if (!paymentMethodId) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Payment method is required for this subscription",
-          });
-        }
-      }
-      // 3. If currentTierId is provided, remove (or update) the old subscription
-      if (currentTierId) {
-        if (currentTierId === newTier.id) {
+      // 3. Handle subscription logic
+      const existingSubscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTier: {
+            serviceId: service.id,
+          },
+        },
+      });
+
+      if (existingSubscription) {
+        if (existingSubscription.id === newTier.id) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Cannot subscribe to the same tier",
           });
         }
-        // Find the existing subscription to the current tier
-        const oldSubscription = await ctx.db.serviceConsumer.findFirst({
-          where: {
-            userId: ctx.session.user.id,
-            subscriptionTierId: currentTierId,
+        await ctx.db.serviceConsumer.update({
+          where: { id: existingSubscription.id },
+          data: {
+            subscriptionTierId: newTier.id,
+            paymentMethodId: paymentMethodId,
           },
         });
-        if (!oldSubscription) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "No existing subscription found for currentTierId",
-          });
-        }
-        // Update the existing subscription to the new tier
-        await ctx.db.serviceConsumer.update({
-          where: { id: oldSubscription.id },
-          data: { subscriptionTierId: newTier.id, lastRenewed: new Date() },
-        });
       } else {
-        // className={`rounded-md p-5 text-left shadow-inner ${isCurrent ? "bg-gray-300" : "bg-gray-50"}`}
-        // check if user is already subscribed to the new tier
-        const existingSubscriptionToNewTier =
-          await ctx.db.serviceConsumer.findFirst({
-            where: {
-              userId: ctx.session.user.id,
-              subscriptionTierId: newTier.id,
-            },
-          });
-        if (existingSubscriptionToNewTier) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: "User already subscribed to the new tier",
-          });
-        }
-        // Create a new subscription to the new tier
         await ctx.db.serviceConsumer.create({
           data: {
             userId: ctx.session.user.id,
             subscriptionTierId: newTier.id,
-            renewingSubscription: autoRenewal,
-            paymentMethodId: paymentMethodId,
+            paymentMethodId: newTier.price ? paymentMethodId : undefined,
           },
         });
       }
 
       // 5. Hhandle payment logic
-      if (paymentMethodId) {
-        // a) Verify the payment method belongs to the user
-        const paymentMethod = await ctx.db.paymentMethod.findUnique({
-          where: { id: paymentMethodId },
-        });
-        if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Payment method not found or doesn't belong to user",
-          });
-        }
-
-        // b) TODO: Call Stripe
-
-        // c) Create a billing receipt
-        await ctx.db.billingReceipt.create({
-          data: {
-            amount: newTier.price,
-            description: `Subscription to ${newTier.name}`,
-            fromId: service.owners[0]?.id ?? "",
-            toId: ctx.session.user.name ?? "",
-            status: BillingStatus.PAID,
-            paymentMethodId: paymentMethod.id,
-            subscriptionTierId: newTier.id,
-          },
+      // a) Verify the payment method belongs to the user
+      const paymentMethod = await ctx.db.paymentMethod.findUnique({
+        where: { id: paymentMethodId },
+      });
+      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Payment method not found or doesn't belong to user",
         });
       }
 
-      // 3. If currentTierId is provided, remove (or update) the old subscription
-      if (currentTierId) {
-        if (currentTierId === newTier.id) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Cannot subscribe to the same tier",
-          });
-        }
-        const oldSubscription = await ctx.db.serviceConsumer.findFirst({
-          where: {
-            userId: ctx.session.user.id,
-            subscriptionTierId: currentTierId,
-          },
-        });
+      // b) TODO: Call Stripe
 
-        if (!oldSubscription) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "No existing subscription found for currentTierId",
-          });
-        }
-
-        await ctx.db.serviceConsumer.update({
-          where: { id: oldSubscription.id },
-          data: {
-            subscriptionTierId: newTier.id,
-            paymentMethodId: newTier.price ? paymentMethodId : undefined,
-          },
-        });
-      } else {
-        const existingSubscriptionToService =
-          await ctx.db.serviceConsumer.findFirst({
-            where: {
-              userId: ctx.session.user.id,
-              subscriptionTier: {
-                serviceId: service.id,
-              },
-            },
-          });
-        if (existingSubscriptionToService) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: "User already subscribed to this service",
-          });
-        }
-
-        await ctx.db.serviceConsumer.create({
-          data: {
-            userId: ctx.session.user.id,
-            subscriptionTierId: newTier.id,
-            paymentMethodId: newTier.price ? paymentMethodId : undefined,
-          },
-        });
-      }
+      // c) Create a billing receipt
+      await ctx.db.billingReceipt.create({
+        data: {
+          amount: newTier.price,
+          description: `Subscription to ${newTier.name}`,
+          fromId: service.owners[0]?.userId ?? "",
+          toId: ctx.session.user.id ?? "",
+          status: BillingStatus.PAID,
+          paymentMethodId: paymentMethod.id,
+          subscriptionTierId: newTier.id,
+        },
+      });
 
       return { success: true };
     }),
