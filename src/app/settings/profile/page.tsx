@@ -38,9 +38,15 @@ const profileSchema = z.object({
 
 const UserProfilePage = () => {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const userId = session?.user?.id; // will always exist as cant enter settings without profile
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login"); // or wherever you want to redirect
+    }
+  }, [status, router]);
 
   // Queries & Mutations
   const { data: userData, isLoading: isLoadingUserProfile } =

@@ -22,6 +22,8 @@ export type setUpdateReviewType = (prev: {
   id: string | null;
 }) => void;
 
+export type topButtonType = "Add" | "Edit" | "Owned" | null;
+
 export interface updateReviewType {
   ready: boolean;
   isUpdateDelete: boolean | null;

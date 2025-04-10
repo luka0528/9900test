@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "~/components/ui/tabs";
 import {
   Card,
@@ -12,36 +11,27 @@ import {
   CardDescription,
   CardContent,
 } from "~/components/ui/card";
-
 import BillingHistory from "~/components/billing/BillingHistory";
 import SavedPaymentMethods from "~/components/billing/SavedPaymentMethods";
 import PaymentMethodForm from "~/components/billing/PaymentMethodForm";
-
 import { useSession } from "next-auth/react";
-import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Plus } from "lucide-react"; // Lucide icon
+import { useRouter } from "next/navigation";
 
 const BillingPage: React.FC = () => {
-  const params = useParams();
-  const userId = params.userId as string;
+  const { status } = useSession();
   const router = useRouter();
-  const sessionId = useSession().data?.user?.id;
 
   // Show/hide the "Add Payment Method" form
   const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false);
 
-  // Ensure user is authenticated & is viewing their own billing page
-  useEffect(() => {
-    if (sessionId && userId && sessionId !== userId) {
-      router.push(`/user/${userId}/profile`);
-    }
-  }, [sessionId, userId, router]);
-
   // If not authorized or still loading session
-  if (!sessionId || !userId || sessionId !== userId) {
-    return null;
-  }
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login"); // or wherever you want to redirect
+    }
+  }, [status, router]);
 
   const stripePromise = loadStripe(
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
@@ -49,7 +39,7 @@ const BillingPage: React.FC = () => {
 
   return (
     <Elements stripe={stripePromise}>
-      <div className="container mx-auto mt-12 min-h-[80vh] max-w-7xl">
+      <div className="container mx-auto mt-12 min-h-[80vh] max-w-6xl">
         <Card className="h-full px-10 py-8">
           <CardHeader>
             <CardTitle className="text-4xl font-bold">
@@ -101,7 +91,7 @@ const BillingPage: React.FC = () => {
                       Cancel
                     </Button>
                     {showAddPaymentMethod && (
-                      <div className="mt-4 rounded-md border p-4">
+                      <div className="mt-4 rounded-md border border-gray-300 bg-gray-50 p-4">
                         <h3 className="mb-2 pl-2 text-lg font-semibold">
                           Add a New Payment Method
                         </h3>
