@@ -260,7 +260,6 @@ export const analyticsRouter = createTRPCRouter({
 
       const entry = groupedByDate.get(dateStr);
       if (!entry) {
-        console.error(`No entry found for date: ${dateStr}`);
         continue;
       }
       entry.set(serviceName, (entry.get(serviceName) ?? 0) + amount);
