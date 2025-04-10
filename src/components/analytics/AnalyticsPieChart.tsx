@@ -70,11 +70,13 @@ export const AnalyticsPieChart = () => {
     if (isLoading) return;
 
     setChartData(() => {
-      return userServiceData?.get(currService)?.map((tier) => ({
-        browser: tier.tierName,
-        visitors: tier.customerCount,
-        fill: chartConfig[tier.tierName]?.color ?? "#ccc",
-      })) ?? [];
+      return (
+        userServiceData?.get(currService)?.map((tier) => ({
+          browser: tier.tierName,
+          visitors: tier.customerCount,
+          fill: chartConfig[tier.tierName]?.color ?? "#ccc",
+        })) ?? []
+      );
     });
   }, [currService, userServiceData, chartConfig, isLoading]);
 
