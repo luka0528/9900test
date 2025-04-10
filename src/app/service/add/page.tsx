@@ -470,9 +470,6 @@ export default function AddServicePage() {
                                 min="0"
                                 placeholder="Enter price"
                                 {...field}
-                                onChange={(e) =>
-                                  field.onChange(e.target.valueAsNumber)
-                                }
                               />
                             </FormControl>
                             <FormMessage />
