@@ -395,7 +395,11 @@ export const serviceRouter = createTRPCRouter({
           id: input,
         },
         include: {
-          subscriptionTiers: true,
+          subscriptionTiers: {
+            include: {
+              features: true,
+            },
+          },
           tags: true,
           versions: {
             include: {
