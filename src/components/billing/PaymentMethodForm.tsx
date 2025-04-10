@@ -423,7 +423,7 @@ const PaymentMethodForm: React.FC = () => {
       {/* Card Number */}
       <div>
         <label className="mb-1 block text-sm font-medium">Card number</label>
-        <div className="rounded-md border border-gray-300 p-3 shadow-sm">
+        <div className="rounded-md border border-gray-300 bg-white p-3 shadow-sm">
           <CardNumberElement
             options={{
               showIcon: true,
@@ -450,7 +450,7 @@ const PaymentMethodForm: React.FC = () => {
           <label className="mb-1 block text-sm font-medium">
             Expiration date
           </label>
-          <div className="rounded-md border border-gray-300 p-3 shadow-sm">
+          <div className="rounded-md border border-gray-300 bg-white p-3 shadow-sm">
             <CardExpiryElement
               options={{
                 style: {
@@ -473,7 +473,7 @@ const PaymentMethodForm: React.FC = () => {
           <label className="mb-1 block text-sm font-medium">
             Security code
           </label>
-          <div className="rounded-md border border-gray-300 p-3 shadow-sm">
+          <div className="rounded-md border border-gray-300 bg-white p-3 shadow-sm">
             <CardCvcElement
               options={{
                 style: {

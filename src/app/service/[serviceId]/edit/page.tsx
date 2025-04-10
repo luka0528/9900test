@@ -265,102 +265,108 @@ export default function AddServicePage() {
                 </Button>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                {form.watch("subscriptionTiers")?.map((tier, tierIndex) => (
-                  <Card key={tierIndex} className="relative">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-2"
-                      onClick={() => removeSubscriptionTier(tierIndex)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <CardHeader>
-                      <FormField
-                        control={form.control}
-                        name={`subscriptionTiers.${tierIndex}.name`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter tier name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name={`subscriptionTiers.${tierIndex}.price`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Price</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="Enter price"
-                                {...field}
-                                onChange={(e) =>
-                                  field.onChange(e.target.valueAsNumber)
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <div className="w-full space-y-2">
-                        <FormLabel>Features</FormLabel>
-                        {tier.features.map((feature, featureIndex) => (
-                          <div
-                            key={featureIndex}
-                            className="flex items-center gap-2"
-                          >
-                            <FormField
-                              control={form.control}
-                              name={`subscriptionTiers.${tierIndex}.features.${featureIndex}`}
-                              render={({ field }) => (
-                                <FormItem className="flex-1">
-                                  <FormControl>
-                                    <Input
-                                      placeholder="Enter feature"
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                removeFeature(tierIndex, featureIndex)
-                              }
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+                {form
+                  .watch("subscriptionTiers")
+                  ?.sort((a, b) => a.price - b.price)
+                  .map((tier, tierIndex) => (
+                    <Card key={tierIndex} className="relative">
                       <Button
                         type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addFeature(tierIndex)}
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-2"
+                        onClick={() => removeSubscriptionTier(tierIndex)}
                       >
-                        <PlusCircle className="mr-1 h-4 w-4" />
-                        Add Feature
+                        <X className="h-4 w-4" />
                       </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                      <CardHeader>
+                        <FormField
+                          control={form.control}
+                          name={`subscriptionTiers.${tierIndex}.name`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Name</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Enter tier name"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name={`subscriptionTiers.${tierIndex}.price`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Price</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  placeholder="Enter price"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(e.target.valueAsNumber)
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="w-full space-y-2">
+                          <FormLabel>Features</FormLabel>
+                          {tier.features.map((feature, featureIndex) => (
+                            <div
+                              key={featureIndex}
+                              className="flex items-center gap-2"
+                            >
+                              <FormField
+                                control={form.control}
+                                name={`subscriptionTiers.${tierIndex}.features.${featureIndex}`}
+                                render={({ field }) => (
+                                  <FormItem className="flex-1">
+                                    <FormControl>
+                                      <Input
+                                        placeholder="Enter feature"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  removeFeature(tierIndex, featureIndex)
+                                }
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addFeature(tierIndex)}
+                        >
+                          <PlusCircle className="mr-1 h-4 w-4" />
+                          Add Feature
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             </div>
 
