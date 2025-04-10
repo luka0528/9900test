@@ -111,14 +111,14 @@ const CredentialsPage = () => {
     }
   };
 
-  const { mutate: requestPasswordReset, isPending: isRequestingPasswordReset } =
+  const { mutate: requestPasswordReset } =
     api.user.requestPasswordReset.useMutation();
 
   const onForgotPassword = () => {
     if (session?.user?.email) {
       toast.success("Verification code sent to your email");
       requestPasswordReset({ email: session.user.email });
-      router.push("/reset-password?email=" + session?.user?.email!);
+      router.push("/reset-password?email=" + session.user.email);
     }
   };
 
