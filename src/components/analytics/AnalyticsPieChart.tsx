@@ -66,10 +66,12 @@ export const AnalyticsPieChart = () => {
     }
 
     return config as ChartConfig;
-  }, [userServiceData]);
+  }, [userServiceData, currService]);
 
   React.useEffect(() => {
     if (isLoading) return;
+
+    console.log("Changed")
 
     setChartData(() => {
       return (
@@ -97,7 +99,7 @@ export const AnalyticsPieChart = () => {
     );
 
 
-  }, [userServiceData, currService])
+  }, [currService, userServiceData])
 
   return (
     <Card className="flex flex-col h-64 w-1/3">
@@ -143,7 +145,7 @@ export const AnalyticsPieChart = () => {
                   layout="vertical"
                   verticalAlign="bottom"
                   align="right"
-                  className="flex flex-col items-start w-20 h-20 p-2 mr-8 mb-4"
+                  className="flex flex-col items-start w-28 h-20 p-2 mb-4"
                 />
                 <Pie
                   data={chartData}
@@ -151,7 +153,7 @@ export const AnalyticsPieChart = () => {
                   nameKey="browser"
                   innerRadius={60}
                   strokeWidth={5}
-                  cx="45%"
+                  cx="48%"
                 >
                   <Label
                     content={({ viewBox }) => {

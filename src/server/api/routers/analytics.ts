@@ -192,14 +192,14 @@ export const analyticsRouter = createTRPCRouter({
       { tierName: "Enterprise", price: 30, customerCount: 25 },
     ]);
     dummyData.set("Service B", [
-      { tierName: "Basic", price: 15, customerCount: 5 },
-      { tierName: "Pro", price: 25, customerCount: 3 },
-      { tierName: "Enterprise", price: 35, customerCount: 2 },
+      { tierName: "Basic 2", price: 15, customerCount: 5 },
+      { tierName: "Pro 2", price: 25, customerCount: 3 },
+      { tierName: "Enterprise 2", price: 35, customerCount: 2 },
     ]);
 
     return dummyData;
   }),
-  
+
   getRevenueOverTimeByService: protectedProcedure.query(async ({ ctx }) => {
     const receipts = await ctx.db.billingReceipt.findMany({
       where: {
