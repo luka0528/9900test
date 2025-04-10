@@ -51,15 +51,23 @@ export const AnalyticsPieChart = () => {
       return {};
     }
 
-    const serviceTiers = userServiceData.get(currService)!;
+    const serviceTiers = userServiceData.get(currService);
+
+    if (!serviceTiers) {
+      return {};
+    }
 
     type ChartConfigPoint = { label: string; color: string };
     const config: Record<string, ChartConfigPoint> = {};
     for (let i = 0; i < serviceTiers.length; i++) {
-      const tier = serviceTiers[i]!;
+      const tier = serviceTiers[i];
+      if (!tier) {
+        continue;
+      }
+
       config[tier.tierName] = {
         label: tier.tierName,
-        color: colors[i % colors.length]!,
+        color: colors[i % colors.length] ?? "#ccc",
       };
     }
 
@@ -89,9 +97,11 @@ export const AnalyticsPieChart = () => {
       return 0;
     }
 
-    return userServiceData
-      .get(currService)!
-      .reduce((acc: number, curr) => acc + (curr.customerCount ?? 0), 0);
+    return (
+      userServiceData
+        .get(currService)
+        ?.reduce((acc, curr) => acc + (curr.customerCount ?? 0), 0) ?? 0
+    );
   }, [currService, userServiceData]);
 
   return (
@@ -108,7 +118,7 @@ export const AnalyticsPieChart = () => {
                 <SelectTrigger className="flex w-40">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-xl" align="end">
                   {allServices?.map((service) => (
                     <SelectItem
                       key={service.id}

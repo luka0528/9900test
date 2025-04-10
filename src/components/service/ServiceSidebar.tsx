@@ -37,7 +37,7 @@ export function ServiceSidebar({ serviceId }: { serviceId: string }) {
     },
     {
       title: "Purchase",
-      url: "1",
+      url: `/service/${serviceId}/purchase`,
       icon: WalletCards,
     },
     {
