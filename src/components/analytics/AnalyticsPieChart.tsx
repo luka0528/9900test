@@ -1,44 +1,42 @@
-"use client"
+"use client";
 
-import React from "react"
-import { Label, Pie, PieChart } from "recharts"
-import { api } from "~/trpc/react"
+import React from "react";
+import { Label, Pie, PieChart } from "recharts";
+import { api } from "~/trpc/react";
 
+import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "~/components/ui/card"
-import {
-  ChartConfig,
+  type ChartConfig,
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from "~/components/ui/charts"
+} from "~/components/ui/charts";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 
 type ChartDataPoint = {
-  browser: string
-  visitors: number
-  fill: string
-}
+  browser: string;
+  visitors: number;
+  fill: string;
+};
 
 export const AnalyticsPieChart = () => {
   const [currService, setCurrService] = React.useState("Service A");
   const [chartData, setChartData] = React.useState<ChartDataPoint[]>();
 
-  const {
-    data: userServiceData,
-    isLoading
-  } = api.analytics.getNumCustomersPerServiceTier.useQuery();
+  const { data: userServiceData, isLoading } =
+    api.analytics.getNumCustomersPerServiceTier.useQuery();
 
-  const {
-    data: allServices,
-    isLoading: allServicesLoading
-  } = api.service.getAllByUserId.useQuery();
+  const { data: allServices, isLoading: allServicesLoading } =
+    api.service.getAllByUserId.useQuery();
 
   const chartConfig = React.useMemo(() => {
     const colors = [
@@ -71,18 +69,14 @@ export const AnalyticsPieChart = () => {
   React.useEffect(() => {
     if (isLoading) return;
 
-    console.log("Changed")
-
     setChartData(() => {
-      return (
-        userServiceData?.get(currService)?.map((tier) => ({
-          browser: tier.tierName,
-          visitors: tier.customerCount,
-          fill: chartConfig[tier.tierName]?.color ?? "#ccc"
-        }))!
-      )
-    })
-  }, [currService, userServiceData])
+      return userServiceData?.get(currService)?.map((tier) => ({
+        browser: tier.tierName,
+        visitors: tier.customerCount,
+        fill: chartConfig[tier.tierName]?.color ?? "#ccc",
+      })) ?? [];
+    });
+  }, [currService, userServiceData, chartConfig, isLoading]);
 
   const totalVisitors = React.useMemo(() => {
     if (!userServiceData) {
@@ -93,42 +87,38 @@ export const AnalyticsPieChart = () => {
       return 0;
     }
 
-    return userServiceData.get(currService)!.reduce(
-      (acc: number, curr) => acc + (curr.customerCount ?? 0),
-      0
-    );
-
-
-  }, [currService, userServiceData])
+    return userServiceData
+      .get(currService)!
+      .reduce((acc: number, curr) => acc + (curr.customerCount ?? 0), 0);
+  }, [currService, userServiceData]);
 
   return (
-    <Card className="flex flex-col h-64 w-1/3">
-      {
-        isLoading || allServicesLoading ? (
-          <div className="flex h-full w-full items-center justify-center">
-            Loading...
-          </div>
-        ) : (
-          <>
-          <CardHeader className="p-0 h-8 relative">
-          <div className="absolute right-4 top-4 z-10">
-            <Select value={currService} onValueChange={setCurrService}>
-              <SelectTrigger className="flex w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {allServices?.map((service) => (
-                  <SelectItem
-                    key={service.id}
-                    value={service.name}
-                    className="rounded-xl"
-                  >
-                    {service.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <Card className="flex h-64 w-1/3 flex-col">
+      {isLoading || allServicesLoading ? (
+        <div className="flex h-full w-full items-center justify-center">
+          Loading...
+        </div>
+      ) : (
+        <>
+          <CardHeader className="relative h-8 p-0">
+            <div className="absolute right-4 top-4 z-10">
+              <Select value={currService} onValueChange={setCurrService}>
+                <SelectTrigger className="flex w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {allServices?.map((service) => (
+                    <SelectItem
+                      key={service.id}
+                      value={service.name}
+                      className="rounded-xl"
+                    >
+                      {service.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent className="flex-1 grow p-0">
             <ChartContainer
@@ -145,7 +135,7 @@ export const AnalyticsPieChart = () => {
                   layout="vertical"
                   verticalAlign="bottom"
                   align="right"
-                  className="flex flex-col items-start w-28 h-20 p-2 mb-4"
+                  className="mb-4 flex h-20 w-28 flex-col items-start p-2"
                 />
                 <Pie
                   data={chartData}
@@ -174,13 +164,13 @@ export const AnalyticsPieChart = () => {
                             </tspan>
                             <tspan
                               x={viewBox.cx}
-                              y={(viewBox.cy || 0) + 24}
+                              y={(viewBox.cy ?? 0) + 24}
                               className="fill-muted-foreground"
                             >
                               Users
                             </tspan>
                           </text>
-                        )
+                        );
                       }
                     }}
                   />
@@ -188,9 +178,8 @@ export const AnalyticsPieChart = () => {
               </PieChart>
             </ChartContainer>
           </CardContent>
-          </>
-        )
-      }
+        </>
+      )}
     </Card>
-  )
-}
+  );
+};

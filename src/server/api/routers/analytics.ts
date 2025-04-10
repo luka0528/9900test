@@ -163,25 +163,25 @@ export const analyticsRouter = createTRPCRouter({
         },
       },
     });
-      
+
     type SubscriptionTierInfo = {
       tierName: string;
       price: number;
       customerCount: number;
-    }
+    };
 
     const serviceToTiers = new Map<string, Array<SubscriptionTierInfo>>();
-  
+
     services.forEach((service) => {
-      const tiers = service.subscriptionTiers.map(tier => ({
+      const tiers = service.subscriptionTiers.map((tier) => ({
         tierName: tier.name,
         price: tier.price,
-        customerCount: tier.consumers.length
+        customerCount: tier.consumers.length,
       }));
-  
+
       serviceToTiers.set(service.name, tiers);
     });
-    
+
     // return serviceToTiers;
 
     // Dummy data for testing
