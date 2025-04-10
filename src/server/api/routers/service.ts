@@ -349,11 +349,57 @@ export const serviceRouter = createTRPCRouter({
           subscriptionTiers: {
             select: {
               id: true,
+              consumers: {
+                select: {
+                  userId: true,
+                },
+              },
               name: true,
               price: true,
               features: {
                 select: { feature: true },
               },
+            },
+          },
+          ratings: {
+            select: {
+              id: true,
+              consumer: {
+                select: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+              starValue: true,
+              content: true,
+              createdAt: true,
+              comments: {
+                select: {
+                  id: true,
+                  owner: {
+                    select: {
+                      user: {
+                        select: {
+                          id: true,
+                          name: true,
+                        },
+                      },
+                    },
+                  },
+                  content: true,
+                  createdAt: true,
+                },
+                orderBy: {
+                  createdAt: "desc",
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "desc",
             },
           },
           owners: {
@@ -951,6 +997,359 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return service;
+    }),
+
+  createReview: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string().min(1),
+        content: z.string(),
+        starValue: z.number().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure user is subscribed to this service and hasn't reviewed it already
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+        select: {
+          subscriptionTiers: {
+            where: {
+              consumers: {
+                some: {
+                  userId: ctx.session.user.id,
+                },
+              },
+            },
+          },
+          ratings: {
+            where: {
+              consumer: {
+                userId: ctx.session.user.id,
+              },
+            },
+          },
+          owners: {
+            where: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // These errors should never occur (due to frontend verifying this already)
+      if (service.owners.length >= 1) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot review your own service",
+        });
+      }
+      if (service.subscriptionTiers.length == 0) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot review a service that you are not subscribed to",
+        });
+      }
+
+      // Already reviewed
+      if (service.ratings.length >= 1) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You have already posted a review",
+        });
+      }
+
+      // Find the consumerId
+      const consumer = await ctx.db.serviceConsumer.findFirst({
+        select: {
+          id: true,
+        },
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTier: {
+            serviceId: input.serviceId,
+          },
+        },
+      });
+
+      if (!consumer) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You are not a service consumer",
+        });
+      }
+
+      // Post the review
+      const rating = await ctx.db.serviceRating.create({
+        data: {
+          starValue: input.starValue,
+          content: input.content,
+          serviceId: input.serviceId,
+          consumerId: consumer.id,
+        },
+      });
+
+      return {
+        reviewerId: ctx.session.user.id,
+        reviewerName: ctx.session.user.name,
+        ...rating,
+      };
+    }),
+
+  createReviewReply: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string().min(1),
+        reviewId: z.string().min(1),
+        content: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check that the current user owns the service (and get their ownerId)
+      const owner = await ctx.db.serviceOwner.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          serviceId: input.serviceId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!owner) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You are not a service owner",
+        });
+      }
+
+      // Create the reply
+      const review = await ctx.db.serviceComment.create({
+        data: {
+          ownerId: owner.id,
+          content: input.content,
+          ratingId: input.reviewId,
+        },
+      });
+
+      if (!review) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The review you are trying to reply to does not exist",
+        });
+      }
+
+      return {
+        replierId: ctx.session.user.id,
+        replierName: ctx.session.user.name,
+        ...review,
+      };
+    }),
+
+  editReview: protectedProcedure
+    .input(
+      z.object({
+        reviewId: z.string().min(1),
+        newContent: z.string().min(1),
+        newRating: z.number().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const reviewOwner = await ctx.db.serviceRating.findUnique({
+        where: {
+          id: input.reviewId,
+        },
+        select: {
+          consumer: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!reviewOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The review you are trying to edit does not exist",
+        });
+      }
+
+      if (reviewOwner.consumer.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot edit this review",
+        });
+      }
+
+      // Edit the review
+      const editedReview = await ctx.db.serviceRating.update({
+        where: {
+          id: input.reviewId,
+        },
+        data: {
+          content: input.newContent,
+          starValue: input.newRating,
+        },
+      });
+
+      return {
+        reviewerId: ctx.session.user.id,
+        reviewerName: ctx.session.user.name,
+        ...editedReview,
+      };
+    }),
+
+  deleteReview: protectedProcedure
+    .input(
+      z.object({
+        reviewId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const reviewOwner = await ctx.db.serviceRating.findUnique({
+        where: {
+          id: input.reviewId,
+        },
+        select: {
+          consumer: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!reviewOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The review you are trying to delete does not exist",
+        });
+      }
+
+      if (reviewOwner.consumer.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot delete this review",
+        });
+      }
+
+      // Delete the review
+      await ctx.db.serviceRating.delete({
+        where: {
+          id: input.reviewId,
+        },
+      });
+
+      return {
+        deleted: input.reviewId,
+      };
+    }),
+
+  editReviewReply: protectedProcedure
+    .input(
+      z.object({
+        commentId: z.string().min(1),
+        newContent: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const commentOwner = await ctx.db.serviceComment.findUnique({
+        where: {
+          id: input.commentId,
+        },
+        select: {
+          owner: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!commentOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The reply you are trying to edit does not exist",
+        });
+      }
+
+      if (commentOwner.owner.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot edit this reply",
+        });
+      }
+
+      // Edit the reply
+      const editedReply = await ctx.db.serviceComment.update({
+        where: {
+          id: input.commentId,
+        },
+        data: {
+          content: input.newContent,
+        },
+      });
+
+      return {
+        replierId: ctx.session.user.id,
+        replierName: ctx.session.user.name,
+        ...editedReply,
+      };
+    }),
+
+  deleteReviewReply: protectedProcedure
+    .input(
+      z.object({
+        commentId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const commentOwner = await ctx.db.serviceComment.findUnique({
+        where: {
+          id: input.commentId,
+        },
+        select: {
+          owner: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!commentOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The reply you are trying to delete does not exist",
+        });
+      }
+
+      if (commentOwner.owner.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot delete this reply",
+        });
+      }
+
+      // Delete the reply
+      await ctx.db.serviceComment.delete({
+        where: {
+          id: input.commentId,
+        },
+      });
+
+      return { deleted: input.commentId };
     }),
 
   getRelatedServices: publicProcedure
