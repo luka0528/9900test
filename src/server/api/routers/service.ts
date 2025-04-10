@@ -32,11 +32,13 @@ export const serviceRouter = createTRPCRouter({
             title: z.string().min(1),
             description: z.string().min(1),
             rows: z.array(
-              z.object({
-                routeName: z.string().min(1),
-                description: z.string().min(1),
-                method: z.nativeEnum(RestMethod),
-              }),
+              z
+                .object({
+                  routeName: z.string().min(1),
+                  description: z.string().min(1),
+                  method: z.nativeEnum(RestMethod),
+                })
+                .strict(),
             ),
           }),
         ),
@@ -198,60 +200,68 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      await ctx.db.service.update({
-        where: { id: input.serviceId },
-        data: {
-          name: input.newName,
-          subscriptionTiers: {
-            deleteMany: {
-              id: {
-                notIn: input.subscriptionTiers
-                  .filter((tier) => tier.id)
-                  .map((tier) => tier.id),
-              },
-            },
-            upsert: input.subscriptionTiers.map((tier) => ({
-              where: {
-                id: tier.id ?? "",
-              },
-              create: {
-                name: tier.name,
-                price: tier.price,
-                features: {
-                  create: tier.features.map((feature) => ({
-                    feature,
-                  })),
+      try {
+        await ctx.db.service.update({
+          where: { id: input.serviceId },
+          data: {
+            name: input.newName,
+            subscriptionTiers: {
+              deleteMany: {
+                id: {
+                  notIn: input.subscriptionTiers
+                    .filter((tier) => tier.id)
+                    .map((tier) => tier.id),
                 },
               },
-              update: {
-                name: tier.name,
-                price: tier.price,
-                features: {
-                  deleteMany: {},
-                  create: tier.features.map((feature) => ({
-                    feature,
-                  })),
+              upsert: input.subscriptionTiers.map((tier) => ({
+                where: {
+                  id: tier.id ?? "",
                 },
-              },
-            })),
-          },
-          tags: {
-            disconnect: input.tags
-              ? await ctx.db.tag.findMany({
-                  where: {
-                    services: { some: { id: input.serviceId } },
-                    name: { notIn: input.tags },
+                create: {
+                  name: tier.name,
+                  price: tier.price,
+                  features: {
+                    create: tier.features.map((feature) => ({
+                      feature,
+                    })),
                   },
-                  select: { id: true },
-                })
-              : [],
-            connectOrCreate: input.tags.map((tag) => ({
-              where: { name: tag },
-              create: { name: tag },
-            })),
+                },
+                update: {
+                  name: tier.name,
+                  price: tier.price,
+                  features: {
+                    deleteMany: {},
+                    create: tier.features.map((feature) => ({
+                      feature,
+                    })),
+                  },
+                },
+              })),
+            },
+            tags: {
+              disconnect: input.tags
+                ? await ctx.db.tag.findMany({
+                    where: {
+                      services: { some: { id: input.serviceId } },
+                      name: { notIn: input.tags },
+                    },
+                    select: { id: true },
+                  })
+                : [],
+              connectOrCreate: input.tags.map((tag) => ({
+                where: { name: tag },
+                create: { name: tag },
+              })),
+            },
           },
-        },
-      });
+        });
+      } catch (error) {
+        console.error("Error updating service metadata:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update service metadata",
+        });
+      }
 
       return { success: true };
     }),
@@ -430,6 +440,11 @@ export const serviceRouter = createTRPCRouter({
           id: input,
         },
         include: {
+          subscriptionTiers: {
+            include: {
+              features: true,
+            },
+          },
           tags: true,
           versions: {
             include: {
@@ -480,7 +495,6 @@ export const serviceRouter = createTRPCRouter({
           message: "Service not found",
         });
       }
-
       return service;
     }),
 
@@ -829,20 +843,13 @@ export const serviceRouter = createTRPCRouter({
     .input(
       z.object({
         serviceId: z.string(),
-        newTierId: z.string(),
-        currentTierId: z.string().optional(), // used if changing tiers
-        paymentMethodId: z.string().optional(),
+        tierId: z.string(),
+        paymentMethodId: z.string(),
         autoRenewal: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const {
-        serviceId,
-        newTierId,
-        currentTierId,
-        paymentMethodId,
-        autoRenewal,
-      } = input;
+      const { serviceId, tierId, paymentMethodId, autoRenewal } = input;
 
       // 1. Validate the service
       const service = await ctx.db.service.findUnique({
@@ -859,98 +866,82 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      // 2. Validate the new tier
-      const newTier = await ctx.db.subscriptionTier.findUnique({
-        where: { id: newTierId },
-      });
-      if (!newTier || newTier.serviceId !== service.id) {
+      // 2. Validate the tier
+      const newTier = service.subscriptionTiers.find(
+        (tier) => tier.id === tierId,
+      );
+      if (!newTier) {
         throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid tier for this service",
+          code: "NOT_FOUND",
+          message: "Tier not found",
         });
       }
 
-      // 3. If currentTierId is provided, remove (or update) the old subscription
-      if (currentTierId) {
-        if (currentTierId === newTier.id) {
+      // 3. Handle subscription logic
+      const existingSubscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTier: {
+            serviceId: service.id,
+          },
+        },
+      });
+
+      if (existingSubscription) {
+        if (existingSubscription.id === newTier.id) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Cannot subscribe to the same tier",
           });
         }
-        // Find the existing subscription to the current tier
-        const oldSubscription = await ctx.db.serviceConsumer.findFirst({
-          where: {
-            userId: ctx.session.user.id,
-            subscriptionTierId: currentTierId,
+        await ctx.db.serviceConsumer.update({
+          where: { id: existingSubscription.id },
+          data: {
+            subscriptionTierId: newTier.id,
+            paymentMethodId: paymentMethodId,
+            lastRenewed: new Date(),
+            renewingSubscription: autoRenewal,
+            subscriptionStartDate: new Date(),
           },
         });
-        if (!oldSubscription) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "No existing subscription found for currentTierId",
-          });
-        }
-        // Update the existing subscription to the new tier
-        await ctx.db.serviceConsumer.update({
-          where: { id: oldSubscription.id },
-          data: { subscriptionTierId: newTier.id, lastRenewed: new Date() },
-        });
       } else {
-        // className={`rounded-md p-5 text-left shadow-inner ${isCurrent ? "bg-gray-300" : "bg-gray-50"}`}
-        // check if user is already subscribed to the new tier
-        const existingSubscriptionToNewTier =
-          await ctx.db.serviceConsumer.findFirst({
-            where: {
-              userId: ctx.session.user.id,
-              subscriptionTierId: newTier.id,
-            },
-          });
-        if (existingSubscriptionToNewTier) {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: "User already subscribed to the new tier",
-          });
-        }
-        // Create a new subscription to the new tier
         await ctx.db.serviceConsumer.create({
           data: {
             userId: ctx.session.user.id,
             subscriptionTierId: newTier.id,
+            paymentMethodId: newTier.price ? paymentMethodId : undefined,
             renewingSubscription: autoRenewal,
-            paymentMethodId: paymentMethodId,
+            subscriptionStartDate: new Date(),
           },
         });
       }
 
       // 5. Hhandle payment logic
-      if (paymentMethodId) {
-        // a) Verify the payment method belongs to the user
-        const paymentMethod = await ctx.db.paymentMethod.findUnique({
-          where: { id: paymentMethodId },
-        });
-        if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Payment method not found or doesn't belong to user",
-          });
-        }
-
-        // b) TODO: Call Stripe
-
-        // c) Create a billing receipt
-        await ctx.db.billingReceipt.create({
-          data: {
-            amount: newTier.price,
-            description: `Subscription to ${newTier.name}`,
-            fromId: service.owners[0]?.id ?? "",
-            toId: ctx.session.user.name ?? "",
-            status: BillingStatus.PAID,
-            paymentMethodId: paymentMethod.id,
-            subscriptionTierId: newTier.id,
-          },
+      // a) Verify the payment method belongs to the user
+      const paymentMethod = await ctx.db.paymentMethod.findUnique({
+        where: { id: paymentMethodId },
+      });
+      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Payment method not found or doesn't belong to user",
         });
       }
+
+      // b) TODO: Call Stripe
+
+      // c) Create a billing receipt
+      await ctx.db.billingReceipt.create({
+        data: {
+          amount: newTier.price,
+          description: `Subscription to ${newTier.name}`,
+          fromId: service.owners[0]?.userId ?? "",
+          toId: ctx.session.user.id ?? "",
+          status: BillingStatus.PAID,
+          paymentMethodId: paymentMethod.id,
+          subscriptionTierId: newTier.id,
+        },
+      });
 
       return { success: true };
     }),
@@ -983,6 +974,13 @@ export const serviceRouter = createTRPCRouter({
       }
 
       // 2) Validate payment method
+      if (paymentMethodId == subscription.paymentMethodId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payment method is the same as the current one",
+        });
+      }
+
       const paymentMethod = await ctx.db.paymentMethod.findUnique({
         where: { id: paymentMethodId },
       });
@@ -1005,6 +1003,7 @@ export const serviceRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
@@ -1036,6 +1035,51 @@ export const serviceRouter = createTRPCRouter({
         where: { id: subscription.id },
       });
 
+      // 3) (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
+
+      return { success: true };
+    }),
+
+  switchTier: protectedProcedure
+    .input(
+      z.object({
+        oldTierId: z.string(),
+        newTierId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { oldTierId, newTierId } = input;
+
+      // 1) Find the user's subscription
+      const subscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTierId: oldTierId,
+        },
+      });
+      if (!subscription) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Subscription not found for the given tier",
+        });
+      }
+
+      // 2) Validate the new tier
+      const newTier = await ctx.db.subscriptionTier.findUnique({
+        where: { id: newTierId },
+      });
+      if (!newTier) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "New tier not found",
+        });
+      }
+
+      // 3) Update the subscription with the new tier
+      await ctx.db.serviceConsumer.update({
+        where: { id: subscription.id },
+        data: { subscriptionTierId: newTier.id },
+      });
       // (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
 
       return { success: true };
@@ -1099,7 +1143,6 @@ export const serviceRouter = createTRPCRouter({
           },
         },
       });
-
       if (!service) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -1164,6 +1207,26 @@ export const serviceRouter = createTRPCRouter({
         reviewerName: ctx.session.user.name,
         ...rating,
       };
+    }),
+
+  getServiceConsumerByTierId: protectedProcedure
+    .input(z.object({ subscriptionTierId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const consumers = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          subscriptionTierId: input.subscriptionTierId,
+          userId: ctx.session.user.id,
+        },
+        include: {
+          subscriptionTier: {
+            include: {
+              service: true,
+            },
+          },
+        },
+      });
+
+      return consumers;
     }),
 
   createReviewReply: protectedProcedure
