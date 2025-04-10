@@ -111,6 +111,17 @@ const CredentialsPage = () => {
     }
   };
 
+  const { mutate: requestPasswordReset, isPending: isRequestingPasswordReset } =
+    api.user.requestPasswordReset.useMutation();
+
+  const onForgotPassword = () => {
+    if (session?.user?.email) {
+      toast.success("Verification code sent to your email");
+      requestPasswordReset({ email: session.user.email });
+      router.push("/reset-password?email=" + session?.user?.email!);
+    }
+  };
+
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6">
       <Card className="w-full shadow-lg">
@@ -191,6 +202,18 @@ const CredentialsPage = () => {
                                 </Button>
                               </div>
                             </FormControl>
+                            <div className="mt-1 flex justify-end">
+                              <Button
+                                variant="link"
+                                type="button"
+                                className="h-auto p-0 text-xs text-muted-foreground"
+                                onClick={() => {
+                                  onForgotPassword();
+                                }}
+                              >
+                                Forgot password?
+                              </Button>
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
