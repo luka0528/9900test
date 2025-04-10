@@ -102,9 +102,7 @@ export default function NavBar() {
               <DropdownMenuContent align="end" sideOffset={40} className="w-72">
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={() =>
-                    router.push(`/user/${String(session?.user?.id)}/profile`)
-                  }
+                  onClick={() => router.push(`/settings/profile`)}
                 >
                   <User className="h-4 w-4" />
                   Profile

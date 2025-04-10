@@ -151,7 +151,7 @@ export const AnalyticsChart = () => {
   });
 
   return (
-    <Card className="@container/card mx-4">
+    <Card className="@container/card my-4">
       <CardHeader className="relative">
         <CardTitle>Total Visitors</CardTitle>
         <CardDescription>

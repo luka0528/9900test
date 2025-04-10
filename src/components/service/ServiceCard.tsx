@@ -1,4 +1,5 @@
 import { Badge } from "~/components/ui/badge";
+import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardHeader,
@@ -34,8 +35,12 @@ export const ServiceCard = ({ service }: ServiceCardProps) => {
     isSubscribed,
   } = service;
 
+  const searchParams = useSearchParams();
   const navigateToService = () => {
-    router.push(`/service/${id}/${latestVersionId}`);
+    // Store current search params
+    const currentParams = searchParams.toString();
+    // Navigate to service details with search params in state
+    router.push(`/service/${id}/${latestVersionId}?${currentParams}`);
   };
 
   const navigateToServiceSettings = (

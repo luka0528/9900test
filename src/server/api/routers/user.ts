@@ -624,7 +624,21 @@ export const userRouter = createTRPCRouter({
 
   getBillingHistory: protectedProcedure.query(async ({ ctx }) => {
     const receipts = await ctx.db.billingReceipt.findMany({
-      where: { userId: ctx.session.user.id },
+      where: { toId: ctx.session.user.id },
+      include: {
+        from: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        to: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
       orderBy: { date: "desc" },
     });
     return receipts;
