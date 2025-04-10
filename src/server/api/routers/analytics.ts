@@ -146,6 +146,60 @@ export const analyticsRouter = createTRPCRouter({
     return 3250 + 0 * totalCustomers;
   }),
 
+  getNumCustomersPerServiceTier: protectedProcedure.query(async ({ ctx }) => {
+    const services = await ctx.db.service.findMany({
+      where: {
+        owners: {
+          some: {
+            id: ctx.session.user.id,
+          },
+        },
+      },
+      include: {
+        subscriptionTiers: {
+          include: {
+            consumers: true,
+          },
+        },
+      },
+    });
+
+    type SubscriptionTierInfo = {
+      tierName: string;
+      price: number;
+      customerCount: number;
+    };
+
+    const serviceToTiers = new Map<string, Array<SubscriptionTierInfo>>();
+
+    services.forEach((service) => {
+      const tiers = service.subscriptionTiers.map((tier) => ({
+        tierName: tier.name,
+        price: tier.price,
+        customerCount: tier.consumers.length,
+      }));
+
+      serviceToTiers.set(service.name, tiers);
+    });
+
+    // return serviceToTiers;
+
+    // Dummy data for testing
+    const dummyData = new Map<string, Array<SubscriptionTierInfo>>();
+    dummyData.set("Service A", [
+      { tierName: "Basic", price: 10, customerCount: 100 },
+      { tierName: "Pro", price: 20, customerCount: 10 },
+      { tierName: "Enterprise", price: 30, customerCount: 25 },
+    ]);
+    dummyData.set("Service B", [
+      { tierName: "Basic 2", price: 15, customerCount: 5 },
+      { tierName: "Pro 2", price: 25, customerCount: 3 },
+      { tierName: "Enterprise 2", price: 35, customerCount: 2 },
+    ]);
+
+    return dummyData;
+  }),
+
   getRevenueOverTimeByService: protectedProcedure.query(async ({ ctx }) => {
     const receipts = await ctx.db.billingReceipt.findMany({
       where: {
