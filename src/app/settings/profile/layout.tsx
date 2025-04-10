@@ -1,6 +1,6 @@
 "use client";
 
-import { EyeIcon, Package, PlusSquare, ReceiptText } from "lucide-react";
+import { EyeIcon, Package, ReceiptText, PlusSquare } from "lucide-react";
 import {
   DefaultSideBar,
   type SidebarItem,
