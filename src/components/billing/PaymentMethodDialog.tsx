@@ -129,7 +129,7 @@ const PaymentMethodDialog: React.FC<PaymentMethodDialogProps> = ({
                 variant="default"
                 onClick={() => {
                   if (session?.user?.id) {
-                    router.push(`/user/${session.user.id}/billing`);
+                    router.push(`/settings/billing`);
                   } else {
                     toast.error("User not authenticated");
                   }

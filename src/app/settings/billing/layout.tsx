@@ -25,7 +25,7 @@ export default function BillingLayout({
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
       <DefaultSideBar items={items} />
-      <main className="h-full flex-1 p-0">{children}</main>
+      <main className="h-full flex-1 p-0 overflow-y-auto">{children}</main>
     </div>
   );
 }
