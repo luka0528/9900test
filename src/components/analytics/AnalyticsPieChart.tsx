@@ -99,7 +99,8 @@ export const AnalyticsPieChart = () => {
 
     return (
       userServiceData
-        .get(currService)?.reduce((acc, curr) => acc + (curr.customerCount ?? 0), 0) ?? 0
+        .get(currService)
+        ?.reduce((acc, curr) => acc + (curr.customerCount ?? 0), 0) ?? 0
     );
   }, [currService, userServiceData]);
 
