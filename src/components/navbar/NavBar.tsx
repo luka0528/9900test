@@ -23,6 +23,7 @@ import { LogOut, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "~/lib/utils";
+import { ThemeToggle } from "~/components/theme/theme-toggle";
 
 const serviceNavigationItems = [
   {
@@ -87,6 +88,7 @@ export default function NavBar() {
         </NavigationMenu>
       </div>
       <div className="flex items-center justify-end gap-5">
+        <ThemeToggle />
         {session ? (
           <>
             <p className="text-lg font-medium">{session?.user?.name}</p>

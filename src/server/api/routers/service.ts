@@ -349,11 +349,57 @@ export const serviceRouter = createTRPCRouter({
           subscriptionTiers: {
             select: {
               id: true,
+              consumers: {
+                select: {
+                  userId: true,
+                },
+              },
               name: true,
               price: true,
               features: {
                 select: { feature: true },
               },
+            },
+          },
+          ratings: {
+            select: {
+              id: true,
+              consumer: {
+                select: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+              starValue: true,
+              content: true,
+              createdAt: true,
+              comments: {
+                select: {
+                  id: true,
+                  owner: {
+                    select: {
+                      user: {
+                        select: {
+                          id: true,
+                          name: true,
+                        },
+                      },
+                    },
+                  },
+                  content: true,
+                  createdAt: true,
+                },
+                orderBy: {
+                  createdAt: "desc",
+                },
+              },
+            },
+            orderBy: {
+              createdAt: "desc",
             },
           },
           owners: {
@@ -588,42 +634,35 @@ export const serviceRouter = createTRPCRouter({
           ? dates
           : [dates]
         : [];
+
+      // Define the order by logic based on sort parameter
       let orderBy: Prisma.ServiceOrderByWithRelationInput = {
         consumerEvents: {
           _count: "desc",
         },
       };
-      // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
-      if (sort == "Price-Desc") {
-        orderBy = {
-          subscriptionTiers: {
-            price: "desc",
-          },
-        } as Prisma.ServiceOrderByWithRelationInput;
-        // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
-      } else if (sort == "Price-Asc") {
-        orderBy = {
-          subscriptionTiers: {
-            price: "asc",
-          },
-        } as Prisma.ServiceOrderByWithRelationInput;
-        orderBy = {
-          createdAt: "asc",
-        } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort == "Old-to-New") {
+
+      // For price sorting, we'll handle it after the query
+      // Only set orderBy for non-price sorting options
+      if (sort === "New-to-Old") {
         orderBy = {
           createdAt: "desc",
-        } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort == "Last-Updated") {
+        };
+      } else if (sort === "Old-to-New") {
+        orderBy = {
+          createdAt: "asc",
+        };
+      } else if (sort === "Last-Updated") {
         orderBy = {
           updatedAt: "desc",
-        } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort == "Name-Asc") {
-        orderBy = { name: "asc" } as Prisma.ServiceOrderByWithRelationInput;
-      } else if (sort == "Name-Desc") {
-        orderBy = { name: "desc" } as Prisma.ServiceOrderByWithRelationInput;
+        };
+      } else if (sort === "Name-Asc") {
+        orderBy = { name: "asc" };
+      } else if (sort === "Name-Desc") {
+        orderBy = { name: "desc" };
       }
 
+      // Date filtering logic
       let dateFilter: Prisma.ServiceWhereInput = {};
       if (dates && dates.length > 0) {
         const dateConditions = processDates.map((yearStr) => {
@@ -642,6 +681,8 @@ export const serviceRouter = createTRPCRouter({
           OR: dateConditions,
         };
       }
+
+      // Build the where clause
       const whereClause: Prisma.ServiceWhereInput = {
         ...(search && {
           name: {
@@ -659,21 +700,71 @@ export const serviceRouter = createTRPCRouter({
               },
             },
           }),
-        // @Utsav TODO: Given the new pricing structure, we need to update this to account for all subscription tiers
-        ...(price &&
-          price.length == 2 && {
-            price: {
-              gte: parseFloat(price[0] ?? "0"),
-              lte: parseFloat(price[1] ?? MAX_FLOAT),
-            },
-          }),
         ...dateFilter,
       };
 
-      const services = await ctx.db.service.findMany({
+      // Handle price range filtering by looking at the minimum subscription tier price
+      if (price && price.length === 2) {
+        const minPrice = parseFloat(price[0] ?? "0");
+        const maxPrice = parseFloat(price[1] ?? MAX_FLOAT);
+
+        // First, get IDs of services that have at least one subscription tier within the price range
+        const servicesWithinPriceRange = await ctx.db.service.findMany({
+          where: {
+            subscriptionTiers: {
+              some: {
+                price: {
+                  gte: minPrice,
+                  lte: maxPrice,
+                },
+              },
+            },
+          },
+          select: {
+            id: true,
+            subscriptionTiers: {
+              select: {
+                price: true,
+              },
+              orderBy: {
+                price: "asc",
+              },
+            },
+          },
+        });
+
+        // Filter services that have their lowest subscription tier within the price range
+        const serviceIdsWithLowestTierInRange = servicesWithinPriceRange
+          .filter(
+            (service) =>
+              service.subscriptionTiers.length > 0 &&
+              service.subscriptionTiers[0] &&
+              service.subscriptionTiers[0].price >= minPrice &&
+              service.subscriptionTiers[0].price <= maxPrice,
+          )
+          .map((service) => service.id);
+
+        // Add this to the where clause
+        whereClause.id = {
+          in: serviceIdsWithLowestTierInRange,
+        };
+      }
+
+      // Query services with the where clause and order by (for non-price sorting)
+      let services = await ctx.db.service.findMany({
         where: whereClause,
         orderBy: orderBy,
         include: {
+          subscriptionTiers: {
+            orderBy: {
+              price: "asc",
+            },
+            select: {
+              id: true,
+              name: true,
+              price: true,
+            },
+          },
           versions: {
             orderBy: {
               version: "desc",
@@ -703,15 +794,34 @@ export const serviceRouter = createTRPCRouter({
           },
         },
         cursor: cursor ? { id: cursor } : undefined,
-        take: limit,
+        take: limit + 1, // Take one extra to determine if there's a next page
       });
 
-      console.log(JSON.stringify(services));
+      // Handle price-based sorting in memory
+      if (sort === "Price-Asc" || sort === "Price-Desc") {
+        services = services.sort((a, b) => {
+          const aPrice =
+            a.subscriptionTiers.length > 0
+              ? (a.subscriptionTiers[0]?.price ?? Infinity)
+              : Infinity;
+          const bPrice =
+            b.subscriptionTiers.length > 0
+              ? (b.subscriptionTiers[0]?.price ?? Infinity)
+              : Infinity;
 
-      const nextCursor = services.length > limit ? services.pop()?.id : null;
+          return sort === "Price-Asc" ? aPrice - bPrice : bPrice - aPrice;
+        });
+      }
+
+      const nextCursor = services.length > limit ? services[limit]?.id : null;
+
+      // Return only the requested number of services
+      if (services.length > limit) {
+        services = services.slice(0, limit);
+      }
+
       return { services, nextCursor };
     }),
-
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
@@ -951,6 +1061,359 @@ export const serviceRouter = createTRPCRouter({
       });
 
       return service;
+    }),
+
+  createReview: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string().min(1),
+        content: z.string(),
+        starValue: z.number().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure user is subscribed to this service and hasn't reviewed it already
+      const service = await ctx.db.service.findUnique({
+        where: { id: input.serviceId },
+        select: {
+          subscriptionTiers: {
+            where: {
+              consumers: {
+                some: {
+                  userId: ctx.session.user.id,
+                },
+              },
+            },
+          },
+          ratings: {
+            where: {
+              consumer: {
+                userId: ctx.session.user.id,
+              },
+            },
+          },
+          owners: {
+            where: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Service not found",
+        });
+      }
+
+      // These errors should never occur (due to frontend verifying this already)
+      if (service.owners.length >= 1) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot review your own service",
+        });
+      }
+      if (service.subscriptionTiers.length == 0) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot review a service that you are not subscribed to",
+        });
+      }
+
+      // Already reviewed
+      if (service.ratings.length >= 1) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You have already posted a review",
+        });
+      }
+
+      // Find the consumerId
+      const consumer = await ctx.db.serviceConsumer.findFirst({
+        select: {
+          id: true,
+        },
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTier: {
+            serviceId: input.serviceId,
+          },
+        },
+      });
+
+      if (!consumer) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You are not a service consumer",
+        });
+      }
+
+      // Post the review
+      const rating = await ctx.db.serviceRating.create({
+        data: {
+          starValue: input.starValue,
+          content: input.content,
+          serviceId: input.serviceId,
+          consumerId: consumer.id,
+        },
+      });
+
+      return {
+        reviewerId: ctx.session.user.id,
+        reviewerName: ctx.session.user.name,
+        ...rating,
+      };
+    }),
+
+  createReviewReply: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string().min(1),
+        reviewId: z.string().min(1),
+        content: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check that the current user owns the service (and get their ownerId)
+      const owner = await ctx.db.serviceOwner.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          serviceId: input.serviceId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!owner) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You are not a service owner",
+        });
+      }
+
+      // Create the reply
+      const review = await ctx.db.serviceComment.create({
+        data: {
+          ownerId: owner.id,
+          content: input.content,
+          ratingId: input.reviewId,
+        },
+      });
+
+      if (!review) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The review you are trying to reply to does not exist",
+        });
+      }
+
+      return {
+        replierId: ctx.session.user.id,
+        replierName: ctx.session.user.name,
+        ...review,
+      };
+    }),
+
+  editReview: protectedProcedure
+    .input(
+      z.object({
+        reviewId: z.string().min(1),
+        newContent: z.string().min(1),
+        newRating: z.number().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const reviewOwner = await ctx.db.serviceRating.findUnique({
+        where: {
+          id: input.reviewId,
+        },
+        select: {
+          consumer: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!reviewOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The review you are trying to edit does not exist",
+        });
+      }
+
+      if (reviewOwner.consumer.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot edit this review",
+        });
+      }
+
+      // Edit the review
+      const editedReview = await ctx.db.serviceRating.update({
+        where: {
+          id: input.reviewId,
+        },
+        data: {
+          content: input.newContent,
+          starValue: input.newRating,
+        },
+      });
+
+      return {
+        reviewerId: ctx.session.user.id,
+        reviewerName: ctx.session.user.name,
+        ...editedReview,
+      };
+    }),
+
+  deleteReview: protectedProcedure
+    .input(
+      z.object({
+        reviewId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const reviewOwner = await ctx.db.serviceRating.findUnique({
+        where: {
+          id: input.reviewId,
+        },
+        select: {
+          consumer: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!reviewOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The review you are trying to delete does not exist",
+        });
+      }
+
+      if (reviewOwner.consumer.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot delete this review",
+        });
+      }
+
+      // Delete the review
+      await ctx.db.serviceRating.delete({
+        where: {
+          id: input.reviewId,
+        },
+      });
+
+      return {
+        deleted: input.reviewId,
+      };
+    }),
+
+  editReviewReply: protectedProcedure
+    .input(
+      z.object({
+        commentId: z.string().min(1),
+        newContent: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const commentOwner = await ctx.db.serviceComment.findUnique({
+        where: {
+          id: input.commentId,
+        },
+        select: {
+          owner: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!commentOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The reply you are trying to edit does not exist",
+        });
+      }
+
+      if (commentOwner.owner.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot edit this reply",
+        });
+      }
+
+      // Edit the reply
+      const editedReply = await ctx.db.serviceComment.update({
+        where: {
+          id: input.commentId,
+        },
+        data: {
+          content: input.newContent,
+        },
+      });
+
+      return {
+        replierId: ctx.session.user.id,
+        replierName: ctx.session.user.name,
+        ...editedReply,
+      };
+    }),
+
+  deleteReviewReply: protectedProcedure
+    .input(
+      z.object({
+        commentId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ensure that the userId owns this review
+      const commentOwner = await ctx.db.serviceComment.findUnique({
+        where: {
+          id: input.commentId,
+        },
+        select: {
+          owner: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+
+      if (!commentOwner) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "The reply you are trying to delete does not exist",
+        });
+      }
+
+      if (commentOwner.owner.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You cannot delete this reply",
+        });
+      }
+
+      // Delete the reply
+      await ctx.db.serviceComment.delete({
+        where: {
+          id: input.commentId,
+        },
+      });
+
+      return { deleted: input.commentId };
     }),
 
   getRelatedServices: publicProcedure

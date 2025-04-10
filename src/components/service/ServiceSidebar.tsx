@@ -32,7 +32,7 @@ export function ServiceSidebar({ serviceId }: { serviceId: string }) {
     },
     {
       title: "Reviews",
-      url: "1",
+      url: `/service/${serviceId}/reviews`,
       icon: MessagesSquare,
     },
     {
