@@ -16,6 +16,7 @@ import {
   type topButtonType,
 } from "~/components/service/reviews/helper";
 import { toast } from "sonner";
+import { Separator } from "~/components/ui/separator";
 
 interface NewCard {
   isVisible: boolean;
@@ -321,6 +322,8 @@ export default function ReviewsPage() {
               replyId={null}
             />
           )}
+
+          {reviews.length == 0 && <Separator className="my-6" />}
 
           {/* Review cards */}
           <div className="w-full">
