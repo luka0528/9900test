@@ -19,6 +19,7 @@ import {
 import { Button } from "~/components/ui/button";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
 import type { SubscriptionTier } from "@prisma/client";
+import { toast } from "sonner";
 
 const SubscriptionsManagementPage: React.FC = () => {
   const { status } = useSession();
@@ -41,6 +42,9 @@ const SubscriptionsManagementPage: React.FC = () => {
     refetch,
   } = api.user.getUserSubscriptions.useQuery();
 
+  const deleteSubscriptionMutation =
+    api.service.deleteSubscription.useMutation();
+
   if (isLoading) {
     return (
       <div className="flex items-center space-x-2 p-4">
@@ -57,6 +61,14 @@ const SubscriptionsManagementPage: React.FC = () => {
   if (!subscriptionsData || subscriptionsData.subscriptions.length === 0) {
     return <div className="p-4">You have no subscriptions.</div>;
   }
+
+  const subscriptionStatusMap = {
+    ACTIVE: "Active",
+    EXPIRED: "Expired",
+    CANCELLED: "Cancelled",
+    PENDING_CANCELLATION: "Pending Cancellation",
+    PAYMENT_FAILED: "Payment Failed",
+  };
 
   return (
     <div className="container mx-auto mt-12 max-w-6xl space-y-6">
@@ -82,38 +94,81 @@ const SubscriptionsManagementPage: React.FC = () => {
             <TableBody>
               {subscriptionsData.subscriptions.map((subscription) => (
                 <TableRow key={subscription.subscriptionTier.id}>
-                  <TableCell>
+                  <TableCell className="text-[13.5px]">
                     {subscription.subscriptionTier.service.name || "N/A"}
                   </TableCell>
-                  <TableCell>{subscription.subscriptionTier.name}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-[13.5px]">
+                    {subscription.subscriptionTier.name}
+                  </TableCell>
+                  <TableCell className="text-[13.5px]">
                     {subscription.subscriptionTier.price !== 0
                       ? `$${subscription.subscriptionTier.price.toFixed(2)}`
                       : `Free`}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-[13.5px]">
                     {subscription.paymentMethod
                       ? subscription.paymentMethod.cardBrand
                         ? `**** **** **** ${subscription.paymentMethod.last4}`
                         : subscription.paymentMethod.stripePaymentId
                       : "N/A"}
                   </TableCell>
-                  <TableCell>{"TBA"}</TableCell>
-                  <TableCell>
-                    {/* For simplicity, assume active if a subscription exists */}
-                    Active
+                  <TableCell className="text-[13.5px]">
+                    {subscription.lastRenewed
+                      ? new Date(
+                          new Date(subscription.lastRenewed).setMonth(
+                            new Date(subscription.lastRenewed).getMonth() + 1,
+                          ),
+                        ).toLocaleDateString()
+                      : "N/A"}
                   </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedSubscription(subscription.subscriptionTier);
-                        setShowManageDialog(true);
-                      }}
-                    >
-                      Manage
-                    </Button>
+                  <TableCell className="text-[13.5px]">
+                    {subscriptionStatusMap[subscription.subscriptionStatus] ||
+                      "Unknown"}
+                  </TableCell>
+                  <TableCell className="text-[13.5px]">
+                    {/* manage subscription, restart subscription,  */}
+                    {subscription.subscriptionStatus === "ACTIVE" ? (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedSubscription(
+                            subscription.subscriptionTier,
+                          );
+                          setShowManageDialog(true);
+                        }}
+                      >
+                        Manage
+                      </Button>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => {
+                            router.push(
+                              `/service/${subscription.subscriptionTier.serviceId}/purchase`,
+                            );
+                          }}
+                        >
+                          {subscription.subscriptionStatus === "PAYMENT_FAILED"
+                            ? "Retry Payment"
+                            : "Renew"}
+                        </Button>
+
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            deleteSubscriptionMutation.mutate({
+                              subscriptionTierId: subscription.id,
+                            });
+                          }}
+                        >
+                          {"Delete"}
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
