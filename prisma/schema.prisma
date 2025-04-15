@@ -188,8 +188,8 @@ model ServiceConsumer {
   createdAt             DateTime            @default(now())
   
   renewingSubscription  Boolean             @default(false)
-  lastRenewed           DateTime?           @default(now())
-  subscriptionStartDate DateTime? 
+  lastRenewed           DateTime           @default(now())
+  subscriptionStartDate DateTime 
   subscriptionStatus    SubscriptionStatus  @default(ACTIVE)
 
   ratings               ServiceRating[]
@@ -201,10 +201,10 @@ model ServiceConsumer {
 
 enum SubscriptionStatus {
   ACTIVE
+  EXPIRED
+  CANCELLED
   PENDING_CANCELLATION
   PAYMENT_FAILED
-  CANCELLED
-  EXPIRED
 }
 
 // Notifications
