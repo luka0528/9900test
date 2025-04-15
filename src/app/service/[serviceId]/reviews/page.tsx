@@ -323,7 +323,16 @@ export default function ReviewsPage() {
             />
           )}
 
-          {reviews.length == 0 && <Separator className="my-6" />}
+          {reviews.length == 0 && (
+            <div className="w-full">
+              <Separator className="my-6" />
+              <div className="flex h-[60vh] items-center justify-center">
+                <span className="text-gray-400">
+                  No reviews have been posted
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Review cards */}
           <div className="w-full">
