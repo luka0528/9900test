@@ -190,12 +190,19 @@ model ServiceConsumer {
   renewingSubscription  Boolean           @default(false)
   lastRenewed           DateTime?         @default(now())
   subscriptionStartDate DateTime? 
+  subscriptionStatus   SubscriptionStatus @default(ACTIVE)
 
   ratings               ServiceRating[]
   events                ConsumerEvent[]
 
   paymentMethodId       String?
   paymentMethod         PaymentMethod?    @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PENDING
+  CANCELLED
 }
 
 // Notifications
