@@ -201,7 +201,8 @@ model ServiceConsumer {
 
 enum SubscriptionStatus {
   ACTIVE
-  PENDING
+  PAYMENT_FAILED
+  PENDING_CANCELLATION
   CANCELLED
 }
 
