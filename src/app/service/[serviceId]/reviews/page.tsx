@@ -338,7 +338,7 @@ export default function ReviewsPage() {
               <Separator className="my-6" />
               <div className="flex h-[60vh] items-center justify-center">
                 <span className="text-gray-400">
-                  No reviews have been posted
+                  No reviews have been posted yet
                 </span>
               </div>
             </div>
