@@ -21,8 +21,8 @@ model ServiceRating {
   id         String          @id @default(cuid())
   serviceId  String
   service    Service         @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  consumerId String?
-  consumer   ServiceConsumer? @relation(fields: [consumerId], references: [id])
+  consumerId String
+  consumer   ServiceConsumer @relation(fields: [consumerId], references: [id], onDelete: Cascade)
   starValue  Int
   content    String
   createdAt  DateTime        @default(now())
