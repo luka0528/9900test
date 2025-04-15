@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { RestMethod } from "@prisma/client";
+import { RestMethod, SubscriptionStatus } from "@prisma/client";
 
 import {
   createTRPCRouter,
@@ -1022,6 +1022,9 @@ export const serviceRouter = createTRPCRouter({
           userId: ctx.session.user.id,
           subscriptionTierId,
         },
+        include: {
+          subscriptionTier: true,
+        },
       });
       if (!subscription) {
         throw new TRPCError({
@@ -1030,12 +1033,55 @@ export const serviceRouter = createTRPCRouter({
         });
       }
 
-      // 2) Delete the subscription record
-      await ctx.db.serviceConsumer.delete({
+      // 2) Update the subscription record
+      await ctx.db.serviceConsumer.update({
         where: { id: subscription.id },
+        data: {
+          subscriptionStatus:
+            subscription.subscriptionTier.price !== 0
+              ? SubscriptionStatus.PENDING_CANCELLATION
+              : SubscriptionStatus.CANCELLED,
+        },
       });
 
       // 3) (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
+
+      return { success: true };
+    }),
+
+  deleteSubscription: protectedProcedure
+    .input(z.object({ subscriptionTierId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const { subscriptionTierId } = input;
+      // 1) Find the subscription
+      const subscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTierId,
+        },
+        include: {
+          subscriptionTier: true,
+        },
+      });
+      if (!subscription) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Subscription not found",
+        });
+      }
+
+      // 2) Check subscription isnt active
+      if (subscription.subscriptionStatus == SubscriptionStatus.ACTIVE) {
+        return {
+          success: false,
+          message: "Cannot delete an active subscription",
+        };
+      }
+
+      // 3) Delete the subscription record
+      await ctx.db.serviceConsumer.delete({
+        where: { id: subscription.id },
+      });
 
       return { success: true };
     }),
