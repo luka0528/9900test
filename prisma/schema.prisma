@@ -204,6 +204,7 @@ enum SubscriptionStatus {
   PENDING_CANCELLATION
   PAYMENT_FAILED
   CANCELLED
+  EXPIRED
 }
 
 // Notifications
