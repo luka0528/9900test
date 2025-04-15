@@ -18,8 +18,7 @@ import {
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
-import type { SubscriptionTier } from "@prisma/client";
-import { toast } from "sonner";
+import { SubscriptionStatus, type SubscriptionTier } from "@prisma/client";
 
 const SubscriptionsManagementPage: React.FC = () => {
   const { status } = useSession();
@@ -40,7 +39,9 @@ const SubscriptionsManagementPage: React.FC = () => {
     isLoading,
     error,
     refetch,
-  } = api.user.getUserSubscriptions.useQuery();
+  } = api.user.getUserSubscriptions.useQuery(undefined, {
+    refetchOnMount: "always",
+  });
 
   const deleteSubscriptionMutation =
     api.service.deleteSubscription.useMutation();
@@ -79,16 +80,24 @@ const SubscriptionsManagementPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>Service</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Payment Method</TableHead>
-                <TableHead>Next Billing Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead className="whitespace-nowrap">Service</TableHead>
+                <TableHead className="w-[120px] whitespace-nowrap">
+                  Tier
+                </TableHead>
+                <TableHead className="w-[100px] whitespace-nowrap">
+                  Price
+                </TableHead>
+                <TableHead className="whitespace-nowrap">
+                  Payment Method
+                </TableHead>
+                <TableHead className="w-[160px] whitespace-nowrap">
+                  Next Billing Date
+                </TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
+                <TableHead className="whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -118,7 +127,11 @@ const SubscriptionsManagementPage: React.FC = () => {
                           new Date(subscription.lastRenewed).setMonth(
                             new Date(subscription.lastRenewed).getMonth() + 1,
                           ),
-                        ).toLocaleDateString()
+                        ).toLocaleDateString(undefined, {
+                          year: "2-digit",
+                          month: "2-digit",
+                          day: "2-digit",
+                        })
                       : "N/A"}
                   </TableCell>
                   <TableCell className="text-[13.5px]">
@@ -127,10 +140,12 @@ const SubscriptionsManagementPage: React.FC = () => {
                   </TableCell>
                   <TableCell className="text-[13.5px]">
                     {/* manage subscription, restart subscription,  */}
-                    {subscription.subscriptionStatus === "ACTIVE" ? (
+                    {subscription.subscriptionStatus ===
+                    SubscriptionStatus.ACTIVE ? (
                       <Button
                         variant="default"
                         size="sm"
+                        className="w-3/4 max-w-[70px]"
                         onClick={() => {
                           setSelectedSubscription(
                             subscription.subscriptionTier,
@@ -141,10 +156,11 @@ const SubscriptionsManagementPage: React.FC = () => {
                         Manage
                       </Button>
                     ) : (
-                      <div className="flex flex-col gap-2">
+                      <>
                         <Button
                           variant="default"
                           size="sm"
+                          className="mr-2 w-3/4 max-w-[70px]"
                           onClick={() => {
                             router.push(
                               `/service/${subscription.subscriptionTier.serviceId}/purchase`,
@@ -155,19 +171,22 @@ const SubscriptionsManagementPage: React.FC = () => {
                             ? "Retry Payment"
                             : "Renew"}
                         </Button>
-
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            deleteSubscriptionMutation.mutate({
-                              subscriptionTierId: subscription.id,
-                            });
-                          }}
-                        >
-                          {"Delete"}
-                        </Button>
-                      </div>
+                        {subscription.subscriptionStatus ===
+                          SubscriptionStatus.CANCELLED && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="mt-2 w-3/4 max-w-[70px]"
+                            onClick={() => {
+                              deleteSubscriptionMutation.mutate({
+                                subscriptionTierId: subscription.id,
+                              });
+                            }}
+                          >
+                            {"Delete"}
+                          </Button>
+                        )}
+                      </>
                     )}
                   </TableCell>
                 </TableRow>
