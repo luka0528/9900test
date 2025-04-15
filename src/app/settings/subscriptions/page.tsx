@@ -87,7 +87,9 @@ const SubscriptionsManagementPage: React.FC = () => {
                   </TableCell>
                   <TableCell>{subscription.subscriptionTier.name}</TableCell>
                   <TableCell>
-                    ${subscription.subscriptionTier.price.toFixed(2)}
+                    {subscription.subscriptionTier.price !== 0
+                      ? `$${subscription.subscriptionTier.price.toFixed(2)}`
+                      : `Free`}
                   </TableCell>
                   <TableCell>
                     {subscription.paymentMethod
