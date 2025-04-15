@@ -180,22 +180,31 @@ model ServiceOwner {
 }
 
 model ServiceConsumer {
-  id                    String            @id @default(cuid())
+  id                    String              @id @default(cuid())
   userId                String
-  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscriptionTierId    String
-  subscriptionTier      SubscriptionTier  @relation(fields: [subscriptionTierId], references: [id], onDelete: Cascade)
-  createdAt             DateTime          @default(now())
+  subscriptionTier      SubscriptionTier    @relation(fields: [subscriptionTierId], references: [id], onDelete: Cascade)
+  createdAt             DateTime            @default(now())
   
-  renewingSubscription  Boolean           @default(false)
-  lastRenewed           DateTime?         @default(now())
-  subscriptionStartDate DateTime? 
+  renewingSubscription  Boolean             @default(false)
+  lastRenewed           DateTime            @default(now())
+  subscriptionStartDate DateTime            @default(now())
+  subscriptionStatus    SubscriptionStatus  @default(ACTIVE)
 
   ratings               ServiceRating[]
   events                ConsumerEvent[]
 
   paymentMethodId       String?
-  paymentMethod         PaymentMethod?    @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+  paymentMethod         PaymentMethod?      @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING_CANCELLATION
+  PAYMENT_FAILED
 }
 
 // Notifications
