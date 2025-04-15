@@ -624,9 +624,157 @@ export const userRouter = createTRPCRouter({
 
   getBillingHistory: protectedProcedure.query(async ({ ctx }) => {
     const receipts = await ctx.db.billingReceipt.findMany({
-      where: { userId: ctx.session.user.id },
+      where: { toId: ctx.session.user.id },
+      include: {
+        from: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        to: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
       orderBy: { date: "desc" },
     });
     return receipts;
   }),
+
+  isUserSubscribedToService: protectedProcedure
+    .input(
+      z.object({
+        serviceId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { serviceId } = input;
+
+      // 1) Find the user and their subscriptions, filtered by the requested serviceId
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        include: {
+          subscriptions: {
+            where: {
+              subscriptionTier: {
+                serviceId: serviceId,
+              },
+            },
+          },
+        },
+      });
+
+      // 2) If we find any matching subscriptions, user is subscribed
+      const isSubscribed = (user?.subscriptions.length ?? 0) > 0;
+
+      // 3) If subscribed, get the tier ID from the first subscription
+      let subscriptionTierId: string | null = null;
+      if (isSubscribed) {
+        subscriptionTierId = user?.subscriptions[0]?.subscriptionTierId ?? null;
+      }
+
+      return { isSubscribed, subscriptionTierId };
+    }),
+
+  getUserSubscriptions: protectedProcedure.query(async ({ ctx }) => {
+    // Ensure the user is authenticated
+    if (!ctx.session?.user?.id) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User not authenticated",
+      });
+    }
+
+    try {
+      // Fetch the user's subscriptions
+      const subscriptions = await ctx.db.serviceConsumer.findMany({
+        where: { userId: ctx.session.user.id },
+        include: {
+          subscriptionTier: {
+            include: {
+              service: {
+                include: {
+                  tags: true,
+                },
+              },
+            },
+          },
+          paymentMethod: true,
+        },
+      });
+
+      return { success: true, subscriptions };
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to fetch subscriptions",
+        cause: error,
+      });
+    }
+  }),
+
+  updateSubscriptionPaymentMethod: protectedProcedure
+    .input(
+      z.object({
+        subscriptionTierId: z.string(),
+        paymentMethodId: z.string(),
+        autoRenewal: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const {
+        subscriptionTierId,
+        paymentMethodId,
+        // autoRenewal
+      } = input;
+
+      // Fetch the subscription by filtering by userId and subscriptionTierId
+      const subscription = await ctx.db.serviceConsumer.findFirst({
+        where: {
+          userId: ctx.session.user.id,
+          subscriptionTierId: subscriptionTierId,
+        },
+        include: {
+          subscriptionTier: {
+            include: {
+              service: true,
+            },
+          },
+        },
+      });
+
+      if (!subscription) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Subscription not found",
+        });
+      }
+
+      // Check if the payment method exists and belongs to the user
+      const paymentMethod = await ctx.db.paymentMethod.findUnique({
+        where: { id: paymentMethodId },
+      });
+      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Payment method not found or does not belong to user",
+        });
+      }
+
+      // Update the subscription with the new payment method (and auto-renew if needed)
+      await ctx.db.serviceConsumer.update({
+        where: { id: subscription.id },
+        data: {
+          paymentMethodId,
+          // Uncomment below if your ServiceConsumer model has an autoRenew field:
+          // autoRenew: autoRenewal,
+        },
+      });
+
+      return { success: true };
+    }),
 });

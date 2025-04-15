@@ -1,10 +1,10 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
+import { ServiceCard } from "~/components/service/ServiceCard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,17 +21,19 @@ import {
 } from "~/components/ui/table";
 import { Separator } from "~/components/ui/separator";
 import {
-  Pencil,
   ChevronDown,
-  Heart,
-  HeartOff,
+  Ban,
+  CheckCircle,
   Loader2,
   MessageSquare,
   AlertTriangle,
+  HandPlatter,
+  FileText,
+  ChevronLeft,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
-import { useToast } from "~/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function ServicePage() {
   const { data: session } = useSession();
@@ -39,19 +41,36 @@ export default function ServicePage() {
   const serviceId = params.serviceId as string;
   const versionId = params.versionId as string;
   const router = useRouter();
-  const { toast } = useToast();
+  const utils = api.useUtils();
+  const searchParams = useSearchParams();
+  const isFromMarketplace = searchParams.get("fromMarketplace") === "true";
 
-  const [isSaved, setIsSaved] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState("");
+  const handleBackToSearch = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("fromMarketplace");
+    const queryString = params.toString();
 
-  // Fetch service data from backend
+    router.push(`/marketplace${queryString ? `?${queryString}` : ""}`);
+  };
+
   const {
     data: service,
     isLoading: serviceLoading,
     error: serviceError,
   } = api.service.getServiceMetadataById.useQuery({ serviceId });
 
-  // Fetch version data from backend
+  const { data: relatedServicesData, isLoading: relatedServicesLoading } =
+    api.service.getRelatedServices.useQuery(
+      {
+        currentServiceId: serviceId,
+        tags: service?.tags.map((tag) => tag.name) ?? [],
+        limit: 6,
+      },
+      {
+        enabled: !!service,
+      },
+    );
+
   const {
     data: versionData,
     isLoading: versionLoading,
@@ -60,48 +79,19 @@ export default function ServicePage() {
     versionId,
   });
 
-  // Tries to get latest version
-  useEffect(() => {
-    if (
-      service &&
-      !selectedVersion &&
-      service.versions &&
-      service.versions.length > 0
-    ) {
-      // Use the most recent version
-      const latestVersion =
-        service.versions[service.versions.length - 1]!.version;
-      setSelectedVersion(latestVersion);
-    }
-  }, [service, selectedVersion]);
-
-  // Handler for version selection
-  const handleVersionSelect = (version: string) => {
-    setSelectedVersion(version);
-  };
-
-  // Handle saving/favoriting service
-  const toggleSaveService = () => {
-    if (!session) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to save services",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Here you would call an API to save/unsave
-    setIsSaved(!isSaved);
-    toast({
-      title: isSaved ? "Removed from favorites" : "Added to favorites",
-      description: isSaved
-        ? "Service removed from your saved list"
-        : "Service added to your saved list",
+  const { mutate: updateDeprecated, isPending: isUpdatingDeprecated } =
+    api.version.updateDeprecated.useMutation({
+      onSuccess: () => {
+        toast.success("Version updated");
+        void utils.version.getDocumentationByVersionId.invalidate({
+          versionId,
+        });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
     });
-  };
 
-  // Show loading state
   if (serviceLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
@@ -110,8 +100,7 @@ export default function ServicePage() {
     );
   }
 
-  // Show error state
-  if (serviceError || !service) {
+  if (serviceError ?? !service) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="text-center">
@@ -133,46 +122,97 @@ export default function ServicePage() {
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
-      <ServiceSidebar />
+      <ServiceSidebar serviceId={serviceId} />
       <div className="flex h-full grow flex-col overflow-y-auto">
         <div className="p-6">
+          {/* Show button if we came from marketplace */}
+          {isFromMarketplace && (
+            <div className="mb-4">
+              <Button
+                variant="ghost"
+                onClick={handleBackToSearch}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back to Marketplace
+              </Button>
+            </div>
+          )}
+
           {/* Service Header with Name and Actions */}
           <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-3xl font-bold">{service.name}</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold">{service.name}</h1>
+              {versionData?.isDeprecated && (
+                <Badge variant="destructive">Deprecated</Badge>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <Button variant="secondary">
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Support
               </Button>
-              <Button
-                size="icon"
-                variant="secondary"
-                onClick={toggleSaveService}
-              >
-                {isSaved ? <HeartOff /> : <Heart />}
-              </Button>
-
-              {/* Only show edit button for service creator */}
               {session &&
                 service.owners.some(
                   (owner) => owner.user.id === session.user.id,
                 ) && (
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      router.push(`/service/${serviceId}/${versionId}/edit`)
-                    }
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">
+                        Edit
+                        <ChevronDown className="text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          router.push(`/service/${serviceId}/edit`)
+                        }
+                      >
+                        <HandPlatter className="h-4 w-4" />
+                        Edit service content
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          router.push(`/service/${serviceId}/${versionId}/edit`)
+                        }
+                      >
+                        <FileText className="h-4 w-4" />
+                        Edit version {versionData?.version} details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          updateDeprecated({
+                            versionId,
+                            isDeprecated: !versionData?.isDeprecated,
+                          })
+                        }
+                        disabled={isUpdatingDeprecated}
+                      >
+                        {isUpdatingDeprecated ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : versionData?.isDeprecated ? (
+                          <>
+                            <CheckCircle className="h-4 w-4" />
+                            Unmark as deprecated
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="h-4 w-4" />
+                            Mark as deprecated
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
 
-              {/* Version selector */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
-                    {selectedVersion || "Select Version"}
+                    {versionData?.version ?? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
                     <ChevronDown className="text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -180,10 +220,12 @@ export default function ServicePage() {
                   {service.versions.map((version) => (
                     <DropdownMenuItem
                       key={version.version}
-                      onClick={() => handleVersionSelect(version.version)}
+                      onClick={() =>
+                        router.push(`/service/${serviceId}/${version.id}`)
+                      }
                     >
                       {version.version}
-                      {version.version === selectedVersion && " (current)"}
+                      {version.version === versionData?.version && " (current)"}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -191,7 +233,6 @@ export default function ServicePage() {
             </div>
           </div>
 
-          {/* Tags */}
           <div className="mb-6 flex flex-wrap gap-2">
             {service.tags.map((tag) => (
               <Badge key={tag.id} variant="secondary">
@@ -200,7 +241,6 @@ export default function ServicePage() {
             ))}
           </div>
 
-          {/* Last updated info */}
           <div className="mb-4 text-sm text-muted-foreground">
             Last updated:{" "}
             {versionData?.createdAt
@@ -208,9 +248,8 @@ export default function ServicePage() {
               : "N/A"}
           </div>
 
-          {/* Service description */}
           <div className="mb-8">
-            {selectedVersion ? (
+            {versionData ? (
               versionLoading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -232,68 +271,88 @@ export default function ServicePage() {
 
           <Separator className="my-8" />
 
-          {/* Version Content */}
-          {selectedVersion ? (
-            versionLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : versionError ? (
-              <div className="rounded-md bg-destructive/10 p-4 text-center">
-                <p className="font-medium text-destructive">
-                  Error loading version content: {versionError.message}
-                </p>
-              </div>
-            ) : versionData?.contents ? (
-              <div className="space-y-10">
-                {versionData.contents.map((content, index) => (
-                  <div key={index} className="mb-10">
-                    <h2 className="mb-4 text-xl font-semibold">
-                      {content.title}
-                    </h2>
-
-                    {/* Content description */}
-                    <p className="mb-6">{content.description}</p>
-
-                    {/* If content has table rows, display them */}
-                    {content.rows && content.rows.length > 0 && (
-                      <div className="rounded-md border">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-1/3">
-                                Method/Code
-                              </TableHead>
-                              <TableHead>Description</TableHead>
+          {versionLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : versionError ? (
+            <div className="rounded-md bg-destructive/10 p-4 text-center">
+              <p className="font-medium text-destructive">
+                Error loading version content: {versionError.message}
+              </p>
+            </div>
+          ) : versionData?.contents ? (
+            <div className="space-y-10">
+              {versionData.contents.map((content, index) => (
+                <div key={index} className="mb-10">
+                  <h2 className="mb-4 text-xl font-semibold">
+                    {content.title}
+                  </h2>
+                  <p className="mb-6">{content.description}</p>
+                  {content.rows && content.rows.length > 0 && (
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-36">Method</TableHead>
+                            <TableHead>Route</TableHead>
+                            <TableHead>Description</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {content.rows.map((row) => (
+                            <TableRow key={row.id}>
+                              <TableCell>{row.method}</TableCell>
+                              <TableCell className="font-mono">
+                                {row.routeName}
+                              </TableCell>
+                              <TableCell>{row.description}</TableCell>
                             </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {content.rows.map((row) => (
-                              <TableRow key={row.id}>
-                                <TableCell className="font-mono">
-                                  {row.routeName}
-                                </TableCell>
-                                <TableCell>{row.description}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-10 text-center">
-                <p className="text-muted-foreground">
-                  No content available for this version
-                </p>
-              </div>
-            )
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="py-10 text-center">
               <p className="text-muted-foreground">
-                Select a version to view content
+                No content available for this version
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-6">
+          <Separator className="mb-8" />
+          <h2 className="mb-6 text-2xl font-bold">Related Services</h2>
+
+          {relatedServicesLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : relatedServicesData?.foundRelated ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {relatedServicesData.relatedServices.map((relatedService) => (
+                <ServiceCard
+                  key={relatedService.id}
+                  service={{
+                    id: relatedService.id,
+                    name: relatedService.name,
+                    owner: relatedService.owners[0]?.user.name ?? "",
+                    tags: relatedService.tags.map((tag) => tag.name),
+                    latestVersionId: relatedService.versions[0]?.id ?? "",
+                    latestVersion: relatedService.versions[0]?.version ?? "",
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <p>
+                {relatedServicesData?.message ?? "No related services found"}
               </p>
             </div>
           )}

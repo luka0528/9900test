@@ -4,6 +4,7 @@ import "~/styles/globals.css";
 import { Inter } from "next/font/google";
 import { type Metadata } from "next";
 import { Toaster } from "~/components/ui/sonner";
+import { ThemeProvider } from "~/components/theme/theme-provider";
 
 import { TRPCReactProvider } from "~/trpc/react";
 
@@ -24,8 +25,15 @@ export default function RootLayout({
     <html lang="en" className={`${inter.className}`}>
       <body>
         <TRPCReactProvider>
-          {children}
-          <Toaster />
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster />
+          </ThemeProvider>
         </TRPCReactProvider>
       </body>
     </html>

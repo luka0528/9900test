@@ -61,8 +61,8 @@ const BillingHistory: React.FC = () => {
         return sortOrder === "asc" ? aDate - bDate : bDate - aDate;
       } else {
         // Sorting by "to"
-        const aTo = a.to || "";
-        const bTo = b.to || "";
+        const aTo = a.to.name ?? "";
+        const bTo = b.to.name ?? "";
         return sortOrder === "asc"
           ? aTo.localeCompare(bTo)
           : bTo.localeCompare(aTo);
@@ -118,8 +118,8 @@ const BillingHistory: React.FC = () => {
         {sortedData.map((receipt) => (
           <TableRow key={receipt.id}>
             <TableCell>{new Date(receipt.date).toLocaleString()}</TableCell>
-            <TableCell>{receipt.from || "-"}</TableCell>
-            <TableCell>{receipt.to || "-"}</TableCell>
+            <TableCell>{receipt.from.name ?? "-"}</TableCell>
+            <TableCell>{receipt.to.name ?? "-"}</TableCell>
             <TableCell>{`$${receipt.amount}`}</TableCell>
             <TableCell>{receipt.description}</TableCell>
             <TableCell>
@@ -127,11 +127,11 @@ const BillingHistory: React.FC = () => {
                 {receipt.status}
               </Badge>
             </TableCell>
-            <TableCell>{receipt.automaticRenewal ? "Yes" : "No"}</TableCell>
+            <TableCell>{`Yes`}</TableCell>
             <TableCell>
-              {receipt.automaticRenewalDate
-                ? new Date(receipt.automaticRenewalDate).toLocaleString()
-                : "-"}
+              {new Date(
+                Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000,
+              ).toLocaleDateString()}
             </TableCell>
           </TableRow>
         ))}
