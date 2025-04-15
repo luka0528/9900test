@@ -134,6 +134,7 @@ export default function AddServicePage() {
         rows: content.rows.map((row) => ({
           routeName: row.routeName,
           description: row.description,
+          method: row.method,
         })),
       }));
 
