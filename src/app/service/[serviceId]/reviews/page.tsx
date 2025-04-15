@@ -84,7 +84,11 @@ export default function ReviewsPage() {
   const { mutate: deleteReview } = api.service.deleteReview.useMutation({
     onSuccess: (data) => {
       setReviews((prev) => prev.filter((review) => review.id !== data.deleted));
-      setTopButton("Add");
+      if (topButton === "EditSubbed") {
+        setTopButton("Add");
+      } else if (topButton === "EditUnsubbed") {
+        setTopButton(null);
+      }
       toast.success("Review deleted");
     },
     onError: (error) => {
@@ -210,15 +214,20 @@ export default function ReviewsPage() {
       } else if (
         service.subscriptionTiers.some((sub) =>
           sub.consumers.some((userId) => userId.userId === session.user.id),
-        ) &&
-        service.ratings.some(
-          (rater) => rater.consumer.user.id === session.user.id,
         )
       ) {
-        // Is subscribed and posted review before
+        // Has posted a review
         // TODO for future - make it so that the edit button at the top directly opens the modal
         // for subscribers who have already posted a review
-        setTopButton("Edit");
+        if (
+          service.subscriptionTiers.some((sub) =>
+            sub.consumers.some((userId) => userId.userId === session.user.id),
+          )
+        ) {
+          setTopButton("EditSubbed");
+        } else {
+          setTopButton("EditSubbed");
+        }
       } else if (
         service.subscriptionTiers.some((sub) =>
           sub.consumers.some((userId) => userId.userId === session.user.id),
@@ -293,8 +302,9 @@ export default function ReviewsPage() {
                   disabled={
                     topButton === null ||
                     topButton === "Owned" ||
-                    topButton === "Edit"
-                  } // Disable the add review button if not subbed
+                    topButton === "EditSubbed" ||
+                    topButton === "EditUnsubbed"
+                  } // Disable the add review button if not subbed/already posted
                   onClick={() => {
                     setNewCardData({
                       isVisible: true,
