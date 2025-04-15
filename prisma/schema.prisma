@@ -188,8 +188,8 @@ model ServiceConsumer {
   createdAt             DateTime            @default(now())
   
   renewingSubscription  Boolean             @default(false)
-  lastRenewed           DateTime           @default(now())
-  subscriptionStartDate DateTime 
+  lastRenewed           DateTime            @default(now())
+  subscriptionStartDate DateTime            @default(now())
   subscriptionStatus    SubscriptionStatus  @default(ACTIVE)
 
   ratings               ServiceRating[]
