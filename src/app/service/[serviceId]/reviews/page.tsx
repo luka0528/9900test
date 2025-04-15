@@ -212,8 +212,8 @@ export default function ReviewsPage() {
       if (!session) {
         setTopButton(null);
       } else if (
-        service.subscriptionTiers.some((sub) =>
-          sub.consumers.some((userId) => userId.userId === session.user.id),
+        service.ratings.some(
+          (rater) => rater.consumer.user.id === session.user.id,
         )
       ) {
         // Has posted a review
@@ -226,7 +226,7 @@ export default function ReviewsPage() {
         ) {
           setTopButton("EditSubbed");
         } else {
-          setTopButton("EditSubbed");
+          setTopButton("EditUnsubbed");
         }
       } else if (
         service.subscriptionTiers.some((sub) =>
