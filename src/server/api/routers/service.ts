@@ -859,6 +859,7 @@ export const serviceRouter = createTRPCRouter({
           owners: true,
         },
       });
+
       if (!service) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -889,29 +890,45 @@ export const serviceRouter = createTRPCRouter({
 
       if (existingSubscription) {
         if (existingSubscription.id === newTier.id) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Cannot subscribe to the same tier",
+          if (existingSubscription.subscriptionStatus === "ACTIVE") {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Cannot subscribe again to the same tier",
+            });
+          } else {
+            await ctx.db.serviceConsumer.update({
+              where: { id: existingSubscription.id },
+              data: {
+                subscriptionStatus: SubscriptionStatus.ACTIVE,
+                subscriptionTierId: newTier.id,
+                paymentMethodId: paymentMethodId,
+                renewingSubscription: autoRenewal,
+                subscriptionStartDate: new Date(),
+                lastRenewed: new Date(),
+              },
+            });
+          }
+        } else {
+          await ctx.db.serviceConsumer.update({
+            where: { id: existingSubscription.id },
+            data: {
+              subscriptionStatus: SubscriptionStatus.ACTIVE,
+              subscriptionTierId: newTier.id,
+              paymentMethodId: paymentMethodId,
+              lastRenewed: new Date(),
+              renewingSubscription: autoRenewal,
+              subscriptionStartDate: new Date(),
+            },
           });
         }
-        await ctx.db.serviceConsumer.update({
-          where: { id: existingSubscription.id },
-          data: {
-            subscriptionTierId: newTier.id,
-            paymentMethodId: paymentMethodId,
-            lastRenewed: new Date(),
-            renewingSubscription: autoRenewal,
-            subscriptionStartDate: new Date(),
-          },
-        });
       } else {
         await ctx.db.serviceConsumer.create({
           data: {
+            subscriptionStatus: SubscriptionStatus.ACTIVE,
             userId: ctx.session.user.id,
             subscriptionTierId: newTier.id,
             paymentMethodId: newTier.price ? paymentMethodId : undefined,
             renewingSubscription: autoRenewal,
-            subscriptionStartDate: new Date(),
           },
         });
       }
@@ -1037,6 +1054,7 @@ export const serviceRouter = createTRPCRouter({
       await ctx.db.serviceConsumer.update({
         where: { id: subscription.id },
         data: {
+          renewingSubscription: false,
           subscriptionStatus:
             subscription.subscriptionTier.price !== 0
               ? SubscriptionStatus.PENDING_CANCELLATION
