@@ -8,7 +8,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { createVerificationToken, verifyToken } from "~/lib/verification";
 import { sendVerificationEmail, sendPasswordResetEmail } from "~/lib/email";
-import { VerificationTokenType } from "@prisma/client";
+import { SubscriptionStatus, VerificationTokenType } from "@prisma/client";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -668,7 +668,10 @@ export const userRouter = createTRPCRouter({
       });
 
       // 2) If we find any matching subscriptions, user is subscribed
-      const isSubscribed = (user?.subscriptions.length ?? 0) > 0;
+      const isSubscribed =
+        (user?.subscriptions.length ?? 0) &&
+        user?.subscriptions[0]?.subscriptionStatus ===
+          SubscriptionStatus.ACTIVE;
 
       // 3) If subscribed, get the tier ID from the first subscription
       let subscriptionTierId: string | null = null;
