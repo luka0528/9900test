@@ -294,10 +294,10 @@ const SubscriptionsManagementPage: React.FC = () => {
         title="Delete Subscription"
         description="You are already cancelled. Would you also like to delete this service from your list?"
         onConfirm={async () => {
-          await deleteSubscriptionMutation.mutate({
-            subscriptionTierId: selectedSubscription?.subscriptionTierId || "",
+          await deleteSubscriptionMutation.mutateAsync({
+            subscriptionTierId: selectedSubscription?.subscriptionTierId ?? "",
           });
-          refetchSubscriptionData();
+          void refetchSubscriptionData();
           setShowDeleteConfirmModal(false);
         }}
         onCancel={() => {
