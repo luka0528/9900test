@@ -92,6 +92,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       await updatePaymentMethodMutation.mutateAsync({
         subscriptionTierId: subscriptionTier.id,
         paymentMethodId: selectedPaymentMethod,
+        autoRenewal: autoRenew,
         // autoRenewal: autoRenew, // Uncomment if your mutation accepts autoRenewal
       });
       toast.success("Payment method updated successfully.");
