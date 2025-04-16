@@ -669,7 +669,7 @@ export const userRouter = createTRPCRouter({
 
       // 2) If we find any matching subscriptions, user is subscribed
       const isSubscribed =
-        (user?.subscriptions.length ?? 0) &&
+        (user?.subscriptions.length ?? 0) > 0 &&
         user?.subscriptions[0]?.subscriptionStatus ===
           SubscriptionStatus.ACTIVE;
 
@@ -729,11 +729,7 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const {
-        subscriptionTierId,
-        paymentMethodId,
-        // autoRenewal
-      } = input;
+      const { subscriptionTierId, paymentMethodId, autoRenewal } = input;
 
       // Fetch the subscription by filtering by userId and subscriptionTierId
       const subscription = await ctx.db.serviceConsumer.findFirst({
@@ -773,8 +769,9 @@ export const userRouter = createTRPCRouter({
         where: { id: subscription.id },
         data: {
           paymentMethodId,
-          // Uncomment below if your ServiceConsumer model has an autoRenew field:
-          // autoRenew: autoRenewal,
+          ...(autoRenewal !== undefined && {
+            renewingSubscription: autoRenewal,
+          }),
         },
       });
 
