@@ -29,8 +29,9 @@ import { toast } from "sonner";
 const SubscriptionsManagementPage: React.FC = () => {
   const { status } = useSession();
   const router = useRouter();
-  const [selectedSubscription, setSelectedSubscription] =
-    useState<SubscriptionTier | null>(null);
+  const [selectedSubscription, setSelectedSubscription] = useState<
+    (ServiceConsumer & { subscriptionTier: SubscriptionTier }) | null
+  >(null);
   const [showManageDialog, setShowManageDialog] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
@@ -73,7 +74,7 @@ const SubscriptionsManagementPage: React.FC = () => {
           size="sm"
           className="w-3/4 max-w-[70px]"
           onClick={() => {
-            setSelectedSubscription(subscription.subscriptionTier);
+            setSelectedSubscription(subscription);
             setShowManageDialog(true);
           }}
         >
@@ -126,7 +127,7 @@ const SubscriptionsManagementPage: React.FC = () => {
           size="sm"
           className="w-3/4 max-w-[70px]"
           onClick={() => {
-            setSelectedSubscription(subscription.subscriptionTier);
+            setSelectedSubscription(subscription);
             setShowConfirmModal(true);
           }}
         >
@@ -250,7 +251,7 @@ const SubscriptionsManagementPage: React.FC = () => {
         <ManageSubscriptionDialog
           isOpen={showManageDialog}
           onClose={() => setShowManageDialog(false)}
-          subscriptionTier={selectedSubscription}
+          serviceConsumer={selectedSubscription}
           refetchSubscriptions={refetch}
         />
       )}

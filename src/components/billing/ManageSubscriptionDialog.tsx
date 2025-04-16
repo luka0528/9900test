@@ -12,24 +12,28 @@ import {
   AlertDialogAction,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
-import { CreditCard, Edit, Trash } from "lucide-react";
+import { CreditCard, Edit, Loader2, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import PaymentMethodDialog from "./PaymentMethodDialog";
 import TiersGrid from "./TiersGrid";
-import type { SubscriptionTier, PaymentMethod } from "@prisma/client";
+import type {
+  SubscriptionTier,
+  PaymentMethod,
+  ServiceConsumer,
+} from "@prisma/client";
 
 interface ManageSubscriptionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  subscriptionTier: SubscriptionTier; // The currently subscribed tier
+  serviceConsumer: ServiceConsumer & { subscriptionTier: SubscriptionTier };
   refetchSubscriptions: () => void;
 }
 
 const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   isOpen,
   onClose,
-  subscriptionTier,
+  serviceConsumer,
   refetchSubscriptions,
 }) => {
   // Local states
@@ -42,14 +46,9 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   >(null);
   const [selectedNewTier, setSelectedNewTier] = useState<string | null>(null);
 
-  // Query service details for this subscription
-  const { data: serviceConsumer, refetch: refetchServiceConsumer } =
-    api.service.getServiceConsumerByTierId.useQuery({
-      subscriptionTierId: subscriptionTier.id,
-    });
-
+  // Query service details; only run when the consumer is available
   const { data: service } = api.service.getServiceById.useQuery(
-    subscriptionTier.serviceId,
+    serviceConsumer.subscriptionTier.serviceId,
   );
 
   // Query saved payment methods
@@ -64,13 +63,11 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
 
   useEffect(() => {
     if (serviceConsumer) {
-      setSelectedNewTier(subscriptionTier.id);
-    }
-  }, [serviceConsumer, subscriptionTier]);
-
-  useEffect(() => {
-    if (serviceConsumer && serviceConsumer.paymentMethodId) {
-      setSelectedPaymentMethod(serviceConsumer.paymentMethodId);
+      setSelectedNewTier(serviceConsumer.subscriptionTier.id);
+      setAutoRenew(serviceConsumer.renewingSubscription);
+      if (serviceConsumer.paymentMethodId) {
+        setSelectedPaymentMethod(serviceConsumer.paymentMethodId);
+      }
     }
   }, [serviceConsumer]);
 
@@ -90,14 +87,13 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     }
     try {
       await updatePaymentMethodMutation.mutateAsync({
-        subscriptionTierId: subscriptionTier.id,
+        subscriptionTierId: serviceConsumer.subscriptionTier.id,
         paymentMethodId: selectedPaymentMethod,
         autoRenewal: autoRenew,
         // autoRenewal: autoRenew, // Uncomment if your mutation accepts autoRenewal
       });
       toast.success("Payment method updated successfully.");
       refetchSubscriptions();
-      await refetchServiceConsumer();
       setShowPaymentDialog(false);
     } catch {
       toast.error("Failed to update payment method.");
@@ -112,7 +108,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     }
     try {
       await switchTierMutation.mutateAsync({
-        oldTierId: subscriptionTier.id,
+        oldTierId: serviceConsumer.subscriptionTier.id,
         newTierId: selectedNewTier,
       });
       toast.success("Subscription tier updated successfully.");
@@ -128,7 +124,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   const handleCancelSubscription = async () => {
     try {
       await unsubscribeMutation.mutateAsync({
-        subscriptionTierId: subscriptionTier.id,
+        subscriptionTierId: serviceConsumer.subscriptionTier.id,
       });
       toast.success("Subscription cancelled successfully.");
       refetchSubscriptions();
@@ -149,8 +145,10 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
               Manage Subscription
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-gray-500">
-              Subscription for <strong>{subscriptionTier.name}</strong> at $
-              {subscriptionTier.price.toFixed(2)}. Next billing date: TBA.
+              Subscription for{" "}
+              <strong>{serviceConsumer.subscriptionTier.name}</strong> at $
+              {serviceConsumer.subscriptionTier.price.toFixed(2)}. Next billing
+              date: TBA.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -188,7 +186,10 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       {showPaymentDialog && serviceConsumer && (
         <PaymentMethodDialog
           isOpen={showPaymentDialog}
-          onClose={() => setShowPaymentDialog(false)}
+          onClose={() => {
+            setShowPaymentDialog(false);
+            setAutoRenew(true);
+          }}
           isSubscribed={true}
           subscriptionTier={serviceConsumer.subscriptionTier}
           paymentMethods={paymentMethods}
