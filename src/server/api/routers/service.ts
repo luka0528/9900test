@@ -1054,7 +1054,6 @@ export const serviceRouter = createTRPCRouter({
       await ctx.db.serviceConsumer.update({
         where: { id: subscription.id },
         data: {
-          renewingSubscription: false,
           subscriptionStatus:
             subscription.subscriptionTier.price !== 0
               ? SubscriptionStatus.PENDING_CANCELLATION
@@ -1603,6 +1602,41 @@ export const serviceRouter = createTRPCRouter({
           services.length > 0
             ? "Found related services"
             : "No related services found",
+      };
+    }),
+
+  resumeService: protectedProcedure
+    .input(z.object({ subscriptionTierId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const { subscriptionTierId } = input;
+      // 1) Find the subscription
+      const subscription = await ctx.db.serviceConsumer.findFirst({
+        where: { userId: ctx.session.user.id, subscriptionTierId },
+      });
+      if (!subscription) {
+        return {
+          success: false,
+          message: "Subscription not found",
+        };
+      }
+      // 2) Check subscription status
+      if (subscription.subscriptionStatus !== "PENDING_CANCELLATION") {
+        return {
+          success: false,
+          message: "Subscription is not in a cancellable state",
+        };
+      }
+      // 3) Update subscription status
+      await ctx.db.serviceConsumer.update({
+        where: { userId: ctx.session.user.id, id: subscription.id },
+        data: {
+          subscriptionStatus: SubscriptionStatus.ACTIVE,
+        },
+      });
+
+      return {
+        success: true,
+        message: "Subscription resumed successfully",
       };
     }),
 });
