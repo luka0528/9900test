@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Button } from "~/components/ui/button";
+import { Button, GlowingButton } from "~/components/ui/button";
 import {
   Form,
   FormControl,
@@ -313,7 +313,10 @@ export default function AddServicePage() {
     <div className="flex h-full w-full xl:max-w-[96rem]">
       <GoBackSideBar />
       <div className="flex h-full grow flex-col overflow-y-auto p-6">
-        <h1 className="mb-6 text-2xl font-bold">Create New Service</h1>
+        <div className="flex items-center justify-between mb-6 mr-2">
+          <h1 className="text-2xl font-bold">Create New Service</h1>
+          <GlowingButton variant="secondary">Auto Generate</GlowingButton>
+        </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
