@@ -91,6 +91,7 @@ export default function ApiTesterPage() {
   const [versions, setVersions] = useState<{ id: string; version: string }[]>(
     [],
   );
+  const [bodyEnabled, setBodyEnabled] = useState<boolean>(true);
 
   // API Call Reference
   const [serviceRoutes, setServiceRoutes] = useState<any[]>([]);
@@ -140,6 +141,15 @@ export default function ApiTesterPage() {
       }
     }
   }, [serviceData, selectedVersion]);
+
+  useEffect(() => {
+    if (method === "GET") {
+      setBody("");
+      setBodyEnabled(false);
+    } else if (!bodyEnabled && ["POST", "PUT", "PATCH"].includes(method)) {
+      setBodyEnabled(true);
+    }
+  }, [method]);
 
   // Add row functions
   const addHeader = () => {
@@ -390,12 +400,12 @@ export default function ApiTesterPage() {
                     disabled={isLoading || !url.trim()}
                     className="w-24"
                   >
+                    Test
                     {isLoading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <ArrowRightCircle className="mr-2 h-4 w-4" />
+                      <ArrowRightCircle className="h-4 w-4" />
                     )}
-                    Send
                   </Button>
                 </div>
 
@@ -579,15 +589,87 @@ export default function ApiTesterPage() {
 
                   {/* Body Tab */}
                   <TabsContent value="body" className="pt-4">
-                    <Textarea
-                      placeholder={`{
+                    <div className="mb-2 rounded-md border">
+                      <div className="flex items-center bg-muted/50 p-2">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="body-enabled"
+                            checked={bodyEnabled}
+                            onChange={(e) => setBodyEnabled(e.target.checked)}
+                            disabled={method === "GET"}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <label
+                            htmlFor="body-enabled"
+                            className={`font-medium ${method === "GET" ? "text-muted-foreground" : ""}`}
+                          >
+                            Request Body
+                          </label>
+                        </div>
+                        {method === "GET" && (
+                          <div className="ml-2 flex items-center text-xs text-muted-foreground">
+                            <Info className="mr-1 h-3 w-3" />
+                            GET requests don't include a request body
+                          </div>
+                        )}
+                        {bodyEnabled && !method.includes("GET") && (
+                          <div className="ml-auto">
+                            <Badge variant="outline" className="text-xs">
+                              Content-Type: application/json
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+
+                      <Textarea
+                        placeholder={
+                          method === "GET"
+                            ? "GET requests don't include a request body"
+                            : `{
   "name": "value",
   "example": true
-}`}
-                      value={body}
-                      onChange={(e) => setBody(e.target.value)}
-                      className="h-60 resize-none font-mono"
-                    />
+}`
+                        }
+                        value={body}
+                        onChange={(e) => setBody(e.target.value)}
+                        className="h-60 resize-none rounded-none border-0 font-mono focus-visible:ring-0 focus-visible:ring-offset-0"
+                        disabled={method === "GET" || !bodyEnabled}
+                      />
+                    </div>
+
+                    {/* Additional help text */}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        {method === "GET"
+                          ? "Use query parameters instead of body for GET requests."
+                          : bodyEnabled
+                            ? "Enter JSON data for your request body."
+                            : "Enable the checkbox to add a request body."}
+                      </span>
+                      {bodyEnabled && !method.includes("GET") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            try {
+                              const formatted = JSON.stringify(
+                                JSON.parse(body),
+                                null,
+                                2,
+                              );
+                              setBody(formatted);
+                              toast.success("JSON formatted");
+                            } catch (error) {
+                              toast.error("Invalid JSON");
+                            }
+                          }}
+                          className="h-6 text-xs"
+                        >
+                          Format JSON
+                        </Button>
+                      )}
+                    </div>
                   </TabsContent>
                 </Tabs>
               </div>
