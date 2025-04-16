@@ -18,7 +18,13 @@ import {
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
-import { SubscriptionStatus, type SubscriptionTier } from "@prisma/client";
+import {
+  ServiceConsumer,
+  SubscriptionStatus,
+  type SubscriptionTier,
+} from "@prisma/client";
+import ConfirmModal from "~/components/billing/ConfirmDialog";
+import { toast } from "sonner";
 
 const SubscriptionsManagementPage: React.FC = () => {
   const { status } = useSession();
@@ -26,6 +32,7 @@ const SubscriptionsManagementPage: React.FC = () => {
   const [selectedSubscription, setSelectedSubscription] =
     useState<SubscriptionTier | null>(null);
   const [showManageDialog, setShowManageDialog] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -46,6 +53,103 @@ const SubscriptionsManagementPage: React.FC = () => {
   const deleteSubscriptionMutation =
     api.service.deleteSubscription.useMutation();
 
+  const resumeServiceMutation = api.service.resumeService.useMutation();
+
+  const subscriptionStatusMap = {
+    ACTIVE: "Active",
+    EXPIRED: "Expired",
+    CANCELLED: "Cancelled",
+    PENDING_CANCELLATION: "Pending Cancellation",
+    PAYMENT_FAILED: "Payment Failed",
+  };
+
+  const serviceAction = (
+    subscription: ServiceConsumer & { subscriptionTier: SubscriptionTier },
+  ) => {
+    if (subscription.subscriptionStatus === SubscriptionStatus.ACTIVE) {
+      return (
+        <Button
+          variant="default"
+          size="sm"
+          className="w-3/4 max-w-[70px]"
+          onClick={() => {
+            setSelectedSubscription(subscription.subscriptionTier);
+            setShowManageDialog(true);
+          }}
+        >
+          Manage
+        </Button>
+      );
+    } else if (
+      subscription.subscriptionStatus === SubscriptionStatus.CANCELLED ||
+      subscription.subscriptionStatus === SubscriptionStatus.PAYMENT_FAILED
+    ) {
+      return (
+        <>
+          <Button
+            variant="default"
+            size="sm"
+            className="mr-2 w-3/4 max-w-[70px]"
+            onClick={() => {
+              router.push(
+                `/service/${subscription.subscriptionTier.serviceId}/purchase`,
+              );
+            }}
+          >
+            {subscription.subscriptionStatus === "PAYMENT_FAILED"
+              ? "Retry Payment"
+              : "Renew"}
+          </Button>
+          {subscription.subscriptionStatus === SubscriptionStatus.CANCELLED && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="mt-2 w-3/4 max-w-[70px]"
+              onClick={() => {
+                deleteSubscriptionMutation.mutate({
+                  subscriptionTierId: subscription.id,
+                });
+              }}
+            >
+              {"Delete"}
+            </Button>
+          )}
+        </>
+      );
+    } else if (
+      subscription.subscriptionStatus ===
+      SubscriptionStatus.PENDING_CANCELLATION
+    ) {
+      return (
+        <Button
+          variant="default"
+          size="sm"
+          className="w-3/4 max-w-[70px]"
+          onClick={() => {
+            setSelectedSubscription(subscription.subscriptionTier);
+            setShowConfirmModal(true);
+          }}
+        >
+          Resume
+        </Button>
+      );
+    }
+  };
+
+  const handleServiceResume = async () => {
+    if (!selectedSubscription) return;
+    try {
+      await resumeServiceMutation.mutateAsync({
+        subscriptionTierId: selectedSubscription.id,
+      });
+      refetch();
+      toast.success("Subscription resumed successfully.");
+    } catch (error) {
+      console.error("Error resuming service:", error);
+      toast.error("Failed to resume subscription.");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center space-x-2 p-4">
@@ -63,14 +167,6 @@ const SubscriptionsManagementPage: React.FC = () => {
     return <div className="p-4">You have no subscriptions.</div>;
   }
 
-  const subscriptionStatusMap = {
-    ACTIVE: "Active",
-    EXPIRED: "Expired",
-    CANCELLED: "Cancelled",
-    PENDING_CANCELLATION: "Pending Cancellation",
-    PAYMENT_FAILED: "Payment Failed",
-  };
-
   return (
     <div className="container mx-auto mt-12 max-w-6xl space-y-6">
       <Card>
@@ -84,18 +180,17 @@ const SubscriptionsManagementPage: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="whitespace-nowrap">Service</TableHead>
-                <TableHead className="w-[120px] whitespace-nowrap">
+                <TableHead className="w-[100px] whitespace-nowrap">
                   Tier
                 </TableHead>
-                <TableHead className="w-[100px] whitespace-nowrap">
+                <TableHead className="w-[80px] whitespace-nowrap">
                   Price
                 </TableHead>
-                <TableHead className="whitespace-nowrap">
+                <TableHead className="w-[140px] whitespace-nowrap">
                   Payment Method
                 </TableHead>
-                <TableHead className="w-[160px] whitespace-nowrap">
-                  Next Billing Date
-                </TableHead>
+                <TableHead className="w-[130px]">Next Billing Date</TableHead>
+                <TableHead>Auto Renewal</TableHead>
                 <TableHead className="whitespace-nowrap">Status</TableHead>
                 <TableHead className="whitespace-nowrap">Actions</TableHead>
               </TableRow>
@@ -122,7 +217,7 @@ const SubscriptionsManagementPage: React.FC = () => {
                       : "N/A"}
                   </TableCell>
                   <TableCell className="text-[13.5px]">
-                    {subscription.lastRenewed
+                    {subscription.renewingSubscription
                       ? new Date(
                           new Date(subscription.lastRenewed).setMonth(
                             new Date(subscription.lastRenewed).getMonth() + 1,
@@ -135,59 +230,14 @@ const SubscriptionsManagementPage: React.FC = () => {
                       : "N/A"}
                   </TableCell>
                   <TableCell className="text-[13.5px]">
+                    {subscription.renewingSubscription ? "Yes" : "No"}
+                  </TableCell>
+                  <TableCell className="text-[13.5px]">
                     {subscriptionStatusMap[subscription.subscriptionStatus] ||
                       "Unknown"}
                   </TableCell>
                   <TableCell className="text-[13.5px]">
-                    {/* manage subscription, restart subscription,  */}
-                    {subscription.subscriptionStatus ===
-                    SubscriptionStatus.ACTIVE ? (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="w-3/4 max-w-[70px]"
-                        onClick={() => {
-                          setSelectedSubscription(
-                            subscription.subscriptionTier,
-                          );
-                          setShowManageDialog(true);
-                        }}
-                      >
-                        Manage
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="mr-2 w-3/4 max-w-[70px]"
-                          onClick={() => {
-                            router.push(
-                              `/service/${subscription.subscriptionTier.serviceId}/purchase`,
-                            );
-                          }}
-                        >
-                          {subscription.subscriptionStatus === "PAYMENT_FAILED"
-                            ? "Retry Payment"
-                            : "Renew"}
-                        </Button>
-                        {subscription.subscriptionStatus ===
-                          SubscriptionStatus.CANCELLED && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="mt-2 w-3/4 max-w-[70px]"
-                            onClick={() => {
-                              deleteSubscriptionMutation.mutate({
-                                subscriptionTierId: subscription.id,
-                              });
-                            }}
-                          >
-                            {"Delete"}
-                          </Button>
-                        )}
-                      </>
-                    )}
+                    {serviceAction(subscription)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -204,6 +254,19 @@ const SubscriptionsManagementPage: React.FC = () => {
           refetchSubscriptions={refetch}
         />
       )}
+
+      <ConfirmModal
+        open={showConfirmModal}
+        title="Resume Subscription"
+        description="Are you sure you want to resume this subscription?"
+        onConfirm={() => {
+          handleServiceResume();
+          setShowConfirmModal(false);
+        }}
+        onCancel={() => {
+          setShowConfirmModal(false);
+        }}
+      />
     </div>
   );
 };
