@@ -43,15 +43,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
 
 // HTTP method types
-const HTTP_METHODS = [
-  "GET",
-  "POST",
-  "PUT",
-  "DELETE",
-  "PATCH",
-  "OPTIONS",
-  "HEAD",
-] as const;
+const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"] as const;
 type HttpMethod = (typeof HTTP_METHODS)[number];
 
 // Response interface
@@ -344,7 +336,9 @@ export default function ApiTesterPage() {
           <Card className="w-full shadow">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-2xl font-bold">API Tester</CardTitle>
+                <CardTitle className="text-2xl font-bold">
+                  {serviceData?.name} API Tester
+                </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -777,10 +771,10 @@ export default function ApiTesterPage() {
                     .map((route, index) => (
                       <Card
                         key={index}
-                        className="cursor-pointer p-4 hover:bg-muted/50"
+                        className="cursor-pointer p-2 hover:bg-muted/50"
                         onClick={() => handleSelectRoute(route)}
                       >
-                        <div className="mb-2 flex items-center justify-between">
+                        <div className="justify-flex-start flex items-center space-x-2">
                           <Badge
                             className={(() => {
                               switch (route.method) {
@@ -801,16 +795,10 @@ export default function ApiTesterPage() {
                           >
                             {route.method}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            v{route.version}
-                          </span>
+                          <p className="break-all font-mono text-sm">
+                            {route.route}
+                          </p>
                         </div>
-                        <p className="mb-2 break-all font-mono text-xs">
-                          {route.route}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {route.description}
-                        </p>
                       </Card>
                     ))}
                 </div>
