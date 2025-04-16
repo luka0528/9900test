@@ -1,1 +1,834 @@
-// hey
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { api } from "~/trpc/react";
+import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import { Badge } from "~/components/ui/badge";
+import { Textarea } from "~/components/ui/textarea";
+import {
+  ArrowRightCircle,
+  BookOpen,
+  ChevronRight,
+  Clock,
+  FileJson,
+  FileText,
+  Info,
+  Loader2,
+  Plus,
+  Trash,
+  AlertTriangle,
+} from "lucide-react";
+import { ScrollArea } from "~/components/ui/scroll-area";
+import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { ServiceSidebar } from "~/components/service/ServiceSidebar";
+
+// HTTP method types
+const HTTP_METHODS = [
+  "GET",
+  "POST",
+  "PUT",
+  "DELETE",
+  "PATCH",
+  "OPTIONS",
+  "HEAD",
+] as const;
+type HttpMethod = (typeof HTTP_METHODS)[number];
+
+// Response interface
+interface ApiResponse {
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  data: any;
+  time: number;
+  size: number;
+}
+
+// KeyValue interface for headers and params
+interface KeyValue {
+  key: string;
+  value: string;
+  enabled: boolean;
+  id: string;
+}
+
+export default function ApiTesterPage() {
+  const params = useParams();
+  const serviceId = params.serviceId as string;
+
+  // Get service documentation for reference
+  const { data: serviceData, isLoading: isLoadingService } =
+    api.service.getServiceById.useQuery(serviceId);
+
+  // State
+  const [url, setUrl] = useState<string>("");
+  const [method, setMethod] = useState<HttpMethod>("GET");
+  const [headers, setHeaders] = useState<KeyValue[]>([
+    { key: "", value: "", enabled: true, id: crypto.randomUUID() },
+  ]);
+  const [queryParams, setQueryParams] = useState<KeyValue[]>([
+    { key: "", value: "", enabled: true, id: crypto.randomUUID() },
+  ]);
+  const [body, setBody] = useState<string>("");
+  const [response, setResponse] = useState<ApiResponse | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<string>("params");
+  const [responseTab, setResponseTab] = useState<string>("body");
+  const [showReferencePanel, setShowReferencePanel] = useState<boolean>(false);
+  const [selectedVersion, setSelectedVersion] = useState<string>("");
+  const [versions, setVersions] = useState<{ id: string; version: string }[]>(
+    [],
+  );
+
+  // API Call Reference
+  const [serviceRoutes, setServiceRoutes] = useState<any[]>([]);
+
+  // Extract API routes from service data
+  useEffect(() => {
+    if (
+      serviceData &&
+      serviceData.versions &&
+      serviceData.versions.length > 0
+    ) {
+      const routes: any[] = [];
+      // Extract unique versions
+      const uniqueVersions = serviceData.versions.map((version) => ({
+        id: version.id,
+        version: version.version,
+      }));
+
+      setVersions(uniqueVersions);
+
+      // Set initial selected version to latest version
+      if (uniqueVersions.length > 0 && !selectedVersion) {
+        setSelectedVersion(uniqueVersions[0]!.version);
+      }
+
+      serviceData.versions.forEach((version) => {
+        if (version.contents) {
+          version.contents.forEach((content) => {
+            if (content.rows) {
+              content.rows.forEach((row) => {
+                routes.push({
+                  method: row.method,
+                  route: row.routeName,
+                  description: row.description,
+                  version: version.version,
+                });
+              });
+            }
+          });
+        }
+      });
+
+      setServiceRoutes(routes);
+      // If we have routes, show the reference panel by default
+      if (routes.length > 0) {
+        setShowReferencePanel(true);
+      }
+    }
+  }, [serviceData, selectedVersion]);
+
+  // Add row functions
+  const addHeader = () => {
+    setHeaders([
+      ...headers,
+      { key: "", value: "", enabled: true, id: crypto.randomUUID() },
+    ]);
+  };
+
+  const addParam = () => {
+    setQueryParams([
+      ...queryParams,
+      { key: "", value: "", enabled: true, id: crypto.randomUUID() },
+    ]);
+  };
+
+  // Remove row functions
+  const removeHeader = (id: string) => {
+    setHeaders(headers.filter((h) => h.id !== id));
+  };
+
+  const removeParam = (id: string) => {
+    setQueryParams(queryParams.filter((p) => p.id !== id));
+  };
+
+  // Update row functions
+  const updateHeader = (
+    id: string,
+    key: string,
+    value: string,
+    enabled: boolean,
+  ) => {
+    setHeaders(
+      headers.map((h) => (h.id === id ? { ...h, key, value, enabled } : h)),
+    );
+  };
+
+  const updateParam = (
+    id: string,
+    key: string,
+    value: string,
+    enabled: boolean,
+  ) => {
+    setQueryParams(
+      queryParams.map((p) => (p.id === id ? { ...p, key, value, enabled } : p)),
+    );
+  };
+
+  // Formatting helpers
+  const formatJSON = (json: any): string => {
+    try {
+      return JSON.stringify(json, null, 2);
+    } catch (_) {
+      return String(json);
+    }
+  };
+
+  const getStatusColor = (status: number): string => {
+    if (status >= 200 && status < 300) return "bg-green-500";
+    if (status >= 300 && status < 400) return "bg-blue-500";
+    if (status >= 400 && status < 500) return "bg-yellow-500";
+    if (status >= 500) return "bg-red-500";
+    return "bg-gray-500";
+  };
+
+  // Handle API call
+  const handleSendRequest = async () => {
+    if (!url.trim()) {
+      toast.error("Please enter a URL");
+      return;
+    }
+
+    setIsLoading(true);
+    setResponse(null);
+
+    try {
+      // Build request URL with params
+      let requestUrl = url;
+      const enabledParams = queryParams.filter((p) => p.enabled && p.key);
+      if (enabledParams.length > 0) {
+        const queryString = enabledParams
+          .map(
+            (p) =>
+              `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`,
+          )
+          .join("&");
+        requestUrl = `${requestUrl}${requestUrl.includes("?") ? "&" : "?"}${queryString}`;
+      }
+
+      // Build headers
+      const requestHeaders: Record<string, string> = {};
+      headers
+        .filter((h) => h.enabled && h.key)
+        .forEach((h) => {
+          requestHeaders[h.key] = h.value;
+        });
+
+      // Prepare request options
+      const options: RequestInit = {
+        method,
+        headers: requestHeaders,
+      };
+
+      // Add body for methods that support it
+      if (["POST", "PUT", "PATCH"].includes(method) && body) {
+        try {
+          // Try to parse as JSON first
+          JSON.parse(body);
+          options.headers = {
+            ...options.headers,
+            "Content-Type": "application/json",
+          };
+          options.body = body;
+        } catch (_) {
+          // If not valid JSON, send as text
+          options.body = body;
+        }
+      }
+
+      // Measure time
+      const startTime = performance.now();
+
+      // Send request
+      const response = await fetch(requestUrl, options);
+
+      // Calculate timing
+      const endTime = performance.now();
+      const responseTime = endTime - startTime;
+
+      // Get response data
+      let responseData;
+      const responseText = await response.text();
+      const responseSize = new Blob([responseText]).size;
+
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = responseText;
+      }
+
+      // Get response headers
+      const responseHeaders: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        responseHeaders[key] = value;
+      });
+
+      // Set the response
+      setResponse({
+        status: response.status,
+        statusText: response.statusText,
+        headers: responseHeaders,
+        data: responseData,
+        time: Math.round(responseTime),
+        size: responseSize,
+      });
+    } catch (error) {
+      toast.error("Request failed", {
+        description:
+          (error as Error)?.message ||
+          "An error occurred while making the request",
+      });
+
+      setResponse({
+        status: 0,
+        statusText: "Error",
+        headers: {},
+        data: { error: (error as Error)?.message || "Request failed" },
+        time: 0,
+        size: 0,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Pre-fill URL from service route
+  const handleSelectRoute = (route: any) => {
+    setUrl(route.route);
+    setMethod(route.method as HttpMethod);
+  };
+
+  // Has API reference data?
+  const hasApiReference = serviceRoutes.length > 0;
+
+  return (
+    <div className="flex h-full w-full">
+      {/* Left sidebar */}
+      <ServiceSidebar serviceId={serviceId} />
+
+      {/* Main content area */}
+      <div className="flex-grow overflow-y-auto p-4">
+        <div className="flex flex-col space-y-6">
+          {/* API Tester Card */}
+          <Card className="w-full shadow">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-2xl font-bold">API Tester</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col space-y-4">
+                {/* URL and Method Row */}
+                <div className="flex gap-2">
+                  <div className="w-[140px]">
+                    <Select
+                      value={method}
+                      onValueChange={(value) => setMethod(value as HttpMethod)}
+                    >
+                      <SelectTrigger
+                        className={`h-10 font-medium ${(() => {
+                          switch (method) {
+                            case "GET":
+                              return "bg-blue-500 text-white";
+                            case "POST":
+                              return "bg-green-500 text-white";
+                            case "PUT":
+                              return "bg-orange-500 text-white";
+                            case "DELETE":
+                              return "bg-red-500 text-white";
+                            case "PATCH":
+                              return "bg-purple-500 text-white";
+                            default:
+                              return "bg-gray-500 text-white";
+                          }
+                        })()}`}
+                      >
+                        <SelectValue placeholder="Method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HTTP_METHODS.map((method) => (
+                          <SelectItem key={method} value={method}>
+                            {method}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Input
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="Enter URL"
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleSendRequest}
+                    disabled={isLoading || !url.trim()}
+                    className="w-24"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRightCircle className="mr-2 h-4 w-4" />
+                    )}
+                    Send
+                  </Button>
+                </div>
+
+                {/* Request Config Tabs */}
+                <Tabs
+                  defaultValue="params"
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                >
+                  <TabsList>
+                    <TabsTrigger value="params">Query Parameters</TabsTrigger>
+                    <TabsTrigger value="headers">Headers</TabsTrigger>
+                    <TabsTrigger value="body">Body</TabsTrigger>
+                  </TabsList>
+
+                  {/* Query Parameters Tab */}
+                  <TabsContent value="params" className="pt-4">
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead style={{ width: "4rem" }}></TableHead>
+                            <TableHead>Key</TableHead>
+                            <TableHead>Value</TableHead>
+                            <TableHead style={{ width: "4rem" }}></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {queryParams.map((param) => (
+                            <TableRow key={param.id}>
+                              <TableCell>
+                                <input
+                                  type="checkbox"
+                                  checked={param.enabled}
+                                  onChange={(e) =>
+                                    updateParam(
+                                      param.id,
+                                      param.key,
+                                      param.value,
+                                      e.target.checked,
+                                    )
+                                  }
+                                  className="h-4 w-4 rounded border-gray-300"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  value={param.key}
+                                  onChange={(e) =>
+                                    updateParam(
+                                      param.id,
+                                      e.target.value,
+                                      param.value,
+                                      param.enabled,
+                                    )
+                                  }
+                                  placeholder="Key"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  value={param.value}
+                                  onChange={(e) =>
+                                    updateParam(
+                                      param.id,
+                                      param.key,
+                                      e.target.value,
+                                      param.enabled,
+                                    )
+                                  }
+                                  placeholder="Value"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeParam(param.id)}
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addParam}
+                      className="mt-2"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Parameter
+                    </Button>
+                  </TabsContent>
+
+                  {/* Headers Tab */}
+                  <TabsContent value="headers" className="pt-4">
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead style={{ width: "4rem" }}></TableHead>
+                            <TableHead>Key</TableHead>
+                            <TableHead>Value</TableHead>
+                            <TableHead style={{ width: "4rem" }}></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {headers.map((header) => (
+                            <TableRow key={header.id}>
+                              <TableCell>
+                                <input
+                                  type="checkbox"
+                                  checked={header.enabled}
+                                  onChange={(e) =>
+                                    updateHeader(
+                                      header.id,
+                                      header.key,
+                                      header.value,
+                                      e.target.checked,
+                                    )
+                                  }
+                                  className="h-4 w-4 rounded border-gray-300"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  value={header.key}
+                                  onChange={(e) =>
+                                    updateHeader(
+                                      header.id,
+                                      e.target.value,
+                                      header.value,
+                                      header.enabled,
+                                    )
+                                  }
+                                  placeholder="Key"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  value={header.value}
+                                  onChange={(e) =>
+                                    updateHeader(
+                                      header.id,
+                                      header.key,
+                                      e.target.value,
+                                      header.enabled,
+                                    )
+                                  }
+                                  placeholder="Value"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeHeader(header.id)}
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={addHeader}
+                      className="mt-2"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Header
+                    </Button>
+                  </TabsContent>
+
+                  {/* Body Tab */}
+                  <TabsContent value="body" className="pt-4">
+                    <Textarea
+                      placeholder={`{
+  "name": "value",
+  "example": true
+}`}
+                      value={body}
+                      onChange={(e) => setBody(e.target.value)}
+                      className="h-60 resize-none font-mono"
+                    />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Response Section */}
+          {response && (
+            <Card className="w-full shadow">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-medium">
+                    Response
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getStatusColor(response.status)}>
+                      {response.status} {response.statusText}
+                    </Badge>
+                    <Badge variant="outline" className="flex items-center">
+                      <Clock className="mr-1 h-3 w-3" /> {response.time}ms
+                    </Badge>
+                    <Badge variant="outline">
+                      {response.size > 1024
+                        ? `${(response.size / 1024).toFixed(1)}KB`
+                        : `${response.size}B`}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Tabs
+                  defaultValue="body"
+                  value={responseTab}
+                  onValueChange={setResponseTab}
+                >
+                  <TabsList>
+                    <TabsTrigger value="body">Body</TabsTrigger>
+                    <TabsTrigger value="headers">Headers</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="body" className="pt-4">
+                    <div className="relative">
+                      <div className="absolute right-2 top-2 flex gap-2">
+                        <Badge variant="outline" className="flex items-center">
+                          {typeof response.data === "object" ? (
+                            <FileJson className="mr-1 h-3 w-3" />
+                          ) : (
+                            <FileText className="mr-1 h-3 w-3" />
+                          )}
+                          {typeof response.data === "object" ? "JSON" : "Text"}
+                        </Badge>
+                      </div>
+                      <ScrollArea className="h-[400px] rounded-md border bg-muted/50 p-4">
+                        <pre className="font-mono text-sm">
+                          {typeof response.data === "object"
+                            ? formatJSON(response.data)
+                            : String(response.data)}
+                        </pre>
+                      </ScrollArea>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="headers" className="pt-4">
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Header</TableHead>
+                            <TableHead>Value</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Object.entries(response.headers).map(
+                            ([key, value]) => (
+                              <TableRow key={key}>
+                                <TableCell className="font-medium">
+                                  {key}
+                                </TableCell>
+                                <TableCell className="font-mono text-sm">
+                                  {value}
+                                </TableCell>
+                              </TableRow>
+                            ),
+                          )}
+                          {Object.keys(response.headers).length === 0 && (
+                            <TableRow>
+                              <TableCell
+                                colSpan={2}
+                                className="py-4 text-center text-muted-foreground"
+                              >
+                                No headers returned
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          )}
+
+          {!response && !isLoading && (
+            <Card className="w-full bg-muted/30 shadow">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <Info className="mb-4 h-12 w-12" />
+                <h3 className="mb-2 text-lg font-medium">API Tester Ready</h3>
+                <p className="max-w-md">
+                  Enter a URL and click Send to make API requests. You can set
+                  query parameters, headers, and a request body as needed.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Toggle button for API reference */}
+      <div className="fixed bottom-6 right-6 z-50 md:block">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowReferencePanel(!showReferencePanel)}
+          className="rounded-full shadow-md"
+        >
+          {showReferencePanel ? (
+            <ChevronRight className="h-5 w-5" />
+          ) : (
+            <div className="flex items-center">
+              <BookOpen className="mr-2 h-4 w-4" />
+              {hasApiReference ? "API Reference" : "No API Reference"}
+            </div>
+          )}
+        </Button>
+      </div>
+
+      {/* Right sidebar for API reference - conditionally rendered */}
+      <div
+        className={`border-l transition-all duration-300 ${
+          showReferencePanel ? "w-80 min-w-80" : "w-0 min-w-0 opacity-0"
+        } flex-shrink-0 overflow-hidden md:block`}
+      >
+        {showReferencePanel && (
+          <div className="h-full overflow-y-auto p-4">
+            <div className="mb-4 space-y-3">
+              <h3 className="flex items-center text-lg font-medium">
+                <BookOpen className="mr-2 h-4 w-4" />
+                API Reference
+              </h3>
+
+              {versions.length > 0 && (
+                <Select
+                  value={selectedVersion}
+                  onValueChange={setSelectedVersion}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select version" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {versions.map((ver) => (
+                      <SelectItem key={ver.id} value={ver.version}>
+                        Version {ver.version}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {isLoadingService ? (
+              <div className="flex justify-center p-4">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : serviceRoutes.length > 0 ? (
+              <ScrollArea className="h-[calc(100vh-200px)]">
+                <div className="space-y-4">
+                  {serviceRoutes
+                    .filter(
+                      (route) =>
+                        !selectedVersion || route.version === selectedVersion,
+                    )
+                    .map((route, index) => (
+                      <Card
+                        key={index}
+                        className="cursor-pointer p-4 hover:bg-muted/50"
+                        onClick={() => handleSelectRoute(route)}
+                      >
+                        <div className="mb-2 flex items-center justify-between">
+                          <Badge
+                            className={(() => {
+                              switch (route.method) {
+                                case "GET":
+                                  return "bg-blue-500";
+                                case "POST":
+                                  return "bg-green-500";
+                                case "PUT":
+                                  return "bg-orange-500";
+                                case "DELETE":
+                                  return "bg-red-500";
+                                case "PATCH":
+                                  return "bg-purple-500";
+                                default:
+                                  return "bg-gray-500";
+                              }
+                            })()}
+                          >
+                            {route.method}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            v{route.version}
+                          </span>
+                        </div>
+                        <p className="mb-2 break-all font-mono text-xs">
+                          {route.route}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {route.description}
+                        </p>
+                      </Card>
+                    ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>No API routes found</AlertTitle>
+                <AlertDescription>
+                  {selectedVersion
+                    ? `No API routes found for version ${selectedVersion}`
+                    : "This service doesn't have any documented API routes."}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

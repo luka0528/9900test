@@ -27,7 +27,7 @@ export function ServiceSidebar({ serviceId }: { serviceId: string }) {
     },
     {
       title: "Test Service",
-      url: "1",
+      url: `/service/${serviceId}/test`,
       icon: TestTube,
     },
     {
