@@ -17,6 +17,12 @@ import {
 } from "~/components/service/reviews/helper";
 import { toast } from "sonner";
 import { Separator } from "~/components/ui/separator";
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from "~/components/ui/tooltip";
 
 interface NewCard {
   isVisible: boolean;
@@ -296,26 +302,38 @@ export default function ReviewsPage() {
                 </Button>
               ) :*/}{" "}
               {
-                <Button
-                  className="size-min"
-                  variant="outline"
-                  disabled={
-                    topButton === null ||
-                    topButton === "Owned" ||
-                    topButton === "EditSubbed" ||
-                    topButton === "EditUnsubbed"
-                  } // Disable the add review button if not subbed/already posted
-                  onClick={() => {
-                    setNewCardData({
-                      isVisible: true,
-                      starValue: null,
-                      content: null,
-                    });
-                  }}
-                >
-                  <MessageSquarePlus className="animate-slide-in transform transition" />
-                  Add review
-                </Button>
+                <TooltipProvider>
+                  <Tooltip open={topButton === "Add" ? false : undefined}>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button
+                          className="size-min"
+                          variant="outline"
+                          disabled={topButton !== "Add"} // Disable the add review button if not subbed/already posted
+                          onClick={() => {
+                            setNewCardData({
+                              isVisible: true,
+                              starValue: null,
+                              content: null,
+                            });
+                          }}
+                        >
+                          <MessageSquarePlus className="animate-slide-in transform transition" />
+                          Add review
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {topButton === null ? (
+                        <p>You must be subscribed to post a review.</p>
+                      ) : topButton === "Owned" ? (
+                        <p>You cannot review your own service.</p>
+                      ) : (
+                        <p>You have already posted a review.</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               }
             </div>
           </div>
