@@ -12,7 +12,7 @@ import { Package, Settings, ChevronRight } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useRouter } from "next/navigation";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
-import type { SubscriptionTier } from "@prisma/client";
+import type { ServiceConsumer, SubscriptionTier } from "@prisma/client";
 import React, { useState } from "react";
 
 interface ServiceManagementCardProps {
@@ -21,7 +21,7 @@ interface ServiceManagementCardProps {
     name: string;
     tierName: string;
     tags: string[];
-    subscriptionTier: SubscriptionTier;
+    serviceConsumer: ServiceConsumer & { subscriptionTier: SubscriptionTier };
     refetch: () => void;
   };
 }
@@ -30,7 +30,7 @@ export const ServiceManagementCard = ({
   service,
 }: ServiceManagementCardProps) => {
   const router = useRouter();
-  const { id, name, tierName, tags, subscriptionTier, refetch } = service;
+  const { id, name, tierName, tags, serviceConsumer, refetch } = service;
 
   const [showManageDialog, setShowManageDialog] = useState(false);
 
@@ -100,7 +100,7 @@ export const ServiceManagementCard = ({
         <ManageSubscriptionDialog
           isOpen={showManageDialog}
           onClose={() => setShowManageDialog(false)}
-          subscriptionTier={subscriptionTier}
+          serviceConsumer={serviceConsumer}
           refetchSubscriptions={refetch}
         />
       )}

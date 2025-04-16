@@ -72,7 +72,7 @@ export default function ServicesPage() {
                       tags: service.subscriptionTier.service.tags?.map(
                         (tag) => tag.name,
                       ),
-                      subscriptionTier: service.subscriptionTier,
+                      serviceConsumer: service,
                       refetch: () => {
                         void refetch();
                       },

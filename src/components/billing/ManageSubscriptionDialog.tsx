@@ -12,7 +12,7 @@ import {
   AlertDialogAction,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
-import { CreditCard, Edit, Loader2, Trash } from "lucide-react";
+import { CreditCard, Edit, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import PaymentMethodDialog from "./PaymentMethodDialog";
