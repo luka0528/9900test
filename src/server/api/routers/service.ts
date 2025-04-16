@@ -1076,9 +1076,6 @@ export const serviceRouter = createTRPCRouter({
           userId: ctx.session.user.id,
           subscriptionTierId,
         },
-        include: {
-          subscriptionTier: true,
-        },
       });
       if (!subscription) {
         throw new TRPCError({
@@ -1100,7 +1097,7 @@ export const serviceRouter = createTRPCRouter({
         where: { id: subscription.id },
       });
 
-      return { success: true };
+      return { success: true, message: "Subscription deleted" };
     }),
 
   switchTier: protectedProcedure
