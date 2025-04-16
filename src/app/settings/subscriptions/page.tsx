@@ -33,7 +33,8 @@ const SubscriptionsManagementPage: React.FC = () => {
     (ServiceConsumer & { subscriptionTier: SubscriptionTier }) | null
   >(null);
   const [showManageDialog, setShowManageDialog] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showRenewConfirmModal, setShowRenewConfirmModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -46,7 +47,7 @@ const SubscriptionsManagementPage: React.FC = () => {
     data: subscriptionsData,
     isLoading,
     error,
-    refetch,
+    refetch: refetchSubscriptionData,
   } = api.user.getUserSubscriptions.useQuery(undefined, {
     refetchOnMount: "always",
   });
@@ -107,9 +108,8 @@ const SubscriptionsManagementPage: React.FC = () => {
               size="sm"
               className="mt-2 w-3/4 max-w-[70px]"
               onClick={() => {
-                deleteSubscriptionMutation.mutate({
-                  subscriptionTierId: subscription.id,
-                });
+                setSelectedSubscription(subscription);
+                setShowDeleteConfirmModal(true);
               }}
             >
               {"Delete"}
@@ -128,7 +128,7 @@ const SubscriptionsManagementPage: React.FC = () => {
           className="w-3/4 max-w-[70px]"
           onClick={() => {
             setSelectedSubscription(subscription);
-            setShowConfirmModal(true);
+            setShowRenewConfirmModal(true);
           }}
         >
           Resume
@@ -140,15 +140,45 @@ const SubscriptionsManagementPage: React.FC = () => {
   const handleServiceResume = async () => {
     if (!selectedSubscription) return;
     try {
-      await resumeServiceMutation.mutateAsync({
-        subscriptionTierId: selectedSubscription.id,
+      const res = await resumeServiceMutation.mutateAsync({
+        subscriptionTierId: selectedSubscription.subscriptionTierId,
       });
-      void refetch();
+      if (!res.success) {
+        toast.error(`Failed to resume subscription: ${res.message}`);
+        return;
+      }
+      void refetchSubscriptionData();
       toast.success("Subscription resumed successfully.");
     } catch (error) {
       console.error("Error resuming service:", error);
       toast.error("Failed to resume subscription.");
     }
+  };
+
+  const getNextBillingDate = (
+    subscription: ServiceConsumer & { subscriptionTier: SubscriptionTier },
+  ) => {
+    if (subscription.renewingSubscription) {
+      const res = new Date(
+        new Date(subscription.lastRenewed).setMonth(
+          new Date(subscription.lastRenewed).getMonth() + 1,
+        ),
+      ).toLocaleDateString(undefined, {
+        year: "2-digit",
+        month: "2-digit",
+        day: "2-digit",
+      });
+
+      if (
+        subscription.subscriptionStatus ===
+        SubscriptionStatus.PENDING_CANCELLATION
+      ) {
+        return `${res} (End)`;
+      } else {
+        return res;
+      }
+    }
+    return "-";
   };
 
   if (isLoading) {
@@ -187,7 +217,7 @@ const SubscriptionsManagementPage: React.FC = () => {
                 <TableHead className="w-[80px] whitespace-nowrap">
                   Price
                 </TableHead>
-                <TableHead className="w-[140px] whitespace-nowrap">
+                <TableHead className="w-[150px] whitespace-nowrap">
                   Payment Method
                 </TableHead>
                 <TableHead className="w-[130px]">Next Billing Date</TableHead>
@@ -218,17 +248,7 @@ const SubscriptionsManagementPage: React.FC = () => {
                       : "N/A"}
                   </TableCell>
                   <TableCell className="text-[13.5px]">
-                    {subscription.renewingSubscription
-                      ? new Date(
-                          new Date(subscription.lastRenewed).setMonth(
-                            new Date(subscription.lastRenewed).getMonth() + 1,
-                          ),
-                        ).toLocaleDateString(undefined, {
-                          year: "2-digit",
-                          month: "2-digit",
-                          day: "2-digit",
-                        })
-                      : "N/A"}
+                    {getNextBillingDate(subscription)}
                   </TableCell>
                   <TableCell className="text-[13.5px]">
                     {subscription.renewingSubscription ? "Yes" : "No"}
@@ -252,20 +272,36 @@ const SubscriptionsManagementPage: React.FC = () => {
           isOpen={showManageDialog}
           onClose={() => setShowManageDialog(false)}
           serviceConsumer={selectedSubscription}
-          refetchSubscriptions={refetch}
+          refetchSubscriptions={refetchSubscriptionData}
         />
       )}
 
       <ConfirmModal
-        open={showConfirmModal}
+        open={showRenewConfirmModal}
         title="Resume Subscription"
         description="Are you sure you want to resume this subscription?"
         onConfirm={() => {
           void handleServiceResume();
-          setShowConfirmModal(false);
+          setShowRenewConfirmModal(false);
         }}
         onCancel={() => {
-          setShowConfirmModal(false);
+          setShowRenewConfirmModal(false);
+        }}
+      />
+
+      <ConfirmModal
+        open={showDeleteConfirmModal}
+        title="Delete Subscription"
+        description="You are already cancelled. Would you also like to delete this service from your list?"
+        onConfirm={async () => {
+          await deleteSubscriptionMutation.mutate({
+            subscriptionTierId: selectedSubscription?.subscriptionTierId || "",
+          });
+          refetchSubscriptionData();
+          setShowDeleteConfirmModal(false);
+        }}
+        onCancel={() => {
+          setShowDeleteConfirmModal(false);
         }}
       />
     </div>
