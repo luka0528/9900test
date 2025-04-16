@@ -19,7 +19,7 @@ import {
 import { Button } from "~/components/ui/button";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
 import {
-  ServiceConsumer,
+  type ServiceConsumer,
   SubscriptionStatus,
   type SubscriptionTier,
 } from "@prisma/client";
@@ -142,7 +142,7 @@ const SubscriptionsManagementPage: React.FC = () => {
       await resumeServiceMutation.mutateAsync({
         subscriptionTierId: selectedSubscription.id,
       });
-      refetch();
+      void refetch();
       toast.success("Subscription resumed successfully.");
     } catch (error) {
       console.error("Error resuming service:", error);
@@ -260,7 +260,7 @@ const SubscriptionsManagementPage: React.FC = () => {
         title="Resume Subscription"
         description="Are you sure you want to resume this subscription?"
         onConfirm={() => {
-          handleServiceResume();
+          void handleServiceResume();
           setShowConfirmModal(false);
         }}
         onCancel={() => {
