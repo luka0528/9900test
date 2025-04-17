@@ -25,36 +25,7 @@ import { Separator } from "~/components/ui/separator";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
-import { RestMethod } from "@prisma/client";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 
-type RestMethodType =
-  | "GET"
-  | "POST"
-  | "PUT"
-  | "DELETE"
-  | "PATCH"
-  | "HEAD"
-  | "OPTIONS"
-  | "TRACE";
-const safeRestMethod: Record<RestMethodType, RestMethodType> = {
-  GET: "GET",
-  POST: "POST",
-  PUT: "PUT",
-  DELETE: "DELETE",
-  PATCH: "PATCH",
-  HEAD: "HEAD",
-  OPTIONS: "OPTIONS",
-  TRACE: "TRACE",
-};
-
-// Define form schema with consistent structure
 const formSchema = z.object({
   name: z.string().min(1, {
     message: "Service name must be at least 1 characters.",
