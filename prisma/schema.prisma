@@ -331,6 +331,7 @@ enum BillingStatus {
   PENDING
   PROCESSING
   FAILED
+  RECEIVED
 }
 
 model PaymentMethod {
