@@ -84,7 +84,7 @@ export default function EndpointPage() {
 
                       {operation.parameters.length > 0 && (
                         <TabsContent value="parameters" className="mt-4">
-                          <Table>
+                          <Table className="rounded-lg border">
                             <TableHeader>
                               <TableRow>
                                 <TableHead>Name</TableHead>

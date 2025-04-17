@@ -65,8 +65,6 @@ export const autoDocsRouter = createTRPCRouter({
       // Validate OpenAPI spec
       let parsedSpec: OpenAPIDocument;
       try {
-        // await SwaggerParser.validate(fileText);
-        // const parsed = await SwaggerParser.parse(fileText);
         parsedSpec = JSON.parse(fileText) as OpenAPIDocument;
       } catch (error) {
         throw new TRPCError({
