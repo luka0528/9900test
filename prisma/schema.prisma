@@ -197,7 +197,7 @@ model ServiceConsumer {
   paymentMethodId       String?
   paymentMethod         PaymentMethod?      @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
 
-  @@index([subscriptionStatus])
+  @@index([subscriptionStatus, subscriptionTierId])
 }
 
 enum SubscriptionStatus {
