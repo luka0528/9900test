@@ -36,7 +36,6 @@ export const autoDocsRouter = createTRPCRouter({
     .input(
       z.object({
         fileText: z.string(),
-        fileName: z.string(),
         serviceName: z.string(),
         version: z.string(),
         description: z.string(),
@@ -56,7 +55,6 @@ export const autoDocsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const {
         fileText,
-        fileName,
         serviceName,
         version,
         description,

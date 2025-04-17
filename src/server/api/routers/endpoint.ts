@@ -10,8 +10,13 @@ export const endpointRouter = createTRPCRouter({
     const endpoint = await ctx.db.endPoint.findUnique({
       where: { id: endpointId },
       select: {
+        path: true,
         operations: {
           select: {
+            id: true,
+            method: true,
+            description: true,
+            deprecated: true,
             parameters: true,
             requestBody: true,
             responses: true,
