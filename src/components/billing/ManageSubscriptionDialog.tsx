@@ -75,7 +75,8 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   const updatePaymentMethodMutation =
     api.subscription.updateSubscriptionPaymentMethod.useMutation();
   // Mutation for switching tiers
-  const switchTierMutation = api.subscription.switchTier.useMutation();
+  const switchSubscriptionTierMutation =
+    api.subscription.switchSubscriptionTier.useMutation();
   // Mutation for unsubscribing
   const unsubscribeMutation = api.subscription.unsubscribeToTier.useMutation();
 
@@ -101,13 +102,13 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   };
 
   // Handler for switching tiers
-  const handleSwitchTier = async () => {
+  const handleSwitchSubscriptionTier = async () => {
     if (!selectedNewTier) {
       toast.error("Please select a new tier.");
       return;
     }
     try {
-      await switchTierMutation.mutateAsync({
+      await switchSubscriptionTierMutation.mutateAsync({
         oldTierId: serviceConsumer.subscriptionTier.id,
         newTierId: selectedNewTier,
       });
@@ -230,7 +231,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
               <AlertDialogCancel onClick={() => setShowTierDialog(false)}>
                 Cancel
               </AlertDialogCancel>
-              <AlertDialogAction onClick={handleSwitchTier}>
+              <AlertDialogAction onClick={handleSwitchSubscriptionTier}>
                 Switch Tier
               </AlertDialogAction>
             </AlertDialogFooter>
