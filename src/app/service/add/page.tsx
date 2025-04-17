@@ -143,9 +143,7 @@ export default function AddServicePage() {
         {
           title: "",
           description: "",
-          endpoints: [
-            { path: "", description: "" },
-          ],
+          endpoints: [{ path: "", description: "" }],
         },
       ]);
     } else {
@@ -172,10 +170,7 @@ export default function AddServicePage() {
     const updatedContents = [...contents];
     updatedContents[contentIndex] = {
       ...content,
-      endpoints: [
-        ...content.endpoints,
-        { path: "", description: "" },
-      ],
+      endpoints: [...content.endpoints, { path: "", description: "" }],
     };
 
     form.setValue("contents", updatedContents);
@@ -583,53 +578,58 @@ export default function AddServicePage() {
                             Table Rows
                           </div>
                           <div className="p-4">
-                            {content.endpoints.map((endpoint, endpointIndex) => (
-                              <div
-                                key={endpointIndex}
-                                className="mb-4 grid grid-cols-[1fr_auto] gap-4"
-                              >
-                                <div className="flex gap-4">             
-                                  <FormField
-                                    control={form.control}
-                                    name={`contents.${contentIndex}.endpoints.${endpointIndex}.path`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormControl>
-                                          <Input
-                                            placeholder="Method/Code"
-                                            {...field}
-                                          />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name={`contents.${contentIndex}.endpoints.${endpointIndex}.description`}
-                                    render={({ field }) => (
-                                      <FormItem className="flex-1">
-                                        <FormControl>
-                                          <Input
-                                            placeholder="Description"
-                                            {...field}
-                                          />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    removeTableRow(contentIndex, endpointIndex)
-                                  }
+                            {content.endpoints.map(
+                              (endpoint, endpointIndex) => (
+                                <div
+                                  key={endpointIndex}
+                                  className="mb-4 grid grid-cols-[1fr_auto] gap-4"
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
+                                  <div className="flex gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name={`contents.${contentIndex}.endpoints.${endpointIndex}.path`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormControl>
+                                            <Input
+                                              placeholder="Method/Code"
+                                              {...field}
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name={`contents.${contentIndex}.endpoints.${endpointIndex}.description`}
+                                      render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                          <FormControl>
+                                            <Input
+                                              placeholder="Description"
+                                              {...field}
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      removeTableRow(
+                                        contentIndex,
+                                        endpointIndex,
+                                      )
+                                    }
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ),
+                            )}
                             <Button
                               type="button"
                               variant="outline"
