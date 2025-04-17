@@ -30,14 +30,11 @@ export const serviceRouter = createTRPCRouter({
           z.object({
             title: z.string().min(1),
             description: z.string().min(1),
-            rows: z.array(
-              z
-                .object({
-                  routeName: z.string().min(1),
-                  description: z.string().min(1),
-                  method: z.nativeEnum(RestMethod),
-                })
-                .strict(),
+            endpoints: z.array(
+              z.object({
+                path: z.string().min(1),
+                description: z.string().min(1),
+              }),
             ),
           }),
         ),
@@ -88,11 +85,10 @@ export const serviceRouter = createTRPCRouter({
                 create: input.contents.map((content) => ({
                   title: content.title,
                   description: content.description,
-                  rows: {
-                    create: content.rows.map((row) => ({
-                      method: row.method,
-                      routeName: row.routeName,
-                      description: row.description,
+                  endpoints: {
+                    create: content.endpoints.map((endpoint) => ({
+                      path: endpoint.path,
+                      description: endpoint.description,
                     })),
                   },
                 })),
@@ -449,7 +445,8 @@ export const serviceRouter = createTRPCRouter({
             include: {
               contents: {
                 include: {
-                  rows: true,
+                  endpoints: true,
+                  schemas: true,
                 },
               },
             },
