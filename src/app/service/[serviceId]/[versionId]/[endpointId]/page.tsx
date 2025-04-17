@@ -4,12 +4,7 @@ import { useParams } from "next/navigation";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
 import { api } from "~/trpc/react";
 import { Badge } from "~/components/ui/badge";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "~/components/ui/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -18,8 +13,14 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent } from "~/components/ui/card";
 import { methodColors } from "~/lib/rest-method";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion";
 
 export default function EndpointPage() {
   const params = useParams();
@@ -42,159 +43,179 @@ export default function EndpointPage() {
             <h1 className="text-3xl font-bold">{endpoint.path}</h1>
           </div>
 
-          {endpoint.operations.map((operation) => (
-            <Card key={operation.id}>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <Badge className={methodColors[operation.method]}>
-                    {operation.method}
-                  </Badge>
-                  <CardTitle>{endpoint.path}</CardTitle>
-                  {operation.deprecated && (
-                    <Badge variant="destructive">Deprecated</Badge>
-                  )}
-                </div>
-                <p className="mt-2 text-muted-foreground">
-                  {operation.description}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <Accordion type="single" collapsible className="space-y-4">
-                  {operation.parameters.length > 0 && (
-                    <AccordionItem value="parameters">
-                      <AccordionTrigger>Parameters</AccordionTrigger>
-                      <AccordionContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Location</TableHead>
-                              <TableHead>Description</TableHead>
-                              <TableHead>Required</TableHead>
-                              <TableHead>Schema</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {operation.parameters.map((param) => (
-                              <TableRow key={param.id}>
-                                <TableCell className="font-medium">
-                                  {param.name}
-                                  {param.deprecated && (
-                                    <Badge
-                                      variant="destructive"
-                                      className="ml-2"
-                                    >
-                                      Deprecated
-                                    </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell>{param.parameterLocation}</TableCell>
-                                <TableCell>{param.description}</TableCell>
-                                <TableCell>
-                                  {param.required ? (
-                                    <Badge>Required</Badge>
-                                  ) : (
-                                    <Badge variant="secondary">Optional</Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <pre className="text-sm">
-                                    {JSON.stringify(
-                                      JSON.parse(param.schemaJson),
-                                      null,
-                                      2,
-                                    )}
-                                  </pre>
-                                </TableCell>
+          <Accordion type="multiple" className="space-y-4">
+            {endpoint.operations.map((operation) => (
+              <AccordionItem key={operation.id} value={operation.id}>
+                <AccordionTrigger className="flex gap-3 py-4">
+                  <div className="flex items-center gap-3">
+                    <Badge className={methodColors[operation.method]}>
+                      {operation.method}
+                    </Badge>
+                    <span className="text-xl font-semibold">
+                      {endpoint.path}
+                    </span>
+                    {operation.deprecated && (
+                      <Badge variant="destructive">Deprecated</Badge>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4 px-4 pb-4">
+                    <p className="text-muted-foreground">
+                      {operation.description}
+                    </p>
+
+                    <Tabs defaultValue="parameters">
+                      <TabsList className="justify-start">
+                        {operation.parameters.length > 0 && (
+                          <TabsTrigger value="parameters">
+                            Parameters
+                          </TabsTrigger>
+                        )}
+                        {operation.requestBody && (
+                          <TabsTrigger value="requestBody">
+                            Request Body
+                          </TabsTrigger>
+                        )}
+                        {operation.responses.length > 0 && (
+                          <TabsTrigger value="responses">Responses</TabsTrigger>
+                        )}
+                      </TabsList>
+
+                      {operation.parameters.length > 0 && (
+                        <TabsContent value="parameters" className="mt-4">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Location</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead>Required</TableHead>
+                                <TableHead>Schema</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
+                            </TableHeader>
+                            <TableBody>
+                              {operation.parameters.map((param) => (
+                                <TableRow key={param.id}>
+                                  <TableCell className="font-medium">
+                                    {param.name}
+                                    {param.deprecated && (
+                                      <Badge
+                                        variant="destructive"
+                                        className="ml-2"
+                                      >
+                                        Deprecated
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {param.parameterLocation}
+                                  </TableCell>
+                                  <TableCell>{param.description}</TableCell>
+                                  <TableCell>
+                                    {param.required ? (
+                                      <Badge>Required</Badge>
+                                    ) : (
+                                      <Badge variant="secondary">
+                                        Optional
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <pre className="text-sm">
+                                      {JSON.stringify(
+                                        JSON.parse(param.schemaJson),
+                                        null,
+                                        2,
+                                      )}
+                                    </pre>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TabsContent>
+                      )}
 
-                  {operation.requestBody && (
-                    <AccordionItem value="requestBody">
-                      <AccordionTrigger>Request Body</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-4">
-                          <div>
-                            <h4 className="font-medium">Description</h4>
-                            <p className="text-muted-foreground">
-                              {operation.requestBody.description}
-                            </p>
+                      {operation.requestBody && (
+                        <TabsContent value="requestBody" className="mt-4">
+                          <div className="space-y-4">
+                            <div>
+                              <h4 className="font-medium">Description</h4>
+                              <p className="text-muted-foreground">
+                                {operation.requestBody.description}
+                              </p>
+                            </div>
+                            <div>
+                              <h4 className="font-medium">Schema</h4>
+                              <pre className="mt-2 rounded-lg bg-muted p-4">
+                                {JSON.stringify(
+                                  JSON.parse(operation.requestBody.contentJson),
+                                  null,
+                                  2,
+                                )}
+                              </pre>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-medium">Schema</h4>
-                            <pre className="mt-2 rounded-lg bg-muted p-4">
-                              {JSON.stringify(
-                                JSON.parse(operation.requestBody.contentJson),
-                                null,
-                                2,
-                              )}
-                            </pre>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
+                        </TabsContent>
+                      )}
 
-                  {operation.responses.length > 0 && (
-                    <AccordionItem value="responses">
-                      <AccordionTrigger>Responses</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-6">
-                          {operation.responses.map((response) => (
-                            <div key={response.id} className="space-y-4">
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  className={
-                                    response.statusCode < 400
-                                      ? "bg-green-500"
-                                      : "bg-red-500"
-                                  }
-                                >
-                                  {response.statusCode}
-                                </Badge>
-                                <h4 className="font-medium">
-                                  {response.description}
-                                </h4>
-                              </div>
-                              <div>
-                                <h5 className="text-sm font-medium">Content</h5>
-                                <pre className="mt-2 rounded-lg bg-muted p-4">
-                                  {JSON.stringify(
-                                    JSON.parse(response.contentJson),
-                                    null,
-                                    2,
-                                  )}
-                                </pre>
-                              </div>
-                              {response.headersJson && (
+                      {operation.responses.length > 0 && (
+                        <TabsContent value="responses" className="mt-4">
+                          <div className="space-y-6">
+                            {operation.responses.map((response) => (
+                              <div key={response.id} className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    className={
+                                      response.statusCode < 400
+                                        ? "bg-green-500"
+                                        : "bg-red-500"
+                                    }
+                                  >
+                                    {response.statusCode}
+                                  </Badge>
+                                  <h4 className="font-medium">
+                                    {response.description}
+                                  </h4>
+                                </div>
                                 <div>
                                   <h5 className="text-sm font-medium">
-                                    Headers
+                                    Content
                                   </h5>
                                   <pre className="mt-2 rounded-lg bg-muted p-4">
                                     {JSON.stringify(
-                                      JSON.parse(response.headersJson),
+                                      JSON.parse(response.contentJson),
                                       null,
                                       2,
                                     )}
                                   </pre>
                                 </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
-                </Accordion>
-              </CardContent>
-            </Card>
-          ))}
+                                {response.headersJson && (
+                                  <div>
+                                    <h5 className="text-sm font-medium">
+                                      Headers
+                                    </h5>
+                                    <pre className="mt-2 rounded-lg bg-muted p-4">
+                                      {JSON.stringify(
+                                        JSON.parse(response.headersJson),
+                                        null,
+                                        2,
+                                      )}
+                                    </pre>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </TabsContent>
+                      )}
+                    </Tabs>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </div>
     </div>
