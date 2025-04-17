@@ -187,16 +187,17 @@ model ServiceConsumer {
   subscriptionTier      SubscriptionTier    @relation(fields: [subscriptionTierId], references: [id], onDelete: Cascade)
   createdAt             DateTime            @default(now())
   
-  renewingSubscription  Boolean             @default(false)
+  autoRenewal           Boolean             @default(false)
   lastRenewed           DateTime            @default(now())
   subscriptionStartDate DateTime            @default(now())
   subscriptionStatus    SubscriptionStatus  @default(ACTIVE)
-
   ratings               ServiceRating[]
   events                ConsumerEvent[]
 
   paymentMethodId       String?
   paymentMethod         PaymentMethod?      @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+
+  @@index([subscriptionStatus, subscriptionTierId])
 }
 
 enum SubscriptionStatus {
