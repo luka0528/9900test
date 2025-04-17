@@ -289,7 +289,7 @@ export default function ServicePage() {
                     {content.title}
                   </h2>
                   <p className="mb-6">{content.description}</p>
-                  {content.rows && content.rows.length > 0 && (
+                  {content.endpoints && content.endpoints.length > 0 && (
                     <div className="rounded-md border">
                       <Table>
                         <TableHeader>
@@ -300,13 +300,12 @@ export default function ServicePage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {content.rows.map((row) => (
-                            <TableRow key={row.id}>
-                              <TableCell>{row.method}</TableCell>
+                          {content.endpoints.map((endpoint) => (
+                            <TableRow key={endpoint.id}>
                               <TableCell className="font-mono">
-                                {row.routeName}
+                                {endpoint.path}
                               </TableCell>
-                              <TableCell>{row.description}</TableCell>
+                              <TableCell>{endpoint.description}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

@@ -23,6 +23,7 @@ const PurchasePage: React.FC = () => {
     data: service,
     isLoading: serviceLoading,
     error: serviceError,
+    refetch: serviceRefetch,
   } = api.service.getServiceById.useQuery(serviceId);
 
   // 2. Check if user is already subscribed to this service
@@ -31,14 +32,14 @@ const PurchasePage: React.FC = () => {
     isLoading: subscriptionLoading,
     error: subscriptionError,
     refetch: subscriptionStatusRefetch,
-  } = api.user.isUserSubscribedToService.useQuery({ serviceId });
+  } = api.subscription.isUserSubscribedToService.useQuery({ serviceId });
 
   // 3. Fetch payment methods
   const { data: paymentMethodsData, isLoading: isPaymentDataLoading } =
-    api.user.getPaymentMethods.useQuery();
+    api.subscription.getPaymentMethods.useQuery();
 
   // 4. Mutation to subscribe/update subscription
-  const subscribeMutation = api.service.subscribeToTier.useMutation();
+  const subscribeMutation = api.subscription.subscribeToTier.useMutation();
 
   // Local state
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
@@ -68,7 +69,7 @@ const PurchasePage: React.FC = () => {
   }, [isPaymentDataLoading, paymentMethodsData]);
 
   useEffect(() => {
-    setIsSubscribed(subscriptionStatus?.isSubscribed ?? false);
+    setIsSubscribed(!!subscriptionStatus?.isSubscribed);
   }, [subscriptionStatus]);
 
   // 5. The purchase/update flow
@@ -83,6 +84,7 @@ const PurchasePage: React.FC = () => {
         autoRenewal: autoRenew,
       });
       setCurrentTierId(selectedTier);
+      void serviceRefetch();
       if (subscriptionStatus?.isSubscribed) {
         toast.success("Successfully updated subscription.");
       } else {

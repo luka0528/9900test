@@ -35,13 +35,14 @@ const PaymentMethodForm: React.FC = () => {
 
   // TRPC mutations
   const initaliazeSetupIntentMutation =
-    api.user.initializeSetupIntent.useMutation();
-  const savePaymentMethodMutation = api.user.savePaymentMethod.useMutation({
-    onSuccess: () => {
-      // Refetch saved payment methods so the UI updates automatically
-      void utils.user.getPaymentMethods.invalidate();
-    },
-  });
+    api.subscription.initializeStripeSetupIntent.useMutation();
+  const savePaymentMethodMutation =
+    api.subscription.savePaymentMethod.useMutation({
+      onSuccess: () => {
+        // Refetch saved payment methods so the UI updates automatically
+        void utils.subscription.getPaymentMethods.invalidate();
+      },
+    });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

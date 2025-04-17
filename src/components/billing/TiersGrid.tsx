@@ -35,7 +35,7 @@ const TiersGrid: React.FC<TiersGridProps> = ({
             return (
               <div
                 key={tier.id}
-                className={`flex h-full min-h-[60vh] flex-col rounded-lg border p-6 text-center shadow-sm transition-shadow ${
+                className={`flex h-full min-h-[60vh] flex-col rounded-lg border p-6 text-center shadow-md transition-shadow ${
                   isCurrent ? "pointer-events-none bg-gray-200 opacity-70" : ""
                 }`}
               >
