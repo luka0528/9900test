@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { BillingStatus, SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
@@ -121,8 +125,8 @@ export const subscriptionRouter = createTRPCRouter({
               subscriptionTierId: newTier.id,
               paymentMethodId: paymentMethodId,
               renewingSubscription: autoRenewal,
-              subscriptionStartDate: new Date().toISOString().split("T")[0],
-              lastRenewed: new Date().toISOString().split("T")[0],
+              subscriptionStartDate: new Date(),
+              lastRenewed: new Date(),
             },
           });
         } else {
@@ -132,9 +136,9 @@ export const subscriptionRouter = createTRPCRouter({
               subscriptionStatus: SubscriptionStatus.ACTIVE,
               subscriptionTierId: newTier.id,
               paymentMethodId: paymentMethodId,
-              lastRenewed: new Date().toISOString().split("T")[0],
+              lastRenewed: new Date(),
               renewingSubscription: autoRenewal,
-              subscriptionStartDate: new Date().toISOString().split("T")[0],
+              subscriptionStartDate: new Date(),
             },
           });
         }
@@ -682,32 +686,30 @@ export const subscriptionRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  checkSubscriptionCancellations: protectedProcedure.mutation(
-    async ({ ctx }) => {
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  checkSubscriptionCancellations: publicProcedure.mutation(async ({ ctx }) => {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-      // 1) Find all subscriptions that are pending cancellation and have a start date in the past
-      const toCancel = await ctx.db.serviceConsumer.findMany({
-        where: {
-          subscriptionStatus: "PENDING_CANCELLATION",
-          lastRenewed: {
-            lte: oneMonthAgo,
-          },
+    // 1) Find all subscriptions that are pending cancellation and have a start date in the past
+    const toCancel = await ctx.db.serviceConsumer.findMany({
+      where: {
+        subscriptionStatus: "PENDING_CANCELLATION",
+        lastRenewed: {
+          lte: oneMonthAgo,
         },
+      },
+    });
+
+    // 2) Change their status to cancelled
+    for (const consumer of toCancel) {
+      await ctx.db.serviceConsumer.update({
+        where: { id: consumer.id },
+        data: { subscriptionStatus: SubscriptionStatus.CANCELLED },
       });
 
-      // 2) Change their status to cancelled
-      for (const consumer of toCancel) {
-        await ctx.db.serviceConsumer.update({
-          where: { id: consumer.id },
-          data: { subscriptionStatus: SubscriptionStatus.CANCELLED },
-        });
+      // 2a) Revoke api key
+    }
 
-        // 2a) Revoke api key
-      }
-
-      return { success: true, count: toCancel.length };
-    },
-  ),
+    return { success: true, count: toCancel.length };
+  }),
 });

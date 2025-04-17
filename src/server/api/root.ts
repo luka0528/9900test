@@ -5,6 +5,11 @@ import { versionRouter } from "./routers/version";
 import { analyticsRouter } from "./routers/analytics";
 import { subscriptionRouter } from "./routers/subscription";
 
+if (process.env.NODE_ENV === "development") {
+  console.log("🧪 Dev mode: enabling cancellation scheduler...");
+  import("../../../scripts/scheduleCancellations");
+}
+
 /**
  * This is the primary router for your server.
  *
