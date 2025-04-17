@@ -900,7 +900,7 @@ export const serviceRouter = createTRPCRouter({
             subscriptionTierId: newTier.id,
             paymentMethodId: paymentMethodId,
             lastRenewed: new Date(),
-            renewingSubscription: autoRenewal,
+            autoRenewal: autoRenewal,
             subscriptionStartDate: new Date(),
           },
         });
@@ -910,7 +910,7 @@ export const serviceRouter = createTRPCRouter({
             userId: ctx.session.user.id,
             subscriptionTierId: newTier.id,
             paymentMethodId: newTier.price ? paymentMethodId : undefined,
-            renewingSubscription: autoRenewal,
+            autoRenewal: autoRenewal,
             subscriptionStartDate: new Date(),
           },
         });
