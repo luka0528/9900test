@@ -7,7 +7,6 @@ import {
 import { TRPCError } from "@trpc/server";
 import { BillingStatus, SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
-import { use } from "react";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
