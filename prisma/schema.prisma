@@ -234,6 +234,7 @@ enum ParameterLocation {
   PATH
   HEADER
   BODY
+  COOKIE
 }
 
 // Service Memberships
