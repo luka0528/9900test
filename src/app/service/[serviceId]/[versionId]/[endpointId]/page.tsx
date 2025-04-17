@@ -84,56 +84,58 @@ export default function EndpointPage() {
 
                       {operation.parameters.length > 0 && (
                         <TabsContent value="parameters" className="mt-4">
-                          <Table className="rounded-lg border">
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Location</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead>Required</TableHead>
-                                <TableHead>Schema</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {operation.parameters.map((param) => (
-                                <TableRow key={param.id}>
-                                  <TableCell className="font-medium">
-                                    {param.name}
-                                    {param.deprecated && (
-                                      <Badge
-                                        variant="destructive"
-                                        className="ml-2"
-                                      >
-                                        Deprecated
-                                      </Badge>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    {param.parameterLocation}
-                                  </TableCell>
-                                  <TableCell>{param.description}</TableCell>
-                                  <TableCell>
-                                    {param.required ? (
-                                      <Badge>Required</Badge>
-                                    ) : (
-                                      <Badge variant="secondary">
-                                        Optional
-                                      </Badge>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    <pre className="text-sm">
-                                      {JSON.stringify(
-                                        JSON.parse(param.schemaJson),
-                                        null,
-                                        2,
-                                      )}
-                                    </pre>
-                                  </TableCell>
+                          <div className="rounded-md border">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Name</TableHead>
+                                  <TableHead>Location</TableHead>
+                                  <TableHead>Description</TableHead>
+                                  <TableHead>Required</TableHead>
+                                  <TableHead>Schema</TableHead>
                                 </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                              </TableHeader>
+                              <TableBody>
+                                {operation.parameters.map((param) => (
+                                  <TableRow key={param.id}>
+                                    <TableCell className="font-medium">
+                                      {param.name}
+                                      {param.deprecated && (
+                                        <Badge
+                                          variant="destructive"
+                                          className="ml-2"
+                                        >
+                                          Deprecated
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      {param.parameterLocation}
+                                    </TableCell>
+                                    <TableCell>{param.description}</TableCell>
+                                    <TableCell>
+                                      {param.required ? (
+                                        <Badge>Required</Badge>
+                                      ) : (
+                                        <Badge variant="secondary">
+                                          Optional
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <pre className="text-sm">
+                                        {JSON.stringify(
+                                          JSON.parse(param.schemaJson),
+                                          null,
+                                          2,
+                                        )}
+                                      </pre>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
                         </TabsContent>
                       )}
 
