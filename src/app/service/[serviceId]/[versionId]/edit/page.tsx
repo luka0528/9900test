@@ -45,13 +45,12 @@ const formSchema = z.object({
         id: z.string(),
         title: z.string().min(2),
         description: z.string().default(""),
-        rows: z
+        endpoints: z
           .array(
             z.object({
               id: z.string(),
-              routeName: z.string(),
+              path: z.string(),
               description: z.string(),
-              method: z.nativeEnum(RestMethod),
             }),
           )
           .default([]),
@@ -75,11 +74,10 @@ interface DocumentationData {
     id: string;
     title: string;
     description: string;
-    rows: Array<{
+    endpoints: Array<{
       id: string;
-      routeName: string;
+      path: string;
       description: string;
-      method: RestMethod;
     }>;
   }>;
   changelogPoints: Array<{
@@ -124,12 +122,11 @@ export default function EditServicePage() {
             id: content.id,
             title: content.title || "",
             description: content.description || "",
-            rows:
-              content.rows?.map((row) => ({
-                id: row.id,
-                routeName: row.routeName || "",
-                description: row.description || "",
-                method: row.method || RestMethod.GET,
+            endpoints:
+              content.endpoints?.map((endpoint) => ({
+                id: endpoint.id,
+                path: endpoint.path || "",
+                description: endpoint.description || "",
               })) || [],
           })) || [],
         changelogPoints: versionData.changelogPoints || [],
@@ -167,12 +164,11 @@ export default function EditServicePage() {
           id: createId(),
           title: "",
           description: "",
-          rows: [
+          endpoints: [
             {
               id: createId(),
-              routeName: "",
+              path: "",
               description: "",
-              method: RestMethod.GET,
             },
           ],
         },
@@ -184,7 +180,7 @@ export default function EditServicePage() {
           id: createId(),
           title: "",
           description: "",
-          rows: [],
+          endpoints: [],
         },
       ]);
     }
@@ -197,19 +193,18 @@ export default function EditServicePage() {
       id: createId(),
       title: "",
       description: "",
-      rows: [],
+      endpoints: [],
     };
 
     const updatedContents = [...contents];
     updatedContents[contentIndex] = {
       ...content,
-      rows: [
-        ...content.rows,
+      endpoints: [
+        ...content.endpoints,
         {
           id: createId(),
-          routeName: "",
+          path: "",
           description: "",
-          method: RestMethod.GET,
         },
       ],
     };
@@ -224,15 +219,15 @@ export default function EditServicePage() {
       id: createId(),
       title: "",
       description: "",
-      rows: [],
+      endpoints: [],
     };
 
-    if (content.rows.length <= 1) return; // Keep at least one row
+    if (content.endpoints.length <= 1) return; // Keep at least one row
 
     const updatedContents = [...contents];
     updatedContents[contentIndex] = {
       ...content,
-      rows: content.rows.filter((_, idx) => idx !== rowIndex),
+      endpoints: content.endpoints.filter((_, idx) => idx !== rowIndex),
     };
 
     form.setValue("contents", updatedContents);
@@ -366,7 +361,7 @@ export default function EditServicePage() {
                   </CardHeader>
 
                   <CardContent>
-                    {content.rows.length > 0 ? (
+                    {content.endpoints.length > 0 ? (
                       // Table content
                       <div className="space-y-4">
                         <FormField
@@ -391,75 +386,15 @@ export default function EditServicePage() {
                             Table Rows
                           </div>
                           <div className="p-4">
-                            {content.rows.map((row, rowIndex) => (
+                            {content.endpoints.map((endpoint, endpointIndex) => (
                               <div
-                                key={rowIndex}
+                                key={endpointIndex}
                                 className="mb-4 grid grid-cols-[1fr_auto] gap-4"
                               >
                                 <div className="flex gap-4">
                                   <FormField
                                     control={form.control}
-                                    name={`contents.${contentIndex}.rows.${rowIndex}.method`}
-                                    render={({ field }) => (
-                                      <FormItem className="w-36">
-                                        <FormControl>
-                                          <Select
-                                            value={field.value}
-                                            onValueChange={field.onChange}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select a method" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem
-                                                value={RestMethod.GET}
-                                              >
-                                                GET
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={RestMethod.POST}
-                                              >
-                                                POST
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={RestMethod.PUT}
-                                              >
-                                                PUT
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={RestMethod.DELETE}
-                                              >
-                                                DELETE
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={RestMethod.PATCH}
-                                              >
-                                                PATCH
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={RestMethod.HEAD}
-                                              >
-                                                HEAD
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={RestMethod.OPTIONS}
-                                              >
-                                                OPTIONS
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={RestMethod.TRACE}
-                                              >
-                                                TRACE
-                                              </SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name={`contents.${contentIndex}.rows.${rowIndex}.routeName`}
+                                    name={`contents.${contentIndex}.endpoints.${endpointIndex}.path`}
                                     render={({ field }) => (
                                       <FormItem>
                                         <FormControl>
@@ -473,7 +408,7 @@ export default function EditServicePage() {
                                   />
                                   <FormField
                                     control={form.control}
-                                    name={`contents.${contentIndex}.rows.${rowIndex}.description`}
+                                    name={`contents.${contentIndex}.endpoints.${endpointIndex}.description`}
                                     render={({ field }) => (
                                       <FormItem className="flex-1">
                                         <FormControl>
@@ -491,7 +426,7 @@ export default function EditServicePage() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() =>
-                                    removeTableRow(contentIndex, rowIndex)
+                                    removeTableRow(contentIndex, endpointIndex)
                                   }
                                 >
                                   <Trash2 className="h-4 w-4" />
