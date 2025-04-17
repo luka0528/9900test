@@ -53,7 +53,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
 
   // Query saved payment methods
   const { data: paymentMethodsData, status: getPaymentMethodsStatus } =
-    api.user.getPaymentMethods.useQuery();
+    api.subscription.getPaymentMethods.useQuery();
 
   useEffect(() => {
     if (getPaymentMethodsStatus === "success" && paymentMethodsData) {
@@ -73,11 +73,11 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
 
   // Mutation for updating payment method
   const updatePaymentMethodMutation =
-    api.user.updateSubscriptionPaymentMethod.useMutation();
+    api.subscription.updateSubscriptionPaymentMethod.useMutation();
   // Mutation for switching tiers
-  const switchTierMutation = api.service.switchTier.useMutation();
+  const switchTierMutation = api.subscription.switchTier.useMutation();
   // Mutation for unsubscribing
-  const unsubscribeMutation = api.service.unsubscribeToTier.useMutation();
+  const unsubscribeMutation = api.subscription.unsubscribeToTier.useMutation();
 
   // Handler for updating the payment method
   const handlePaymentMethodUpdate = async () => {

@@ -48,14 +48,15 @@ const SubscriptionsManagementPage: React.FC = () => {
     isLoading,
     error,
     refetch: refetchSubscriptionData,
-  } = api.user.getUserSubscriptions.useQuery(undefined, {
+  } = api.subscription.getUserSubscriptions.useQuery(undefined, {
     refetchOnMount: "always",
   });
 
   const deleteSubscriptionMutation =
-    api.service.deleteSubscription.useMutation();
+    api.subscription.deleteSubscription.useMutation();
 
-  const resumeServiceMutation = api.service.resumeService.useMutation();
+  const resumeServiceMutation =
+    api.subscription.resumeSubscription.useMutation();
 
   const subscriptionStatusMap = {
     ACTIVE: "Active",

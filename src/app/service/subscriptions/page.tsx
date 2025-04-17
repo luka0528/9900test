@@ -15,7 +15,7 @@ export default function ServicesPage() {
     isLoading,
     error,
     refetch,
-  } = api.user.getUserSubscriptions.useQuery();
+  } = api.subscription.getUserSubscriptions.useQuery();
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
