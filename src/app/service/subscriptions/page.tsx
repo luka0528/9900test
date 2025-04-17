@@ -15,7 +15,7 @@ export default function ServicesPage() {
     isLoading,
     error,
     refetch,
-  } = api.user.getUserSubscriptions.useQuery();
+  } = api.subscription.getUserSubscriptions.useQuery();
 
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
@@ -72,7 +72,7 @@ export default function ServicesPage() {
                       tags: service.subscriptionTier.service.tags?.map(
                         (tag) => tag.name,
                       ),
-                      subscriptionTier: service.subscriptionTier,
+                      serviceConsumer: service,
                       refetch: () => {
                         void refetch();
                       },

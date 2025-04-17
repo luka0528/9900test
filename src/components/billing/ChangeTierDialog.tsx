@@ -45,10 +45,11 @@ const ChangeTierDialog: React.FC<ChangeTierDialogProps> = ({
   } = api.service.getServiceById.useQuery(serviceId);
 
   // 2) We also might need user payment methods if tiers > 0 require a card
-  const { data: paymentMethods } = api.user.getPaymentMethods.useQuery();
+  const { data: paymentMethods } =
+    api.subscription.getPaymentMethods.useQuery();
 
   // 3) Mutation for changing the tier
-  const subscribeMutation = api.service.subscribeToTier.useMutation({});
+  const subscribeMutation = api.subscription.subscribeToTier.useMutation({});
 
   // Local state for chosen tier + paymentMethod
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);

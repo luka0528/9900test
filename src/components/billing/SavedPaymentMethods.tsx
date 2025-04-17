@@ -41,15 +41,16 @@ const SavedPaymentMethods: React.FC = () => {
     isLoading,
     error,
     refetch,
-  } = api.user.getPaymentMethods.useQuery();
+  } = api.subscription.getPaymentMethods.useQuery();
 
   // Set up a delete mutation
-  const deletePaymentMethodMutation = api.user.deletePaymentMethod.useMutation({
-    onSuccess: () => {
-      // Automatically refetch payment methods after deletion
-      void refetch();
-    },
-  });
+  const deletePaymentMethodMutation =
+    api.subscription.deletePaymentMethod.useMutation({
+      onSuccess: () => {
+        // Automatically refetch payment methods after deletion
+        void refetch();
+      },
+    });
 
   if (isLoading) {
     return (
