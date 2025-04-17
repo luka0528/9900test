@@ -49,7 +49,7 @@ export const subscriptionRouter = createTRPCRouter({
         });
       }
 
-      // 3. Handle subscription logic
+      // 3. Handle existing subscription logic
       const existingSubscription = await ctx.db.serviceConsumer.findFirst({
         where: {
           userId: ctx.session.user.id,
@@ -59,26 +59,72 @@ export const subscriptionRouter = createTRPCRouter({
         },
       });
 
+      if (
+        existingSubscription &&
+        existingSubscription.id === newTier.id &&
+        existingSubscription.subscriptionStatus === "ACTIVE"
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Already subscribed to this tier",
+        });
+      }
+
+      // 4) Verify the payment method belongs to the user
+      const paymentMethod = await ctx.db.paymentMethod.findUnique({
+        where: { id: paymentMethodId },
+      });
+      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Payment method not found or doesn't belong to user",
+        });
+      }
+
+      // 5) TODO: Call Stripe
+
+      // 6) Create an incoming billing receipt for purchaser
+      await ctx.db.billingReceipt.create({
+        data: {
+          amount: newTier.price,
+          description: `Subscription to ${newTier.name}`,
+          fromId: service.owners[0]?.userId ?? "",
+          toId: ctx.session.user.id ?? "",
+          status: BillingStatus.PAID,
+          paymentMethodId: paymentMethod.id,
+          subscriptionTierId: newTier.id,
+        },
+      });
+
+      // 7) TODO: Create an outgoing billing receipt for the service owner
+      await ctx.db.billingReceipt.create({
+        data: {
+          amount: newTier.price,
+          description: `Subscription to ${newTier.name}`,
+          fromId: ctx.session.user.id ?? "",
+          toId: service.owners[0]?.userId ?? "",
+          status: BillingStatus.RECEIVED,
+          paymentMethodId: paymentMethod.id,
+          subscriptionTierId: newTier.id,
+        },
+      });
+
+      // 8. Invoke api key
+
+      // 9. Update or create the subscription
       if (existingSubscription) {
         if (existingSubscription.id === newTier.id) {
-          if (existingSubscription.subscriptionStatus === "ACTIVE") {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Cannot subscribe again to the same tier",
-            });
-          } else {
-            await ctx.db.serviceConsumer.update({
-              where: { id: existingSubscription.id },
-              data: {
-                subscriptionStatus: SubscriptionStatus.ACTIVE,
-                subscriptionTierId: newTier.id,
-                paymentMethodId: paymentMethodId,
-                renewingSubscription: autoRenewal,
-                subscriptionStartDate: new Date(),
-                lastRenewed: new Date(),
-              },
-            });
-          }
+          await ctx.db.serviceConsumer.update({
+            where: { id: existingSubscription.id },
+            data: {
+              subscriptionStatus: SubscriptionStatus.ACTIVE,
+              subscriptionTierId: newTier.id,
+              paymentMethodId: paymentMethodId,
+              renewingSubscription: autoRenewal,
+              subscriptionStartDate: new Date().toISOString().split("T")[0],
+              lastRenewed: new Date().toISOString().split("T")[0],
+            },
+          });
         } else {
           await ctx.db.serviceConsumer.update({
             where: { id: existingSubscription.id },
@@ -86,9 +132,9 @@ export const subscriptionRouter = createTRPCRouter({
               subscriptionStatus: SubscriptionStatus.ACTIVE,
               subscriptionTierId: newTier.id,
               paymentMethodId: paymentMethodId,
-              lastRenewed: new Date(),
+              lastRenewed: new Date().toISOString().split("T")[0],
               renewingSubscription: autoRenewal,
-              subscriptionStartDate: new Date(),
+              subscriptionStartDate: new Date().toISOString().split("T")[0],
             },
           });
         }
@@ -103,33 +149,6 @@ export const subscriptionRouter = createTRPCRouter({
           },
         });
       }
-
-      // 5. Hhandle payment logic
-      // a) Verify the payment method belongs to the user
-      const paymentMethod = await ctx.db.paymentMethod.findUnique({
-        where: { id: paymentMethodId },
-      });
-      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Payment method not found or doesn't belong to user",
-        });
-      }
-      // b) TODO: Call Stripe
-
-      // c) Create a billing receipt
-      await ctx.db.billingReceipt.create({
-        data: {
-          amount: newTier.price,
-          description: `Subscription to ${newTier.name}`,
-          fromId: service.owners[0]?.userId ?? "",
-          toId: ctx.session.user.id ?? "",
-          status: BillingStatus.PAID,
-          paymentMethodId: paymentMethod.id,
-          subscriptionTierId: newTier.id,
-        },
-      });
-
       return { success: true };
     }),
 
@@ -162,7 +181,9 @@ export const subscriptionRouter = createTRPCRouter({
         });
       }
 
-      // 2) Update the subscription record
+      // 2) Tell stripe to cancel the subscription now/after the billing period
+
+      // 3) Update the subscription record
       await ctx.db.serviceConsumer.update({
         where: { id: subscription.id },
         data: {
@@ -173,7 +194,9 @@ export const subscriptionRouter = createTRPCRouter({
         },
       });
 
-      // 3) (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
+      // 4) If service was free (i.e. cancelled immediately), revoke the API key here
+
+      // 5) (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
 
       return { success: true };
     }),
@@ -215,7 +238,7 @@ export const subscriptionRouter = createTRPCRouter({
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  switchTier: protectedProcedure
+  switchSubscriptionTier: protectedProcedure
     .input(
       z.object({
         oldTierId: z.string(),
@@ -230,6 +253,17 @@ export const subscriptionRouter = createTRPCRouter({
         where: {
           userId: ctx.session.user.id,
           subscriptionTierId: oldTierId,
+        },
+        include: {
+          subscriptionTier: {
+            include: {
+              service: {
+                include: {
+                  owners: true,
+                },
+              },
+            },
+          },
         },
       });
       if (!subscription) {
@@ -250,19 +284,48 @@ export const subscriptionRouter = createTRPCRouter({
         });
       }
 
-      // 3) Update the subscription with the new tier
+      // 3) Tell Stripe to charge the new tier
+
+      // 4) Create a new incoming billing receipt for the new tier
+      await ctx.db.billingReceipt.create({
+        data: {
+          amount: newTier.price,
+          description: `Subscription to ${newTier.name} (Switched from ${subscription.subscriptionTier.name})`,
+          fromId: subscription.subscriptionTier.service.owners[0]?.userId ?? "",
+          toId: ctx.session.user.id,
+          status: BillingStatus.PAID,
+          paymentMethodId: subscription.paymentMethodId,
+          subscriptionTierId: newTier.id,
+        },
+      });
+
+      // 5) Create an outgoing billing receipt for the service owner
+      await ctx.db.billingReceipt.create({
+        data: {
+          amount: newTier.price,
+          description: `Subscription to ${newTier.name} (Switched from ${subscription.subscriptionTier.name})`,
+          fromId: ctx.session.user.id,
+          toId: subscription.subscriptionTier.service.owners[0]?.userId ?? "",
+          status: BillingStatus.RECEIVED,
+          paymentMethodId: subscription.paymentMethodId,
+          subscriptionTierId: newTier.id,
+        },
+      });
+
+      // 6 Revoke the API key for the old tier
+
+      // 7) Invoke a API key for the new tier
+
+      // 8) Update the subscription with the new tier
       await ctx.db.serviceConsumer.update({
         where: { id: subscription.id },
         data: { subscriptionTierId: newTier.id },
       });
+
       // (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
 
       return { success: true };
     }),
-
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
 
   updateSubscriptionPaymentMethod: protectedProcedure
     .input(
@@ -441,6 +504,7 @@ export const subscriptionRouter = createTRPCRouter({
           message: "Subscription is not in a cancellable state",
         };
       }
+
       // 3) Update subscription status
       await ctx.db.serviceConsumer.update({
         where: { userId: ctx.session.user.id, id: subscription.id },
@@ -496,6 +560,63 @@ export const subscriptionRouter = createTRPCRouter({
 
       return { success: true };
     }),
+
+  initializeStripeSetupIntent: protectedProcedure.mutation(async ({ ctx }) => {
+    // Fetch the current user from the database.
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.session.user.id },
+    });
+    if (!user) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    if (!user.email) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          "Email is required to create a Stripe customer. Fix this in your profile settings.",
+      });
+    }
+
+    if (!user.name) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          "A name is required to create a Stripe customer. Fix this in your profile settings.",
+      });
+    }
+
+    let stripeCustomerId = user.stripeCustomerId;
+    // If the user does not already have a Stripe customer ID, create one.
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.name,
+      });
+      stripeCustomerId = customer.id;
+      await ctx.db.user.update({
+        where: { id: user.id },
+        data: { stripeCustomerId },
+      });
+    }
+
+    // Create a SetupIntent associated with the Stripe customer.
+    const setupIntent = await stripe.setupIntents.create({
+      customer: stripeCustomerId,
+    });
+
+    if (!setupIntent.client_secret) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to create SetupIntent",
+      });
+    }
+
+    return { clientSecret: setupIntent.client_secret };
+  }),
 
   // Procedure to save the PaymentMethod returned by Stripe.
   savePaymentMethod: protectedProcedure
@@ -561,60 +682,32 @@ export const subscriptionRouter = createTRPCRouter({
       return { success: true };
     }),
 
-  initializeStripeSetupIntent: protectedProcedure.mutation(async ({ ctx }) => {
-    // Fetch the current user from the database.
-    const user = await ctx.db.user.findUnique({
-      where: { id: ctx.session.user.id },
-    });
-    if (!user) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "User not found",
-      });
-    }
+  checkSubscriptionCancellations: protectedProcedure.mutation(
+    async ({ ctx }) => {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    if (!user.email) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message:
-          "Email is required to create a Stripe customer. Fix this in your profile settings.",
+      // 1) Find all subscriptions that are pending cancellation and have a start date in the past
+      const toCancel = await ctx.db.serviceConsumer.findMany({
+        where: {
+          subscriptionStatus: "PENDING_CANCELLATION",
+          lastRenewed: {
+            lte: oneMonthAgo,
+          },
+        },
       });
-    }
 
-    if (!user.name) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message:
-          "A name is required to create a Stripe customer. Fix this in your profile settings.",
-      });
-    }
+      // 2) Change their status to cancelled
+      for (const consumer of toCancel) {
+        await ctx.db.serviceConsumer.update({
+          where: { id: consumer.id },
+          data: { subscriptionStatus: SubscriptionStatus.CANCELLED },
+        });
 
-    let stripeCustomerId = user.stripeCustomerId;
-    // If the user does not already have a Stripe customer ID, create one.
-    if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        name: user.name,
-      });
-      stripeCustomerId = customer.id;
-      await ctx.db.user.update({
-        where: { id: user.id },
-        data: { stripeCustomerId },
-      });
-    }
+        // 2a) Revoke api key
+      }
 
-    // Create a SetupIntent associated with the Stripe customer.
-    const setupIntent = await stripe.setupIntents.create({
-      customer: stripeCustomerId,
-    });
-
-    if (!setupIntent.client_secret) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to create SetupIntent",
-      });
-    }
-
-    return { clientSecret: setupIntent.client_secret };
-  }),
+      return { success: true, count: toCancel.length };
+    },
+  ),
 });

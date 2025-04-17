@@ -58,12 +58,11 @@ const SubscriptionsManagementPage: React.FC = () => {
   const resumeServiceMutation =
     api.subscription.resumeSubscription.useMutation();
 
-  const subscriptionStatusMap = {
-    ACTIVE: "Active",
-    EXPIRED: "Expired",
-    CANCELLED: "Cancelled",
-    PENDING_CANCELLATION: "Pending Cancellation",
-    PAYMENT_FAILED: "Payment Failed",
+  const subscriptionStatusMap = (status: SubscriptionStatus) => {
+    return status
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
   };
 
   const serviceAction = (
@@ -255,7 +254,7 @@ const SubscriptionsManagementPage: React.FC = () => {
                     {subscription.renewingSubscription ? "Yes" : "No"}
                   </TableCell>
                   <TableCell className="text-[13.5px]">
-                    {subscriptionStatusMap[subscription.subscriptionStatus] ||
+                    {subscriptionStatusMap(subscription.subscriptionStatus) ||
                       "Unknown"}
                   </TableCell>
                   <TableCell className="text-[13.5px]">
