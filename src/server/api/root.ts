@@ -7,7 +7,7 @@ import { subscriptionRouter } from "./routers/subscription";
 
 if (process.env.NODE_ENV === "development") {
   console.log("🧪 Dev mode: enabling cancellation scheduler...");
-  import("../../../scripts/scheduleCancellations");
+  void import("../../../scripts/scheduleCancellations");
 }
 
 /**
