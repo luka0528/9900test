@@ -7,6 +7,9 @@ import {
 import { TRPCError } from "@trpc/server";
 import { BillingStatus, SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
+import { checkOverdueSubscriptions } from "scripts/checkOverdueSubscriptions";
+import { api } from "~/trpc/server";
+import { appRouter } from "../root";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -288,7 +291,7 @@ export const subscriptionRouter = createTRPCRouter({
     .input(
       z.object({
         tierId: z.string(),
-        paymentMethodId: z.string(),
+        paymentMethodId: z.string().min(1),
         autoRenewal: z.boolean().default(false),
       }),
     )
@@ -344,7 +347,7 @@ export const subscriptionRouter = createTRPCRouter({
           subscriptionStatus: SubscriptionStatus.ACTIVE,
           userId: ctx.session.user.id,
           subscriptionTierId: tier.id,
-          paymentMethodId: tier.price ? paymentMethodId : undefined,
+          paymentMethodId: paymentMethodId,
           renewingSubscription: autoRenewal,
         },
       });
@@ -906,4 +909,82 @@ export const subscriptionRouter = createTRPCRouter({
         isLower: newTier.price < oldTier.price || newTier.price === 0,
       };
     }),
+
+  checkSubscriptionRenewals: publicProcedure.mutation(async ({ ctx }) => {
+    const THIRTY_DAYS_AGO = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const overdueSubscriptions = await ctx.db.serviceConsumer.findMany({
+      where: {
+        subscriptionStatus: SubscriptionStatus.ACTIVE,
+        renewingSubscription: true,
+        lastRenewed: { lte: THIRTY_DAYS_AGO },
+      },
+      include: {
+        subscriptionTier: {
+          include: {
+            service: {
+              include: { owners: true },
+            },
+          },
+        },
+      },
+    });
+
+    const caller = appRouter.createCaller(ctx);
+
+    let processedCount = 0;
+
+    for (const subscription of overdueSubscriptions) {
+      const tier = subscription.subscriptionTier;
+      const service = tier.service;
+
+      if (tier.price === 0 || !subscription.paymentMethodId) continue;
+
+      const paymentResponse =
+        await caller.subscription.createStripePaymentIntent({
+          paymentMethodId: subscription.paymentMethodId,
+          subscriptionTierId: subscription.subscriptionTierId,
+        });
+
+      // Create billing receipt for the attempt
+      await ctx.db.billingReceipt.create({
+        data: {
+          amount: tier.price,
+          description: `Subscription to ${tier.name}`,
+          fromId: subscription.userId,
+          toId: service.owners[0]?.userId ?? "",
+          status:
+            paymentResponse.status === "SUCCESS"
+              ? BillingStatus.PAID
+              : paymentResponse.status === "CONFIRMATION_REQUIRED"
+                ? BillingStatus.PENDING
+                : BillingStatus.FAILED,
+          paymentMethodId: subscription.paymentMethodId,
+          subscriptionTierId: subscription.subscriptionTierId,
+        },
+      });
+
+      if (paymentResponse.status !== "SUCCESS") {
+        // Mark as pending cancellation
+        await ctx.db.serviceConsumer.update({
+          where: { id: subscription.id },
+          data: {
+            subscriptionStatus: SubscriptionStatus.PENDING_CANCELLATION,
+          },
+        });
+      } else {
+        // Mark renewal timestamp
+        await ctx.db.serviceConsumer.update({
+          where: { id: subscription.id },
+          data: {
+            lastRenewed: new Date(),
+          },
+        });
+      }
+
+      processedCount++;
+    }
+
+    return { success: true, count: processedCount };
+  }),
 });
