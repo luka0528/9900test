@@ -7,8 +7,6 @@ import {
 import { TRPCError } from "@trpc/server";
 import { BillingStatus, SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
-import { checkOverdueSubscriptions } from "scripts/checkOverdueSubscriptions";
-import { api } from "~/trpc/server";
 import { appRouter } from "../root";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -255,7 +253,7 @@ export const subscriptionRouter = createTRPCRouter({
       await ctx.db.billingReceipt.create({
         data: {
           amount: subscriptionTier.price,
-          description: `Subscription to ${subscriptionTier.name}`,
+          description: `${subscriptionTier.service.name} | ${subscriptionTier.name}`,
           fromId: ctx.session.user.id ?? "",
           toId: subscriptionTier.service.owners[0]?.userId ?? "",
           status:
@@ -274,7 +272,7 @@ export const subscriptionRouter = createTRPCRouter({
         await ctx.db.billingReceipt.create({
           data: {
             amount: subscriptionTier.price,
-            description: `Subscription to ${subscriptionTier.name}`,
+            description: `${subscriptionTier.service.name} | ${subscriptionTier.name}`,
             fromId: ctx.session.user.id ?? "",
             toId: subscriptionTier.service.owners[0]?.userId ?? "",
             status: BillingStatus.RECEIVED,
@@ -935,10 +933,11 @@ export const subscriptionRouter = createTRPCRouter({
     let processedCount = 0;
 
     for (const subscription of overdueSubscriptions) {
-      const tier = subscription.subscriptionTier;
-      const service = tier.service;
+      const subscriptionTier = subscription.subscriptionTier;
+      const service = subscriptionTier.service;
 
-      if (tier.price === 0 || !subscription.paymentMethodId) continue;
+      if (subscriptionTier.price === 0 || !subscription.paymentMethodId)
+        continue;
 
       const paymentResponse =
         await caller.subscription.createStripePaymentIntent({
@@ -949,8 +948,8 @@ export const subscriptionRouter = createTRPCRouter({
       // Create billing receipt for the attempt
       await ctx.db.billingReceipt.create({
         data: {
-          amount: tier.price,
-          description: `Subscription to ${tier.name}`,
+          amount: subscriptionTier.price,
+          description: `${subscriptionTier.service.name} | ${subscriptionTier.name}`,
           fromId: subscription.userId,
           toId: service.owners[0]?.userId ?? "",
           status:
