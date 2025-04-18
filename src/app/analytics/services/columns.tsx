@@ -33,7 +33,7 @@ export type ServiceData = {
   latestVersion: {
     id: string;
     version: string;
-  }
+  };
   rating: number;
   revenue: {
     total: number;

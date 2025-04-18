@@ -6,8 +6,7 @@ import { DataTable } from "~/app/analytics/services/data-table";
 import { Loader2 } from "lucide-react";
 
 export const ServiceTable = () => {
-  const { data, isLoading } =
-    api.service.getAllByUserId.useQuery();
+  const { data, isLoading } = api.service.getAllByUserId.useQuery();
   return (
     <>
       {isLoading ? (
