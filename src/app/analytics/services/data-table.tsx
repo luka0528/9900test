@@ -2,11 +2,11 @@
 
 import React from "react";
 import {
-  ColumnDef,
+  type ColumnDef,
+  type SortingState,
+  type ExpandedState,
+  type ColumnFiltersState,
   flexRender,
-  SortingState,
-  ExpandedState,
-  ColumnFiltersState,
   getCoreRowModel,
   getExpandedRowModel,
   getPaginationRowModel,
@@ -27,7 +27,7 @@ import {
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
-import type { ServiceData, ServiceTierData } from "./columns";
+import type { ServiceData } from "./columns";
 import { ServiceTableTierTable } from "~/components/analytics/ServiceTableTierTable";
 import { ServiceTableViewOptions } from "~/components/analytics/ServiceTableViewOptions";
 

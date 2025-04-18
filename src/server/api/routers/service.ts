@@ -1,7 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { RestMethod } from "@prisma/client";
 
 import {
   createTRPCRouter,
@@ -302,6 +301,7 @@ export const serviceRouter = createTRPCRouter({
           take: 1,
           select: {
             version: true,
+            id: true,
           },
         },
         subscriptionTiers: {
@@ -331,7 +331,10 @@ export const serviceRouter = createTRPCRouter({
         updatedAt: service.updatedAt,
         owners: service.owners.map((owner) => owner.user.name ?? ""),
         tags: service.tags.map((tag) => tag.name),
-        latestVersion: service.versions[0]?.version ?? "1.0",
+        latestVersion: {
+          id: service.versions[0]?.id ?? "",
+          version: service.versions[0]?.version ?? "",
+        },
         rating: await getRatingForService(service.id),
         revenue: {
           total: await getRevenueTotalForService(service.id),

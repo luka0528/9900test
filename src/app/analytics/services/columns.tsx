@@ -1,6 +1,10 @@
+// ESLint recognises certain assertions as unnecesary, however without it, they
+// are being inferred as type 'unknown'.
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
+
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
@@ -26,7 +30,10 @@ export type ServiceData = {
   createdAt: Date;
   updatedAt: Date;
   tags: string[];
-  latestVersion: string;
+  latestVersion: {
+    id: string;
+    version: string;
+  }
   rating: number;
   revenue: {
     total: number;
@@ -95,6 +102,7 @@ export const columns: ColumnDef<ServiceData>[] = [
     cell: ({ row }) => {
       const owners = row.getValue("owners") as string[];
       return (
+        // TODO: Remove useSession & instead store .src in the database (?)
         <div className="flex flex-wrap gap-2">
           {owners.map((owner) => (
             <Avatar className="h-8 w-8" key={owner}>

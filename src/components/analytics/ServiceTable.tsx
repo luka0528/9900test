@@ -1,5 +1,4 @@
 import { api } from "~/trpc/react";
-import { AnalyticsSideBar } from "./AnalyticsSideBar";
 
 import { columns } from "~/app/analytics/services/columns";
 import { DataTable } from "~/app/analytics/services/data-table";
@@ -7,7 +6,7 @@ import { DataTable } from "~/app/analytics/services/data-table";
 import { Loader2 } from "lucide-react";
 
 export const ServiceTable = () => {
-  const { data, isLoading, isError, isSuccess } =
+  const { data, isLoading } =
     api.service.getAllByUserId.useQuery();
   return (
     <>

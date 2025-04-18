@@ -86,7 +86,7 @@ export default function ServicesPage() {
                   service={{
                     id: service.id,
                     name: service.name,
-                    owner: service.owner ?? "No Name",
+                    owner: service.owners[0] ?? "No Name",
                     tags: service.tags,
                     latestVersionId: service.latestVersion.id,
                     latestVersion: service.latestVersion.version,
