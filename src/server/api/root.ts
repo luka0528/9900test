@@ -4,6 +4,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 import { versionRouter } from "./routers/version";
 import { analyticsRouter } from "./routers/analytics";
 import { subscriptionRouter } from "./routers/subscription";
+import { notificationRouter } from "./routers/notification";
 
 if (process.env.NODE_ENV === "development") {
   console.log("🧪 Dev mode: enabling cancellation scheduler...");
@@ -21,6 +22,7 @@ export const appRouter = createTRPCRouter({
   version: versionRouter,
   analytics: analyticsRouter,
   subscription: subscriptionRouter,
+  notification: notificationRouter,
 });
 
 // export type definition of API
