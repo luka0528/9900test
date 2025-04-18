@@ -15,9 +15,10 @@ const waitForPaymentStatus = async (
   timeoutMs = 5000,
   intervalMs = 1000,
 ): Promise<{
-  success: "SUCCESS" | "RETRY_PAYMENT" | "CONFIRMATION_REQUIRED";
+  success: boolean;
+  status: "SUCCESS" | "RETRY_PAYMENT" | "CONFIRMATION_REQUIRED";
   message: string;
-  data: Stripe.PaymentIntent | null;
+  data: Stripe.PaymentIntent;
 }> => {
   const start = Date.now();
 
@@ -27,31 +28,34 @@ const waitForPaymentStatus = async (
     if (!intent) {
       await stripe.paymentIntents.cancel(paymentIntent.id);
       return {
-        success: "RETRY_PAYMENT",
+        success: false,
+        status: "RETRY_PAYMENT",
         message: "Payment failed. Please try again.",
-        data: null,
+        data: intent,
       };
     }
 
     switch (intent.status) {
       case "succeeded":
         return {
-          success: "SUCCESS",
+          success: true,
+          status: "SUCCESS",
           message: "Payment successful",
           data: intent,
         };
 
       case "requires_action":
         return {
-          success: "CONFIRMATION_REQUIRED",
-          message:
-            "Payment requires authentication. Please complete payment in-session.",
+          success: false,
+          status: "CONFIRMATION_REQUIRED",
+          message: "Payment requires confirmation.",
           data: intent,
         };
 
       case "requires_payment_method":
         return {
-          success: "RETRY_PAYMENT",
+          success: false,
+          status: "RETRY_PAYMENT",
           message: "Payment failed. Please try another payment method.",
           data: intent,
         };
@@ -63,37 +67,42 @@ const waitForPaymentStatus = async (
           );
           if (confirmedIntent.status === "succeeded") {
             return {
-              success: "SUCCESS",
+              success: true,
+              status: "SUCCESS",
               message: "Payment successful after confirmation",
               data: confirmedIntent,
             };
           } else {
             await stripe.paymentIntents.cancel(paymentIntent.id);
             return {
-              success: "RETRY_PAYMENT",
+              success: false,
+              status: "RETRY_PAYMENT",
               message: `Payment confirmation failed with status: ${confirmedIntent.status}`,
               data: confirmedIntent,
             };
           }
         } catch {
           return {
-            success: "RETRY_PAYMENT",
+            success: false,
+            status: "RETRY_PAYMENT",
             message: `Error confirming payment. Please try again.`,
-            data: null,
+            data: intent,
           };
         }
 
       case "requires_capture":
         await stripe.paymentIntents.cancel(paymentIntent.id);
         return {
-          success: "RETRY_PAYMENT",
+          success: false,
+          status: "RETRY_PAYMENT",
           message: "Payment failed. Please try again.",
           data: intent,
         };
 
       case "canceled":
         return {
-          success: "RETRY_PAYMENT",
+          success: false,
+          status: "RETRY_PAYMENT",
           message: "Payment was canceled. Please try again.",
           data: intent,
         };
@@ -103,18 +112,48 @@ const waitForPaymentStatus = async (
   }
 
   return {
-    success: "RETRY_PAYMENT",
+    success: false,
+    status: "RETRY_PAYMENT",
     message: "Payment status check timed out.",
-    data: null,
+    data: paymentIntent,
   };
 };
 
 export const subscriptionRouter = createTRPCRouter({
-  createStripePaymentMethod: protectedProcedure
+  cancelStripePaymentIntent: protectedProcedure
+    .input(z.object({ paymentIntentId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { paymentIntentId } = input;
+      // 1) Find the payment intent
+      const paymentIntent =
+        await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (!paymentIntent) {
+        return {
+          success: false,
+          message: "Payment intent not found",
+        };
+      }
+
+      // 2) Cancel the payment intent
+      try {
+        await stripe.paymentIntents.cancel(paymentIntentId);
+      } catch {
+        return {
+          success: false,
+          message: "Failed to cancel payment intent",
+        };
+      }
+
+      return {
+        success: true,
+        message: "Payment intent cancelled successfully",
+      };
+    }),
+
+  createStripePaymentIntent: protectedProcedure
     .input(
       z.object({
         paymentMethodId: z.string(),
-        userId: z.string(),
         subscriptionTierId: z.string(),
       }),
     )
@@ -197,7 +236,7 @@ export const subscriptionRouter = createTRPCRouter({
         amount: Math.round(subscriptionTier.price * 100), // amount in cents
         currency: "aud",
         customer: stripeCustomerId,
-        payment_method: paymentMethodId,
+        payment_method: paymentMethod.stripePaymentId,
         off_session: true,
         confirm: true,
         description: `Subscription to ${subscriptionTier.service.name}, for ${subscriptionTier.name}`,
@@ -214,12 +253,12 @@ export const subscriptionRouter = createTRPCRouter({
         data: {
           amount: subscriptionTier.price,
           description: `Subscription to ${subscriptionTier.name}`,
-          fromId: subscriptionTier.service.owners[0]?.userId ?? "",
-          toId: ctx.session.user.id ?? "",
+          fromId: ctx.session.user.id ?? "",
+          toId: subscriptionTier.service.owners[0]?.userId ?? "",
           status:
-            res.success === "SUCCESS"
+            res.status === "SUCCESS"
               ? BillingStatus.PAID
-              : res.success === "CONFIRMATION_REQUIRED"
+              : res.status === "CONFIRMATION_REQUIRED"
                 ? BillingStatus.PENDING
                 : BillingStatus.FAILED,
           paymentMethodId: paymentMethodId,
@@ -228,7 +267,7 @@ export const subscriptionRouter = createTRPCRouter({
       });
 
       // 7) TODO: Create an outgoing billing receipt for the service owner if payment was successful
-      if (res.success === "SUCCESS") {
+      if (res.status === "SUCCESS") {
         await ctx.db.billingReceipt.create({
           data: {
             amount: subscriptionTier.price,
@@ -241,44 +280,35 @@ export const subscriptionRouter = createTRPCRouter({
           },
         });
       }
+
+      return res;
     }),
 
   subscribeToTier: protectedProcedure
     .input(
       z.object({
-        serviceId: z.string(),
         tierId: z.string(),
         paymentMethodId: z.string(),
         autoRenewal: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { serviceId, tierId, paymentMethodId, autoRenewal } = input;
-
-      // 1. Validate the service
-      const service = await ctx.db.service.findUnique({
-        where: { id: serviceId },
-        include: {
-          subscriptionTiers: true,
-          owners: true,
-        },
-      });
-
-      if (!service) {
-        return {
-          success: false,
-          message: "Service not found.",
-        };
-      }
+      const { tierId, paymentMethodId, autoRenewal } = input;
 
       // 2. Validate the tier
-      const tier = service.subscriptionTiers.find((tier) => tier.id === tierId);
+      const tier = await ctx.db.subscriptionTier.findUnique({
+        where: { id: tierId },
+        include: {
+          service: { include: { owners: true } },
+        },
+      });
       if (!tier) {
         return {
           success: false,
-          message: "Tier not found.",
+          message: "Subscription tier not found.",
         };
       }
+      const service = tier.service;
 
       // 4) Verify the payment method belongs to the user
       const paymentMethod = await ctx.db.paymentMethod.findUnique({
@@ -301,54 +331,24 @@ export const subscriptionRouter = createTRPCRouter({
         },
       });
 
-      if (
-        existingSubscription &&
-        existingSubscription.id === tier.id &&
-        existingSubscription.subscriptionStatus === "ACTIVE"
-      ) {
+      if (existingSubscription) {
         return {
           success: false,
-          message: "Already subscribed to this tier.",
+          message:
+            "Already subscribed to this tier. To switch tiers, please visit the subscription management page.",
         };
       }
 
-      if (existingSubscription) {
-        if (existingSubscription.id === tier.id) {
-          await ctx.db.serviceConsumer.update({
-            where: { id: existingSubscription.id },
-            data: {
-              subscriptionStatus: SubscriptionStatus.ACTIVE,
-              subscriptionTierId: tier.id,
-              paymentMethodId: paymentMethodId,
-              renewingSubscription: autoRenewal,
-              subscriptionStartDate: new Date(),
-              lastRenewed: new Date(),
-            },
-          });
-        } else {
-          await ctx.db.serviceConsumer.update({
-            where: { id: existingSubscription.id },
-            data: {
-              subscriptionStatus: SubscriptionStatus.ACTIVE,
-              subscriptionTierId: tier.id,
-              paymentMethodId: paymentMethodId,
-              renewingSubscription: autoRenewal,
-              subscriptionStartDate: new Date(),
-              lastRenewed: new Date(),
-            },
-          });
-        }
-      } else {
-        await ctx.db.serviceConsumer.create({
-          data: {
-            subscriptionStatus: SubscriptionStatus.ACTIVE,
-            userId: ctx.session.user.id,
-            subscriptionTierId: tier.id,
-            paymentMethodId: tier.price ? paymentMethodId : undefined,
-            renewingSubscription: autoRenewal,
-          },
-        });
-      }
+      await ctx.db.serviceConsumer.create({
+        data: {
+          subscriptionStatus: SubscriptionStatus.ACTIVE,
+          userId: ctx.session.user.id,
+          subscriptionTierId: tier.id,
+          paymentMethodId: tier.price ? paymentMethodId : undefined,
+          renewingSubscription: autoRenewal,
+        },
+      });
+
       return { success: true, message: "Successfully subscribed to service." };
     }),
 
@@ -877,4 +877,33 @@ export const subscriptionRouter = createTRPCRouter({
 
     return { success: true, count: toCancel.length };
   }),
+
+  isNewTierLower: protectedProcedure
+    .input(
+      z.object({
+        oldTierId: z.string(),
+        newTierId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { oldTierId, newTierId } = input;
+
+      // 1) Find the old and new tiers
+      const oldTier = await ctx.db.subscriptionTier.findUnique({
+        where: { id: oldTierId },
+      });
+      const newTier = await ctx.db.subscriptionTier.findUnique({
+        where: { id: newTierId },
+      });
+
+      if (!oldTier || !newTier) {
+        return { success: false, message: "Tier not found" };
+      }
+
+      // 2) Compare the prices
+      return {
+        success: true,
+        isLower: newTier.price < oldTier.price || newTier.price === 0,
+      };
+    }),
 });
