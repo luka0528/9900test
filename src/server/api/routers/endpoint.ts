@@ -40,117 +40,182 @@ export const endpointRouter = createTRPCRouter({
       return endpoint;
     }),
 
-  updateEndpoint: protectedProcedure
+  getOperation: protectedProcedure
     .input(
       z.object({
-        endpointId: z.string(),
-        path: z.string().min(1),
-        operations: z.array(
+        operationId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { operationId } = input;
+      const operation = await ctx.db.operation.findUnique({
+        where: { id: operationId },
+        select: {
+          id: true,
+          method: true,
+          description: true,
+          deprecated: true,
+          parameters: true,
+          requestBody: true,
+          responses: true,
+        },
+      });
+
+      if (!operation) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Operation not found",
+        });
+      }
+
+      return operation;
+    }),
+
+  updateOperation: protectedProcedure
+    .input(
+      z.object({
+        operationId: z.string(),
+        method: z.nativeEnum(RestMethod),
+        description: z.string(),
+        deprecated: z.boolean(),
+        parameters: z.array(
           z.object({
             id: z.string(),
-            method: z.nativeEnum(RestMethod),
+            name: z.string(),
             description: z.string(),
+            required: z.boolean(),
+            parameterLocation: z.nativeEnum(ParameterLocation),
+            schemaJson: z.string(),
             deprecated: z.boolean(),
-            parameters: z.array(
-              z.object({
-                id: z.string(),
-                name: z.string(),
-                description: z.string(),
-                required: z.boolean(),
-                parameterLocation: z.nativeEnum(ParameterLocation),
-                schemaJson: z.string(),
-                deprecated: z.boolean(),
-              }),
-            ),
-            requestBody: z
-              .object({
-                id: z.string(),
-                description: z.string(),
-                contentJson: z.string(),
-              })
-              .nullable(),
-            responses: z.array(
-              z.object({
-                id: z.string(),
-                statusCode: z.number(),
-                description: z.string(),
-                contentJson: z.string(),
-                headersJson: z.string().nullable(),
-              }),
-            ),
+          }),
+        ),
+        requestBody: z
+          .object({
+            id: z.string(),
+            description: z.string(),
+            contentJson: z.string(),
+          })
+          .nullable(),
+        responses: z.array(
+          z.object({
+            id: z.string(),
+            statusCode: z.number(),
+            description: z.string(),
+            contentJson: z.string(),
+            headersJson: z.string().nullable(),
           }),
         ),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { endpointId, path, operations } = input;
+      const {
+        operationId,
+        method,
+        description,
+        deprecated,
+        parameters,
+        requestBody,
+        responses,
+      } = input;
 
-      // First update the endpoint path
-      await ctx.db.endPoint.update({
-        where: { id: endpointId },
-        data: { path },
+      // Update operation
+      await ctx.db.operation.update({
+        where: { id: operationId },
+        data: {
+          method,
+          description,
+          deprecated,
+        },
       });
 
-      // Then update all operations
-      for (const operation of operations) {
-        await ctx.db.operation.update({
-          where: { id: operation.id },
+      // Update parameters
+      for (const param of parameters) {
+        await ctx.db.parameter.update({
+          where: { id: param.id },
           data: {
-            method: operation.method,
-            description: operation.description,
-            deprecated: operation.deprecated,
+            name: param.name,
+            description: param.description,
+            required: param.required,
+            parameterLocation: param.parameterLocation,
+            schemaJson: param.schemaJson,
+            deprecated: param.deprecated,
           },
         });
-
-        // Update parameters
-        for (const param of operation.parameters) {
-          await ctx.db.parameter.update({
-            where: { id: param.id },
-            data: {
-              name: param.name,
-              description: param.description,
-              required: param.required,
-              parameterLocation: param.parameterLocation,
-              schemaJson: param.schemaJson,
-              deprecated: param.deprecated,
-            },
-          });
-        }
-
-        // Update request body if exists
-        if (operation.requestBody) {
-          await ctx.db.requestBody.update({
-            where: { id: operation.requestBody.id },
-            data: {
-              description: operation.requestBody.description,
-              contentJson: operation.requestBody.contentJson,
-            },
-          });
-        }
-
-        // Update responses
-        for (const response of operation.responses) {
-          const updateData: {
-            statusCode: number;
-            description: string;
-            contentJson: string;
-            headersJson?: string;
-          } = {
-            statusCode: response.statusCode,
-            description: response.description,
-            contentJson: response.contentJson,
-          };
-
-          if (response.headersJson !== null) {
-            updateData.headersJson = response.headersJson;
-          }
-
-          await ctx.db.response.update({
-            where: { id: response.id },
-            data: updateData,
-          });
-        }
       }
+
+      // Update request body if exists
+      if (requestBody) {
+        await ctx.db.requestBody.update({
+          where: { id: requestBody.id },
+          data: {
+            description: requestBody.description,
+            contentJson: requestBody.contentJson,
+          },
+        });
+      }
+
+      // Update responses
+      for (const response of responses) {
+        const updateData: {
+          statusCode: number;
+          description: string;
+          contentJson: string;
+          headersJson?: string;
+        } = {
+          statusCode: response.statusCode,
+          description: response.description,
+          contentJson: response.contentJson,
+        };
+
+        if (response.headersJson !== null) {
+          updateData.headersJson = response.headersJson;
+        }
+
+        await ctx.db.response.update({
+          where: { id: response.id },
+          data: updateData,
+        });
+      }
+
+      return { success: true };
+    }),
+
+  addOperation: protectedProcedure
+    .input(
+      z.object({
+        endpointId: z.string(),
+        method: z.nativeEnum(RestMethod),
+        description: z.string(),
+        deprecated: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { endpointId, method, description, deprecated } = input;
+
+      const operation = await ctx.db.operation.create({
+        data: {
+          endPointId: endpointId,
+          method,
+          description,
+          deprecated,
+        },
+      });
+
+      return operation;
+    }),
+
+  deleteOperation: protectedProcedure
+    .input(
+      z.object({
+        operationId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { operationId } = input;
+
+      await ctx.db.operation.delete({
+        where: { id: operationId },
+      });
 
       return { success: true };
     }),

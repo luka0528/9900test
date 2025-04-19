@@ -1,10 +1,12 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
 import { api } from "~/trpc/react";
 import { Badge } from "~/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Button } from "~/components/ui/button";
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -24,14 +26,50 @@ import {
   SchemaViewer,
   type SchemaViewerProps,
 } from "~/components/auto-generation/SchemaViewer";
+import { useSession } from "next-auth/react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
+import { RestMethod } from "@prisma/client";
 
 export default function EndpointPage() {
+  const { data: session } = useSession();
   const params = useParams();
+  const router = useRouter();
   const endpointId = params.endpointId as string;
 
   const { data: endpoint } = api.endpoint.getEndpoint.useQuery({
     endpointId,
   });
+
+  const { data: service } = api.service.getServiceById.useQuery(
+    params.serviceId as string,
+  );
+
+  const addOperation = api.endpoint.addOperation.useMutation({
+    onSuccess: () => {
+      router.refresh();
+    },
+  });
+
+  const deleteOperation = api.endpoint.deleteOperation.useMutation({
+    onSuccess: () => {
+      router.refresh();
+    },
+  });
+
+  const isOwner = service?.owners.some(
+    (owner) => owner.user.id === session?.user?.id,
+  );
 
   if (!endpoint) {
     return <div>Loading...</div>;
@@ -42,8 +80,26 @@ export default function EndpointPage() {
       <ServiceSidebar serviceId={params.serviceId as string} />
       <div className="flex h-full grow flex-col overflow-y-auto">
         <div className="space-y-6 p-6">
-          <div>
+          <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">{endpoint.path}</h1>
+            {isOwner && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    addOperation.mutate({
+                      endpointId,
+                      method: RestMethod.GET,
+                      description: "",
+                      deprecated: false,
+                    });
+                  }}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add Operation
+                </Button>
+              </div>
+            )}
           </div>
 
           <Accordion type="multiple" className="space-y-4">
@@ -64,9 +120,54 @@ export default function EndpointPage() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4 px-4 pb-4">
-                    <p className="text-muted-foreground">
-                      {operation.description}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-muted-foreground">
+                        {operation.description}
+                      </p>
+                      {isOwner && (
+                        <div className="flex gap-2">
+                          <Link
+                            href={`/service/${params.serviceId as string}/${params.versionId as string}/${endpointId}/${operation.id}/edit`}
+                          >
+                            <Button variant="outline" size="sm">
+                              <Pencil className="mr-1 h-4 w-4" />
+                              Edit
+                            </Button>
+                          </Link>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm">
+                                <Trash2 className="mr-1 h-4 w-4" />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Delete Operation
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this
+                                  operation? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => {
+                                    deleteOperation.mutate({
+                                      operationId: operation.id,
+                                    });
+                                  }}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+                    </div>
 
                     <Tabs defaultValue="parameters">
                       <TabsList className="justify-start">
@@ -130,14 +231,6 @@ export default function EndpointPage() {
                                       </div>
                                     </TableCell>
                                     <TableCell className="w-1/2">
-                                      {/* DEBUG */}
-                                      {/* <pre className="mt-2 rounded-lg bg-muted p-4">
-                                        {JSON.stringify(
-                                          JSON.parse(param.schemaJson),
-                                          null,
-                                          2,
-                                        )}
-                                      </pre> */}
                                       <SchemaViewer
                                         schema={
                                           JSON.parse(
