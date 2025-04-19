@@ -34,16 +34,6 @@ import {
 } from "~/components/ui/select";
 import { Badge } from "~/components/ui/badge";
 
-type RestMethodType =
-  | "GET"
-  | "POST"
-  | "PUT"
-  | "DELETE"
-  | "PATCH"
-  | "HEAD"
-  | "OPTIONS"
-  | "TRACE";
-
 // Define form schema with consistent structure
 const formSchema = z.object({
   description: z.string().min(1, {
