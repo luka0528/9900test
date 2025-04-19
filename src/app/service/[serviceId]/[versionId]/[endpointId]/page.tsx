@@ -21,6 +21,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "~/components/ui/accordion";
+import { SchemaViewer, type SchemaViewerProps } from "~/components/auto-generation/SchemaViewer";
+
 
 export default function EndpointPage() {
   const params = useParams();
@@ -130,6 +132,11 @@ export default function EndpointPage() {
                                           2,
                                         )}
                                       </pre>
+                                      <SchemaViewer
+                                        schema={JSON.parse(
+                                          param.schemaJson,
+                                        ) as SchemaViewerProps["schema"]}
+                                      />
                                     </TableCell>
                                   </TableRow>
                                 ))}
