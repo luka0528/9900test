@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
 import React from "react";
-import { ChangeLogPointType, RestMethod } from "@prisma/client";
+import { ChangeLogPointType } from "@prisma/client";
 import {
   Select,
   SelectContent,
@@ -43,16 +43,6 @@ type RestMethodType =
   | "HEAD"
   | "OPTIONS"
   | "TRACE";
-const safeRestMethod: Record<RestMethodType, RestMethodType> = {
-  GET: "GET",
-  POST: "POST",
-  PUT: "PUT",
-  DELETE: "DELETE",
-  PATCH: "PATCH",
-  HEAD: "HEAD",
-  OPTIONS: "OPTIONS",
-  TRACE: "TRACE",
-};
 
 // Define form schema with consistent structure
 const formSchema = z.object({

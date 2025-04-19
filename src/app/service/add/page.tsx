@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Button, GlowingButton } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import {
   Form,
   FormControl,

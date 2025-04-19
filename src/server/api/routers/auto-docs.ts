@@ -1,7 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import SwaggerParser from "@apidevtools/swagger-parser";
 import {
   ChangeLogPointType,
   type RestMethod,

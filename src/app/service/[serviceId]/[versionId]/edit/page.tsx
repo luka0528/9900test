@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { createId } from "@paralleldrive/cuid2";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
-import { ChangeLogPointType, RestMethod } from "@prisma/client";
+import { ChangeLogPointType } from "@prisma/client";
 import {
   Select,
   SelectContent,
