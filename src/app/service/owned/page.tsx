@@ -34,7 +34,7 @@ export default function ServicesPage() {
             Add Service
           </Button>
         </div>
-        
+
         <Separator className="mb-6" />
 
         <div className="flex-1 overflow-auto p-4">

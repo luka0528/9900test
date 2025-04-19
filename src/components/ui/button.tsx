@@ -59,7 +59,7 @@ const GlowingButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     return (
       <div className="group relative inline-flex">
-        <div className="transitiona-all animated-background animate-tilt absolute -inset-px bg-gradient-to-r from-[#44BCFF] via-[#FF44EC] to-[#FF675E] opacity-70 blur-md duration-1000 group-hover:-inset-1 group-hover:opacity-100 "></div>
+        <div className="transitiona-all animated-background animate-tilt absolute -inset-px bg-gradient-to-r from-[#44BCFF] via-[#FF44EC] to-[#FF675E] opacity-70 blur-md duration-1000 group-hover:-inset-1 group-hover:opacity-100"></div>
         <Comp
           className={cn(
             buttonVariants({ variant, size, className }),
