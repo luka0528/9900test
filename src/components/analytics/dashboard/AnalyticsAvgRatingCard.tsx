@@ -14,7 +14,7 @@ import { StarRating } from "~/components/ui/stars";
 const MAX_RATING = 5;
 
 export const AnalyticsAvgRatingCard = () => {
-  const { data: avgRating, isLoading } = api.analytics.getAvgRating.useQuery();
+  const { data: avgRating, isLoading } = api.analytics.getAverageRating.useQuery();
 
   return (
     <Card>

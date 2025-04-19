@@ -28,8 +28,8 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
 import type { ServiceData } from "./columns";
-import { ServiceTableTierTable } from "~/components/analytics/ServiceTableTierTable";
-import { ServiceTableViewOptions } from "~/components/analytics/ServiceTableViewOptions";
+import { ServiceTableTierTable } from "~/components/analytics/service-table/ServiceTableTierTable";
+import { ServiceTableViewOptions } from "~/components/analytics/service-table/ServiceTableViewOptions";
 
 interface DataTableProps<TValue> {
   columns: ColumnDef<ServiceData, TValue>[];

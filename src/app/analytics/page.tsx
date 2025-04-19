@@ -3,10 +3,10 @@
 import { useSession } from "next-auth/react";
 
 import { AnalyticsSideBar } from "~/components/analytics/AnalyticsSideBar";
-import { AnalyticsCards } from "~/components/analytics/AnalyticsCards";
-import { AnalyticsChart } from "~/components/analytics/AnalyticsChart";
-import { AnalyticsReviewSection } from "~/components/analytics/AnalyticsReviewSection";
-import { AnalyticsPieChart } from "~/components/analytics/AnalyticsPieChart";
+import { AnalyticsCards } from "~/components/analytics/dashboard/AnalyticsCards";
+import { AnalyticsChart } from "~/components/analytics/dashboard/AnalyticsChart";
+import { AnalyticsReviewSection } from "~/components/analytics/dashboard/AnalyticsReviewSection";
+import { AnalyticsPieChart } from "~/components/analytics/dashboard/AnalyticsPieChart";
 import { AnalyticsUserUnauthenticated } from "~/components/analytics/AnalyticsUserUnauthenticated";
 
 import { Loader2 } from "lucide-react";

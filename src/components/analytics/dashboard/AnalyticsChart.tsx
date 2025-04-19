@@ -30,7 +30,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 
 export const AnalyticsChart = () => {
   const { data: serviceRevenueData = [] } =
-    api.analytics.getRevenueOverTimeByService.useQuery();
+    api.analytics.getRevenueGraphByUser.useQuery();
 
   // Sets-up the chart configuration
   const chartConfig = React.useMemo(() => {
