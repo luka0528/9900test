@@ -32,6 +32,7 @@ import { Badge } from "~/components/ui/badge";
 import { methodColors } from "~/lib/rest-method";
 import { useEffect } from "react";
 import { createId } from "@paralleldrive/cuid2";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   method: z.nativeEnum(RestMethod),
@@ -61,7 +62,7 @@ const formSchema = z.object({
       statusCode: z.number(),
       description: z.string(),
       contentJson: z.string(),
-      headersJson: z.string().nullable(),
+      headersJson: z.string(),
     }),
   ),
 });
@@ -71,6 +72,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function EditOperationPage() {
   const router = useRouter();
   const params = useParams();
+  const utils = api.useUtils();
   const operationId = params.operationId as string;
 
   const { data: operation } = api.endpoint.getOperation.useQuery({
@@ -79,7 +81,14 @@ export default function EditOperationPage() {
 
   const updateOperation = api.endpoint.updateOperation.useMutation({
     onSuccess: () => {
-      router.back();
+      toast.success("Operation updated successfully");
+      void utils.endpoint.getEndpoint.invalidate({
+        endpointId: params.endpointId as string,
+      });
+      void utils.service.getServiceById.invalidate(params.serviceId as string);
+      router.push(
+        `/service/${params.serviceId as string}/${params.versionId as string}/${params.endpointId as string}`,
+      );
     },
   });
 
@@ -132,7 +141,7 @@ export default function EditOperationPage() {
         statusCode: 200,
         description: "",
         contentJson: "{}",
-        headersJson: null,
+        headersJson: "{}",
       },
     ]);
   };

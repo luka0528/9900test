@@ -102,7 +102,7 @@ export const endpointRouter = createTRPCRouter({
             statusCode: z.number(),
             description: z.string(),
             contentJson: z.string(),
-            headersJson: z.string().nullable(),
+            headersJson: z.string(),
           }),
         ),
       }),
@@ -118,64 +118,46 @@ export const endpointRouter = createTRPCRouter({
         responses,
       } = input;
 
-      // Update operation
       await ctx.db.operation.update({
         where: { id: operationId },
         data: {
           method,
           description,
           deprecated,
+          parameters: {
+            deleteMany: {
+              id: {
+                notIn: parameters.map((parameter) => parameter.id),
+              },
+            },
+            upsert: parameters.map((parameter) => ({
+              where: { id: parameter.id },
+              update: parameter,
+              create: parameter,
+            })),
+          },
+          requestBody: requestBody
+            ? {
+                update: {
+                  where: { id: requestBody.id },
+                  data: requestBody,
+                },
+              }
+            : undefined,
+          responses: {
+            deleteMany: {
+              id: {
+                notIn: responses.map((response) => response.id),
+              },
+            },
+            upsert: responses.map((response) => ({
+              where: { id: response.id },
+              update: response,
+              create: response,
+            })),
+          },
         },
       });
-
-      // Update parameters
-      for (const param of parameters) {
-        await ctx.db.parameter.update({
-          where: { id: param.id },
-          data: {
-            name: param.name,
-            description: param.description,
-            required: param.required,
-            parameterLocation: param.parameterLocation,
-            schemaJson: param.schemaJson,
-            deprecated: param.deprecated,
-          },
-        });
-      }
-
-      // Update request body if exists
-      if (requestBody) {
-        await ctx.db.requestBody.update({
-          where: { id: requestBody.id },
-          data: {
-            description: requestBody.description,
-            contentJson: requestBody.contentJson,
-          },
-        });
-      }
-
-      // Update responses
-      for (const response of responses) {
-        const updateData: {
-          statusCode: number;
-          description: string;
-          contentJson: string;
-          headersJson?: string;
-        } = {
-          statusCode: response.statusCode,
-          description: response.description,
-          contentJson: response.contentJson,
-        };
-
-        if (response.headersJson !== null) {
-          updateData.headersJson = response.headersJson;
-        }
-
-        await ctx.db.response.update({
-          where: { id: response.id },
-          data: updateData,
-        });
-      }
 
       return { success: true };
     }),

@@ -40,11 +40,12 @@ import {
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
 import { RestMethod } from "@prisma/client";
-
+import { toast } from "sonner";
 export default function EndpointPage() {
   const { data: session } = useSession();
   const params = useParams();
   const router = useRouter();
+  const utils = api.useUtils();
   const endpointId = params.endpointId as string;
 
   const { data: endpoint } = api.endpoint.getEndpoint.useQuery({
@@ -57,13 +58,21 @@ export default function EndpointPage() {
 
   const addOperation = api.endpoint.addOperation.useMutation({
     onSuccess: () => {
-      router.refresh();
+      void utils.endpoint.getEndpoint.invalidate({
+        endpointId,
+      });
+      void utils.service.getServiceById.invalidate(params.serviceId as string);
+      toast.success("Operation added successfully");
     },
   });
 
   const deleteOperation = api.endpoint.deleteOperation.useMutation({
     onSuccess: () => {
-      router.refresh();
+      void utils.endpoint.getEndpoint.invalidate({
+        endpointId,
+      });
+      void utils.service.getServiceById.invalidate(params.serviceId as string);
+      toast.success("Operation deleted successfully");
     },
   });
 
