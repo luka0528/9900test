@@ -393,6 +393,76 @@ export default function EditOperationPage() {
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
+                  <FormLabel>Request Body</FormLabel>
+                  <FormField
+                    control={form.control}
+                    name="requestBody"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={!!field.value}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                field.onChange({
+                                  id: createId(),
+                                  description: "",
+                                  contentJson: "{}",
+                                });
+                              } else {
+                                field.onChange(null);
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          Enable Request Body
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {form.watch("requestBody") && (
+                  <Card>
+                    <CardContent className="space-y-4 pt-6">
+                      <FormField
+                        control={form.control}
+                        name="requestBody.description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Request body description"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="requestBody.contentJson"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Content</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="JSON content" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
                   <FormLabel>Responses</FormLabel>
                   <Button
                     type="button"

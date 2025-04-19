@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
 import { api } from "~/trpc/react";
 import { Badge } from "~/components/ui/badge";
