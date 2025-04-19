@@ -54,7 +54,8 @@ export const AnalyticsChart = () => {
     type ChartConfigPoint = { label: string; color: string };
     const config: Record<string, ChartConfigPoint> = {};
     for (let i = 0; i < serviceTypes.length; i++) {
-      const service = serviceTypes[i]!;
+      const service = serviceTypes[i] ?? "";
+
       config[service] = {
         label: service,
         color: colors[i % colors.length]!,
@@ -130,10 +131,10 @@ export const AnalyticsChart = () => {
           <AreaChart data={filteredData}>
             <ChartLegend content={<ChartLegendContent />} />
             <defs>
-              {Object.entries(chartConfig).map(([key, config]) => (
+              {Object.entries(chartConfig).sort().map(([key, config]) => (
                 <linearGradient
                   key={key}
-                  id={`fill${key}`}
+                  id={`fill-${key.replace(/\s+/g, "-")}`}
                   x1="0"
                   y1="0"
                   x2="0"
@@ -176,6 +177,7 @@ export const AnalyticsChart = () => {
               cursor={false}
               content={
                 <ChartTooltipContent
+                  className="w-[150px]"
                   labelFormatter={(value: string | number | Date) => {
                     return new Date(value).toLocaleDateString("en-US", {
                       month: "short",
@@ -186,12 +188,12 @@ export const AnalyticsChart = () => {
                 />
               }
             />
-            {Object.entries(chartConfig).map(([key, config]) => (
+            {Object.entries(chartConfig).sort().map(([key, config]) => (
               <Area
                 key={key}
                 dataKey={key}
                 type={timeRange === "30d" ? "monotone" : "step"}
-                fill={`url(#fill${key})`}
+                fill={`url(#fill-${key.replace(/\s+/g, "-")})`}
                 stroke={config.color}
                 stackId="a"
               />

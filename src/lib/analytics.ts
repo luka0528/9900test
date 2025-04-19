@@ -38,7 +38,7 @@ export const getRatingForUser = async (userId: string) => {
     where: {
       owners: {
         some: {
-          id: userId,
+          userId: userId,
         },
       },
     },
@@ -51,9 +51,13 @@ export const getRatingForUser = async (userId: string) => {
     },
   });
 
+  console.log("😻 Ratings: ", ratings);
+
   const allRatings = ratings.flatMap((service) =>
     service.ratings.map((rating) => rating.starValue),
   );
+
+  console.log("😻 All Ratings: ", allRatings);
 
   const sum = allRatings.reduce((acc, rating) => acc + rating, 0);
   const avg = allRatings.length > 0 ? sum / allRatings.length : 0;
@@ -65,7 +69,7 @@ export const getRevenueTotalForUser = async (userId: string) => {
     where: {
       owners: {
         some: {
-          id: userId,
+          userId: userId,
         },
       },
     },

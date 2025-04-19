@@ -117,13 +117,18 @@ export const analyticsRouter = createTRPCRouter({
     // Prefilling the amount with 0 if necessary.
     const revenueOverTime = [];
     const today = new Date();
+    const tomorrow = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() + 1,
+    );
 
     const currDate = new Date(
       today.getFullYear() - 1,
       today.getMonth(),
       today.getDay(),
     );
-    while (currDate <= today) {
+    while (currDate <= tomorrow) {
       const date = currDate.toISOString().split("T")[0]!;
 
       const dataPoint = {
