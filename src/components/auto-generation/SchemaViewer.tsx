@@ -81,8 +81,52 @@ export const SchemaViewer = ({ schema }: SchemaViewerProps) => {
 
     // Handle single type schema without properties
     if (!schema.properties && schema.type) {
+      // Handle top-level array schema first
+      if (schema.type === "array" && schema.items) {
+        return (
+          <AccordionItem value="array" className="rounded-md border px-2">
+            <AccordionTrigger className="hover:no-underline">
+              <div className="flex items-center gap-2">
+                <span className="font-mono">
+                  {isTopLevel ? "Schema" : "Array Items"}
+                </span>
+                <Badge variant="outline" className="font-mono text-xs">
+                  array
+                </Badge>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-2 pl-4">
+                {/* Array constraints */}
+                <div className="flex flex-wrap gap-2">
+                  {schema.minItems !== undefined && (
+                    <Badge variant="secondary" className="text-xs">
+                      minItems: {schema.minItems}
+                    </Badge>
+                  )}
+                  {schema.uniqueItems && (
+                    <Badge variant="secondary" className="text-xs">
+                      unique items
+                    </Badge>
+                  )}
+                </div>
+                {/* Items constraints */}
+                {schema.items.enum && (
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      enum: [{schema.items.enum.join(", ")}]
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        );
+      }
+
+      // Handle other single type schemas
       return (
-        <AccordionItem value="root" className="border rounded-md px-2">
+        <AccordionItem value="root" className="rounded-md border px-2">
           <AccordionTrigger className="hover:no-underline">
             <div className="flex items-center gap-2">
               <span className="font-mono">
@@ -146,7 +190,7 @@ export const SchemaViewer = ({ schema }: SchemaViewerProps) => {
     // Handle top-level object schema
     if (isTopLevel && schema.type === "object") {
       return (
-        <AccordionItem value="root" className="border rounded-md px-2">
+        <AccordionItem value="root" className="rounded-md border px-2">
           <AccordionTrigger className="hover:no-underline">
             <div className="flex items-center gap-2">
               <span className="font-mono">Schema</span>
@@ -160,7 +204,11 @@ export const SchemaViewer = ({ schema }: SchemaViewerProps) => {
               <Accordion type="single" collapsible className="w-full space-y-2">
                 {Object.entries(schema.properties ?? {}).map(
                   ([key, value]: [string, SchemaProperty]) => (
-                    <AccordionItem key={key} value={key} className="border rounded-md px-2">
+                    <AccordionItem
+                      key={key}
+                      value={key}
+                      className="rounded-md border px-2"
+                    >
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
                           <span className="font-mono">{key}</span>
@@ -241,36 +289,9 @@ export const SchemaViewer = ({ schema }: SchemaViewerProps) => {
       );
     }
 
-    // Handle top-level array schema
-    if (schema.type === "array" && schema.items) {
-      return (
-        <AccordionItem value="array" className="border rounded-md px-2">
-          <AccordionTrigger className="hover:no-underline">
-            <div className="flex items-center gap-2">
-              <span className="font-mono">Array Items</span>
-              <Badge variant="outline" className="font-mono text-xs">
-                {schema.items.type}
-              </Badge>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2 pl-4">
-              {schema.items.enum && (
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary" className="text-xs">
-                    enum: [{schema.items.enum.join(", ")}]
-                  </Badge>
-                </div>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      );
-    }
-
     return Object.entries(schema.properties ?? {}).map(
       ([key, value]: [string, SchemaProperty]) => (
-        <AccordionItem key={key} value={key} className="border rounded-md px-2">
+        <AccordionItem key={key} value={key} className="rounded-md border px-2">
           <AccordionTrigger className="hover:no-underline">
             <div className="flex items-center gap-2">
               <span className="font-mono">{key}</span>

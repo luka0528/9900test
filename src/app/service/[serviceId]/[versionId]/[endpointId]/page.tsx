@@ -116,9 +116,7 @@ export default function EndpointPage() {
                                             </Badge>
                                           )}
                                         </div>
-                                        <p>
-                                          {param.name}
-                                        </p>
+                                        <p>{param.name}</p>
                                       </div>
                                     </TableCell>
                                     <TableCell>
@@ -129,12 +127,18 @@ export default function EndpointPage() {
                                         >
                                           {param.parameterLocation}
                                         </Badge>
-                                        <p>
-                                          {param.description}
-                                        </p>
+                                        <p>{param.description}</p>
                                       </div>
                                     </TableCell>
                                     <TableCell className="w-1/2">
+                                      {/* DEBUG */}
+                                      {/* <pre className="mt-2 rounded-lg bg-muted p-4">
+                                        {JSON.stringify(
+                                          JSON.parse(param.schemaJson),
+                                          null,
+                                          2,
+                                        )}
+                                      </pre> */}
                                       <SchemaViewer
                                         schema={
                                           JSON.parse(
