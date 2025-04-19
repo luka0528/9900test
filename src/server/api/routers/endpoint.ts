@@ -174,6 +174,37 @@ export const endpointRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { endpointId, method, description, deprecated } = input;
 
+      // First get the endpoint with its operations to check existing methods
+      const endpoint = await ctx.db.endPoint.findUnique({
+        where: { id: endpointId },
+        select: {
+          operations: {
+            select: {
+              method: true,
+            },
+          },
+        },
+      });
+
+      if (!endpoint) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Endpoint not found",
+        });
+      }
+
+      // Check if the method already exists
+      const methodExists = endpoint.operations.some(
+        (op) => op.method === method,
+      );
+
+      if (methodExists) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Operation with method ${method} already exists for this endpoint`,
+        });
+      }
+
       const operation = await ctx.db.operation.create({
         data: {
           endPointId: endpointId,

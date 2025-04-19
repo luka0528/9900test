@@ -44,7 +44,6 @@ import { toast } from "sonner";
 export default function EndpointPage() {
   const { data: session } = useSession();
   const params = useParams();
-  const router = useRouter();
   const utils = api.useUtils();
   const endpointId = params.endpointId as string;
 
@@ -76,6 +75,25 @@ export default function EndpointPage() {
     },
   });
 
+  const handleAddOperation = () => {
+    // Try to get the method that is not already in the endpoint
+    const method = Object.values(RestMethod).find(
+      (method) => !endpoint?.operations.some((op) => op.method === method),
+    );
+
+    if (!method) {
+      toast.error("No new REST methods available");
+      return;
+    }
+
+    addOperation.mutate({
+      endpointId,
+      method,
+      description: "",
+      deprecated: false,
+    });
+  };
+
   const isOwner = service?.owners.some(
     (owner) => owner.user.id === session?.user?.id,
   );
@@ -96,12 +114,7 @@ export default function EndpointPage() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    addOperation.mutate({
-                      endpointId,
-                      method: RestMethod.GET,
-                      description: "",
-                      deprecated: false,
-                    });
+                    handleAddOperation();
                   }}
                 >
                   <Plus className="mr-1 h-4 w-4" />
