@@ -7,6 +7,11 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+import {
+  getRatingForService,
+  getRevenueTotalForService,
+  getRevenueMonthlyForService,
+} from "~/lib/analytics";
 
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";
@@ -266,7 +271,7 @@ export const serviceRouter = createTRPCRouter({
   }),
 
   getAllByUserId: protectedProcedure.query(async ({ ctx }) => {
-    const services = await ctx.db.service.findMany({
+    const serviceData = await ctx.db.service.findMany({
       where: {
         owners: {
           some: {
@@ -275,24 +280,80 @@ export const serviceRouter = createTRPCRouter({
         },
       },
       include: {
-        tags: true,
+        owners: {
+          select: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        tags: {
+          select: {
+            name: true,
+          },
+        },
         versions: {
           orderBy: {
             version: "desc",
+          },
+          take: 1,
+          select: {
+            version: true,
+            id: true,
+          },
+        },
+        subscriptionTiers: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            consumers: true,
+            billingReceipts: {
+              where: {
+                status: "PAID",
+              },
+              select: {
+                amount: true,
+              },
+            },
           },
         },
       },
     });
 
-    const res = services.map((service) => ({
-      id: service.id,
-      name: service.name,
-      owner: ctx.session.user.name,
-      tags: service.tags.map((tag) => tag.name),
-      latestVersion: service.versions[0]!,
-    }));
+    const allServiceData = await Promise.all(
+      serviceData.map(async (service) => ({
+        id: service.id,
+        name: service.name,
+        createdAt: service.createdAt,
+        updatedAt: service.updatedAt,
+        owners: service.owners.map((owner) => owner.user.name ?? ""),
+        tags: service.tags.map((tag) => tag.name),
+        latestVersion: {
+          id: service.versions[0]?.id ?? "",
+          version: service.versions[0]?.version ?? "",
+        },
+        rating: await getRatingForService(service.id),
+        revenue: {
+          total: await getRevenueTotalForService(service.id),
+          monthly: await getRevenueMonthlyForService(service.id),
+        },
+        tiers: service.subscriptionTiers.map((tier) => ({
+          id: tier.id,
+          name: tier.name,
+          price: tier.price,
+          numCustomers: tier.consumers.length,
+          revenue: tier.billingReceipts.reduce(
+            (acc, receipt) => acc + receipt.amount,
+            0,
+          ),
+        })),
+      })),
+    );
 
-    return res;
+    return allServiceData;
   }),
 
   editName: protectedProcedure
