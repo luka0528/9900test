@@ -91,9 +91,20 @@ export const columns: ColumnDef<ServiceData>[] = [
     },
   },
   {
-    id: "Version",
+    id: "version",
     accessorKey: "latestVersion",
     header: "Version",
+    cell: ({ row }) => {
+      const version = row.getValue("version") as {
+        id: string;
+        version: string;
+      };
+      return (
+        <div className="flex items-center gap-2">
+          <span>{version.version}</span>
+        </div>
+      );
+    },
   },
   {
     id: "owners",

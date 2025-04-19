@@ -6,17 +6,15 @@ import { api } from "~/trpc/react";
 import {
   Card,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { Badge } from "~/components/ui/badge";
 import { Skeleton } from "~/components/ui/skeleton";
 import { HandCoins } from "lucide-react";
 
 export const AnalyticsTotalRevenueCard = () => {
-  const date = new Date();
-  const {data: revenue, isLoading} = api.analytics.getTotalRevenueOfUser.useQuery();
+  const { data: revenue, isLoading } =
+    api.analytics.getTotalRevenueOfUser.useQuery();
 
   return (
     <Card>

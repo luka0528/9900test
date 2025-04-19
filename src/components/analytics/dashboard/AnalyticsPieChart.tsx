@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { Loading } from "~/components/ui/loading";
 
 export const AnalyticsPieChart = () => {
   const { data: services, isLoading: servicesLoading } =
@@ -28,7 +29,12 @@ export const AnalyticsPieChart = () => {
   const [selectedServiceId, setSelectedServiceId] = React.useState<string>("");
 
   React.useEffect(() => {
-    if (services && services.length > 0 && !selectedServiceId && services[0]?.id) {
+    if (
+      services &&
+      services.length > 0 &&
+      !selectedServiceId &&
+      services[0]?.id
+    ) {
       setSelectedServiceId(services[0].id);
     }
   }, [services, selectedServiceId]);
@@ -36,20 +42,23 @@ export const AnalyticsPieChart = () => {
   const { data: serviceTierData, isLoading: isServiceTierDataLoading } =
     api.analytics.getNumCustomersPerServiceTier.useQuery(
       { service: selectedServiceId },
-      { enabled: !!selectedServiceId }
+      { enabled: !!selectedServiceId },
     );
 
   const selectedService = React.useMemo(() => {
     return services?.find((service) => service.id === selectedServiceId);
   }, [services, selectedServiceId]);
 
-  const colors = [
-    "hsl(var(--chart-1))",
-    "hsl(var(--chart-2))",
-    "hsl(var(--chart-3))",
-    "hsl(var(--chart-4))",
-    "hsl(var(--chart-5))",
-  ];
+  const colors = React.useMemo(
+    () => [
+      "hsl(var(--chart-1))",
+      "hsl(var(--chart-2))",
+      "hsl(var(--chart-3))",
+      "hsl(var(--chart-4))",
+      "hsl(var(--chart-5))",
+    ],
+    [],
+  );
 
   const chartData = React.useMemo(() => {
     if (!serviceTierData) return [];
@@ -57,7 +66,7 @@ export const AnalyticsPieChart = () => {
     const data = serviceTierData.map((tier, index) => ({
       name: tier.tierName,
       value: tier.customerCount,
-      fill: colors[index % colors.length]
+      fill: colors[index % colors.length],
     }));
 
     const isZero = data.every((item) => item.value === 0);
@@ -70,21 +79,21 @@ export const AnalyticsPieChart = () => {
     }
 
     return data;
-  }, [serviceTierData]);
+  }, [serviceTierData, colors]);
 
   const chartConfig = React.useMemo(() => {
     if (!serviceTierData) return {};
-    
+
     const config: Record<string, { label: string; color: string }> = {};
     serviceTierData.forEach((tier, index) => {
       config[tier.tierName] = {
         label: tier.tierName,
-        color: colors[index % colors.length] ?? "#ccc"
+        color: colors[index % colors.length] ?? "#ccc",
       };
     });
-    
+
     return config;
-  }, [serviceTierData]);
+  }, [serviceTierData, colors]);
 
   const totalUsers = React.useMemo(() => {
     if (!serviceTierData) return 0;
@@ -101,8 +110,8 @@ export const AnalyticsPieChart = () => {
         <>
           <CardHeader className="relative h-8 p-0">
             <div className="absolute right-4 top-4 z-10">
-              <Select 
-                value={selectedServiceId} 
+              <Select
+                value={selectedServiceId}
                 onValueChange={setSelectedServiceId}
               >
                 <SelectTrigger className="flex w-40">
@@ -126,9 +135,7 @@ export const AnalyticsPieChart = () => {
           </CardHeader>
           <CardContent className="flex-1 grow p-0">
             {isServiceTierDataLoading ? (
-              <div className="flex h-full w-full items-center justify-center">
-                Loading tier data...
-              </div>
+              <Loading />
             ) : (
               <ChartContainer
                 config={chartConfig}

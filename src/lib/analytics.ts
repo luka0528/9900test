@@ -10,13 +10,13 @@ export const getServicesByUser = async (userId: string) => {
         select: {
           id: true,
           name: true,
-        }
-      }
+        },
+      },
     },
   });
 
   return services.map((service) => service.service);
-}
+};
 
 export const getRatingForService = async (serviceId: string) => {
   const ratings = await db.serviceRating.findMany({
@@ -38,7 +38,7 @@ export const getRatingForUser = async (userId: string) => {
     where: {
       owners: {
         some: {
-          id: userId
+          id: userId,
         },
       },
     },
@@ -51,12 +51,14 @@ export const getRatingForUser = async (userId: string) => {
     },
   });
 
-  const allRatings = ratings.flatMap((service) => service.ratings.map((rating) => rating.starValue));
+  const allRatings = ratings.flatMap((service) =>
+    service.ratings.map((rating) => rating.starValue),
+  );
 
   const sum = allRatings.reduce((acc, rating) => acc + rating, 0);
   const avg = allRatings.length > 0 ? sum / allRatings.length : 0;
   return avg;
-}
+};
 
 export const getRevenueTotalForUser = async (userId: string) => {
   const serviceIds = await db.service.findMany({
@@ -131,11 +133,11 @@ export const getCustomersForService = async (serviceId: string) => {
               OR: [
                 { subscriptionStatus: "ACTIVE" },
                 { subscriptionStatus: "PENDING_CANCELLATION" },
-              ]
+              ],
             },
             select: {
               id: true,
-            }
+            },
           },
         },
       },
@@ -143,11 +145,13 @@ export const getCustomersForService = async (serviceId: string) => {
   });
 
   const numCustomers = customers.flatMap((service) => {
-    return service.subscriptionTiers.flatMap((tier) => tier.consumers.map((consumer) => consumer.id));
+    return service.subscriptionTiers.flatMap((tier) =>
+      tier.consumers.map((consumer) => consumer.id),
+    );
   });
 
   return numCustomers.length;
-}
+};
 
 export const getSubscriptionTiersByService = async (serviceId: string) => {
   const subscriptionTiers = await db.subscriptionTier.findMany({
@@ -167,7 +171,7 @@ export const getSubscriptionTiersByService = async (serviceId: string) => {
   });
 
   return subscriptionTiers;
-}
+};
 
 export const getRevenueOverTimeByService = async (serviceId: string) => {
   const receipts = await db.billingReceipt.findMany({
@@ -187,4 +191,4 @@ export const getRevenueOverTimeByService = async (serviceId: string) => {
   });
 
   return receipts;
-}
+};
