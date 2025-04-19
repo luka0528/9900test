@@ -21,8 +21,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "~/components/ui/accordion";
-import { SchemaViewer, type SchemaViewerProps } from "~/components/auto-generation/SchemaViewer";
-
+import {
+  SchemaViewer,
+  type SchemaViewerProps,
+} from "~/components/auto-generation/SchemaViewer";
 
 export default function EndpointPage() {
   const params = useParams();
@@ -91,51 +93,54 @@ export default function EndpointPage() {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Name</TableHead>
-                                  <TableHead>Location</TableHead>
                                   <TableHead>Description</TableHead>
-                                  <TableHead>Required</TableHead>
                                   <TableHead>Schema</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {operation.parameters.map((param) => (
                                   <TableRow key={param.id}>
-                                    <TableCell className="font-medium">
-                                      {param.name}
-                                      {param.deprecated && (
+                                    <TableCell className="gap-2 font-medium">
+                                      <div className="flex flex-col gap-2">
+                                        <div className="flex items-center gap-2">
+                                          {param.deprecated && (
+                                            <Badge variant="destructive">
+                                              Deprecated
+                                            </Badge>
+                                          )}
+                                          {param.required ? (
+                                            <Badge>Required</Badge>
+                                          ) : (
+                                            <Badge variant="secondary">
+                                              Optional
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <p>
+                                          {param.name}
+                                        </p>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex flex-col gap-2">
                                         <Badge
-                                          variant="destructive"
-                                          className="ml-2"
+                                          variant="secondary"
+                                          className="w-fit"
                                         >
-                                          Deprecated
+                                          {param.parameterLocation}
                                         </Badge>
-                                      )}
+                                        <p>
+                                          {param.description}
+                                        </p>
+                                      </div>
                                     </TableCell>
-                                    <TableCell>
-                                      {param.parameterLocation}
-                                    </TableCell>
-                                    <TableCell>{param.description}</TableCell>
-                                    <TableCell>
-                                      {param.required ? (
-                                        <Badge>Required</Badge>
-                                      ) : (
-                                        <Badge variant="secondary">
-                                          Optional
-                                        </Badge>
-                                      )}
-                                    </TableCell>
-                                    <TableCell>
-                                      <pre className="text-sm">
-                                        {JSON.stringify(
-                                          JSON.parse(param.schemaJson),
-                                          null,
-                                          2,
-                                        )}
-                                      </pre>
+                                    <TableCell className="w-1/2">
                                       <SchemaViewer
-                                        schema={JSON.parse(
-                                          param.schemaJson,
-                                        ) as SchemaViewerProps["schema"]}
+                                        schema={
+                                          JSON.parse(
+                                            param.schemaJson,
+                                          ) as SchemaViewerProps["schema"]
+                                        }
                                       />
                                     </TableCell>
                                   </TableRow>
