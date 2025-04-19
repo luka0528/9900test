@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { AnalyticsUserUnauthenticated } from "~/components/analytics/AnalyticsUserUnauthenticated";
 import { AnalyticsSideBar } from "~/components/analytics/AnalyticsSideBar";
 import { Loading } from "~/components/ui/loading";
-import { ServiceTable } from "~/components/analytics/ServiceTable";
+import { ServiceTable } from "~/components/analytics/service-table/ServiceTable";
 
 export default function Analytics() {
   const { status } = useSession();

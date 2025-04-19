@@ -28,8 +28,8 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
 import type { ServiceData } from "./columns";
-import { ServiceTableTierTable } from "~/components/analytics/ServiceTableTierTable";
-import { ServiceTableViewOptions } from "~/components/analytics/ServiceTableViewOptions";
+import { ServiceTableTierTable } from "~/components/analytics/service-table/ServiceTableTierTable";
+import { ServiceTableViewOptions } from "~/components/analytics/service-table/ServiceTableViewOptions";
 
 interface DataTableProps<TValue> {
   columns: ColumnDef<ServiceData, TValue>[];
@@ -63,7 +63,7 @@ export function DataTable<TValue>({ columns, data }: DataTableProps<TValue>) {
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center pb-4">
         <Input
           placeholder="Filter services..."
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}

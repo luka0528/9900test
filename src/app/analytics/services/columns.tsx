@@ -2,8 +2,6 @@
 // are being inferred as type 'unknown'.
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 
-"use client";
-
 import type { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
 
@@ -18,10 +16,14 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import {
+  TooltipProvider,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 
 import { ArrowUpDown, ChevronDown, ChevronRight, Star } from "lucide-react";
-import { AvatarImage } from "~/components/ui/avatar";
-import { getSession } from "next-auth/react";
 
 export type ServiceData = {
   id: string;
@@ -49,8 +51,6 @@ export type ServiceTierData = {
   numCustomers: number;
   revenue: number;
 };
-
-const session = await getSession();
 
 export const columns: ColumnDef<ServiceData>[] = [
   {
@@ -91,9 +91,20 @@ export const columns: ColumnDef<ServiceData>[] = [
     },
   },
   {
-    id: "Version",
+    id: "version",
     accessorKey: "latestVersion",
     header: "Version",
+    cell: ({ row }) => {
+      const version = row.getValue("version") as {
+        id: string;
+        version: string;
+      };
+      return (
+        <div className="flex items-center gap-2">
+          <span>{version.version}</span>
+        </div>
+      );
+    },
   },
   {
     id: "owners",
@@ -102,13 +113,18 @@ export const columns: ColumnDef<ServiceData>[] = [
     cell: ({ row }) => {
       const owners = row.getValue("owners") as string[];
       return (
-        // TODO: Remove useSession & instead store .src in the database (?)
         <div className="flex flex-wrap gap-2">
           {owners.map((owner) => (
-            <Avatar className="h-8 w-8" key={owner}>
-              <AvatarImage src={session?.user?.image ?? undefined} />
-              <AvatarFallback>{session?.user?.name?.charAt(0)}</AvatarFallback>
-            </Avatar>
+            <TooltipProvider key={owner}>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>{owner.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>{owner}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ))}
         </div>
       );

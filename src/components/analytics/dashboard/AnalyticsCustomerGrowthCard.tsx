@@ -18,17 +18,12 @@ export const AnalyticsCustomerGrowthCard = () => {
   const { data: totalCustomers, isLoading: isTotalCustomersLoading } =
     api.analytics.getTotalCustomers.useQuery();
 
-  const { data: customersPerService, isLoading: isCustomersPerServiceLoading } =
-    api.analytics.getNumCustomersPerService.useQuery();
+  const { data: mostPopularService, isLoading: isMostPopularServiceLoading } =
+    api.analytics.getMostPopularService.useQuery();
 
-  // Sorts the services by customer.
-  const [popularServiceName, popularServiceCount] = customersPerService
-    ? Array.from(customersPerService.entries()).reduce(
-        (a, b) => (a[1] > b[1] ? a : b),
-        ["", 0],
-      )
-    : ["", 0];
-
+  React.useEffect(() => {
+    console.log("Most Popular Service: ", mostPopularService);
+  }, [mostPopularService]);
   return (
     <Card>
       <CardHeader className="relative">
@@ -45,17 +40,17 @@ export const AnalyticsCustomerGrowthCard = () => {
         </div>
       </CardHeader>
       <CardFooter className="flex-col items-start gap-1 text-sm">
-        {isCustomersPerServiceLoading ? (
+        {isMostPopularServiceLoading ? (
           <Skeleton className="h-10 w-full" />
         ) : (
           <div className="inline text-muted-foreground">
             <div>
-              {popularServiceName} leads the way, attracting
+              {mostPopularService?.serviceName} leads the way, attracting
               <Badge
                 variant="outline"
                 className="mx-1 inline-flex gap-1 rounded-lg text-xs"
               >
-                {popularServiceCount}
+                {mostPopularService?.customerCount}
               </Badge>
               customers.
             </div>
