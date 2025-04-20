@@ -138,9 +138,10 @@ export const endpointRouter = createTRPCRouter({
           },
           requestBody: requestBody
             ? {
-                update: {
+                upsert: {
                   where: { id: requestBody.id },
-                  data: requestBody,
+                  update: requestBody,
+                  create: requestBody,
                 },
               }
             : undefined,
