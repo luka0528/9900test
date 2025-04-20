@@ -46,7 +46,17 @@ const formSchema = z.object({
       description: z.string(),
       required: z.boolean(),
       parameterLocation: z.nativeEnum(ParameterLocation),
-      schemaJson: z.string(),
+      schemaJson: z.string().refine(
+        (val) => {
+          try {
+            JSON.parse(val);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { message: "Invalid JSON schema" },
+      ),
       deprecated: z.boolean(),
     }),
   ),
@@ -54,7 +64,17 @@ const formSchema = z.object({
     .object({
       id: z.string(),
       description: z.string(),
-      contentJson: z.string(),
+      contentJson: z.string().refine(
+        (val) => {
+          try {
+            JSON.parse(val);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { message: "Invalid JSON content" },
+      ),
     })
     .nullable(),
   responses: z.array(
@@ -62,8 +82,28 @@ const formSchema = z.object({
       id: z.string(),
       statusCode: z.number(),
       description: z.string(),
-      contentJson: z.string(),
-      headersJson: z.string(),
+      contentJson: z.string().refine(
+        (val) => {
+          try {
+            JSON.parse(val);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { message: "Invalid JSON content" },
+      ),
+      headersJson: z.string().refine(
+        (val) => {
+          try {
+            JSON.parse(val);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { message: "Invalid JSON headers" },
+      ),
     }),
   ),
 });
@@ -120,7 +160,7 @@ export default function EditOperationPage() {
         description: "",
         required: false,
         parameterLocation: ParameterLocation.QUERY,
-        schemaJson: "{}",
+        schemaJson: JSON.stringify({}),
         deprecated: false,
       },
     ]);
@@ -144,8 +184,8 @@ export default function EditOperationPage() {
         id: createId(),
         statusCode: 200,
         description: "",
-        contentJson: "{}",
-        headersJson: "{}",
+        contentJson: JSON.stringify({}),
+        headersJson: JSON.stringify({}),
       },
     ]);
   };
@@ -423,7 +463,7 @@ export default function EditOperationPage() {
                                   field.onChange({
                                     id: createId(),
                                     description: "",
-                                    contentJson: "{}",
+                                    contentJson: JSON.stringify({}),
                                   });
                                 } else {
                                   field.onChange(null);
