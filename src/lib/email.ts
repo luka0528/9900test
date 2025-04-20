@@ -120,7 +120,7 @@ export const sendBillingEmail = async ({
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <h1>Billing Receipt</h1>
         <p>Hello <strong>${userName}</strong>,</p>
-        <p>Thank you for your payment for the <strong>${serviceName}</strong> service. Below are the details of your transaction:</p>
+        <p>Thank you for your payment for <strong>${serviceName}</strong>. Below are the details of your transaction:</p>
         <ul>
         <li><strong>Service Name:</strong> ${serviceName}</li>
         <li><strong>Subscription Tier:</strong> ${subscriptionTierName}</li>
@@ -153,7 +153,7 @@ export const sendBillingEmail = async ({
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <h1>Payment Failed</h1>
         <p>Hello <strong>${userName}</strong>,</p>
-        <p>We encountered an issue processing your payment for the <strong>${serviceName}</strong> service. Below are the details:</p>
+        <p>We encountered an issue processing your payment for <strong>${serviceName}</strong>. Below are the details:</p>
         <ul>
         <li><strong>Service Name:</strong> ${serviceName}</li>
         <li><strong>Subscription Tier:</strong> ${subscriptionTierName}</li>
