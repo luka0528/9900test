@@ -294,15 +294,21 @@ export default function ServicePage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-36">Method</TableHead>
-                            <TableHead>Route</TableHead>
+                            <TableHead className="w-96">Route</TableHead>
                             <TableHead>Description</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {content.endpoints.map((endpoint) => (
                             <TableRow key={endpoint.id}>
-                              <TableCell className="font-mono">
+                              <TableCell
+                                className="font-mono hover:cursor-pointer"
+                                onClick={() => {
+                                  router.push(
+                                    `/service/${serviceId}/${versionId}/${endpoint.id}`,
+                                  );
+                                }}
+                              >
                                 {endpoint.path}
                               </TableCell>
                               <TableCell>{endpoint.description}</TableCell>
