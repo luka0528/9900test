@@ -1,5 +1,5 @@
-import { db } from "~/server/db";
 import { appRouter } from "~/server/api/root";
+import { db } from "~/server/db";
 
 export async function checkRenewals() {
   const ctx = {
