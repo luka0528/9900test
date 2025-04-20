@@ -1,7 +1,7 @@
 import { db } from "~/server/db";
 import { appRouter } from "~/server/api/root";
 
-export async function checkCancellations() {
+export async function checkRenewals() {
   const ctx = {
     db,
     session: null,
@@ -11,16 +11,16 @@ export async function checkCancellations() {
   const caller = appRouter.createCaller(ctx);
 
   const { success, count } =
-    await caller.subscription.checkSubscriptionCancellations();
+    await caller.subscription.checkSubscriptionRenewals();
 
   if (success) {
-    console.log(`✅ Processed cancellations: ${count}`);
+    console.log(`✅ Processed subscription renewals: ${count}`);
   } else {
-    console.log(`⚠️ No cancellations processed.`);
+    console.log(`⚠️ No subscription renewals processed.`);
   }
 }
 
-checkCancellations().catch((err) => {
-  console.error("❌ checkCancellations failed:", err);
+checkRenewals().catch((err) => {
+  console.error("❌ checkSubscriptionRenewals failed:", err);
   process.exit(1);
 });

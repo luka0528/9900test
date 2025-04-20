@@ -30,7 +30,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 
 export const AnalyticsChart = () => {
   const { data: serviceRevenueData = [] } =
-    api.analytics.getRevenueOverTimeByService.useQuery();
+    api.analytics.getRevenueGraphByUser.useQuery();
 
   // Sets-up the chart configuration
   const chartConfig = React.useMemo(() => {
@@ -54,7 +54,8 @@ export const AnalyticsChart = () => {
     type ChartConfigPoint = { label: string; color: string };
     const config: Record<string, ChartConfigPoint> = {};
     for (let i = 0; i < serviceTypes.length; i++) {
-      const service = serviceTypes[i]!;
+      const service = serviceTypes[i] ?? "";
+
       config[service] = {
         label: service,
         color: colors[i % colors.length]!,
@@ -130,27 +131,29 @@ export const AnalyticsChart = () => {
           <AreaChart data={filteredData}>
             <ChartLegend content={<ChartLegendContent />} />
             <defs>
-              {Object.entries(chartConfig).map(([key, config]) => (
-                <linearGradient
-                  key={key}
-                  id={`fill${key}`}
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop
-                    offset="5%"
-                    stopColor={config.color}
-                    stopOpacity={0.75}
-                  />
-                  <stop
-                    offset="95%"
-                    stopColor={config.color}
-                    stopOpacity={0.25}
-                  />
-                </linearGradient>
-              ))}
+              {Object.entries(chartConfig)
+                .sort()
+                .map(([key, config]) => (
+                  <linearGradient
+                    key={key}
+                    id={`fill-${key.replace(/\s+/g, "-")}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="5%"
+                      stopColor={config.color}
+                      stopOpacity={0.75}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={config.color}
+                      stopOpacity={0.25}
+                    />
+                  </linearGradient>
+                ))}
             </defs>
             <CartesianGrid />
             <XAxis
@@ -176,6 +179,7 @@ export const AnalyticsChart = () => {
               cursor={false}
               content={
                 <ChartTooltipContent
+                  className="w-[150px]"
                   labelFormatter={(value: string | number | Date) => {
                     return new Date(value).toLocaleDateString("en-US", {
                       month: "short",
@@ -186,16 +190,18 @@ export const AnalyticsChart = () => {
                 />
               }
             />
-            {Object.entries(chartConfig).map(([key, config]) => (
-              <Area
-                key={key}
-                dataKey={key}
-                type={timeRange === "30d" ? "monotone" : "step"}
-                fill={`url(#fill${key})`}
-                stroke={config.color}
-                stackId="a"
-              />
-            ))}
+            {Object.entries(chartConfig)
+              .sort()
+              .map(([key, config]) => (
+                <Area
+                  key={key}
+                  dataKey={key}
+                  type={timeRange === "30d" ? "monotone" : "step"}
+                  fill={`url(#fill-${key.replace(/\s+/g, "-")})`}
+                  stroke={config.color}
+                  stackId="a"
+                />
+              ))}
           </AreaChart>
         </ChartContainer>
       </CardContent>
