@@ -33,6 +33,7 @@ import { methodColors } from "~/lib/rest-method";
 import { useEffect } from "react";
 import { createId } from "@paralleldrive/cuid2";
 import { toast } from "sonner";
+import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
 
 const formSchema = z.object({
   method: z.nativeEnum(RestMethod),
@@ -86,6 +87,9 @@ export default function EditOperationPage() {
         endpointId: params.endpointId as string,
       });
       void utils.service.getServiceById.invalidate(params.serviceId as string);
+      void utils.endpoint.getOperation.invalidate({
+        operationId,
+      });
       router.push(
         `/service/${params.serviceId as string}/${params.versionId as string}/${params.endpointId as string}`,
       );
@@ -177,404 +181,423 @@ export default function EditOperationPage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Edit Operation</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="method"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Method</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a method" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.values(RestMethod).map((method) => (
-                          <SelectItem key={method} value={method}>
-                            <Badge className={methodColors[method]}>
-                              {method}
-                            </Badge>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Operation description"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="deprecated"
-                render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Deprecated</FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <FormLabel>Parameters</FormLabel>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addParameter}
-                  >
-                    <Plus className="mr-1 h-4 w-4" />
-                    Add Parameter
-                  </Button>
-                </div>
-
-                {form.watch("parameters")?.map((param, index) => (
-                  <Card key={index} className="relative">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-2"
-                      onClick={() => removeParameter(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                    <CardContent className="space-y-4 pt-6">
-                      <FormField
-                        control={form.control}
-                        name={`parameters.${index}.name`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Parameter name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`parameters.${index}.description`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Parameter description"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`parameters.${index}.parameterLocation`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Location</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a location" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {Object.values(ParameterLocation).map(
-                                  (location) => (
-                                    <SelectItem key={location} value={location}>
-                                      {location}
-                                    </SelectItem>
-                                  ),
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="flex items-center space-x-4">
-                        <FormField
-                          control={form.control}
-                          name={`parameters.${index}.required`}
-                          render={({ field }) => (
-                            <FormItem className="flex items-center space-x-2">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Required
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name={`parameters.${index}.deprecated`}
-                          render={({ field }) => (
-                            <FormItem className="flex items-center space-x-2">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Deprecated
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name={`parameters.${index}.schemaJson`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Schema</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder="JSON schema" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <FormLabel>Request Body</FormLabel>
-                  <FormField
-                    control={form.control}
-                    name="requestBody"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center space-x-2">
+    <div className="flex h-full w-full xl:max-w-[96rem]">
+      <GoBackSideBar />
+      <div className="flex h-full grow flex-col overflow-y-auto p-6">
+        <h1 className="mb-6 text-2xl font-bold">Edit Operation</h1>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Edit Operation</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="method"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Method</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
-                          <Checkbox
-                            checked={!!field.value}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                field.onChange({
-                                  id: createId(),
-                                  description: "",
-                                  contentJson: "{}",
-                                });
-                              } else {
-                                field.onChange(null);
-                              }
-                            }}
-                          />
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a method" />
+                          </SelectTrigger>
                         </FormControl>
-                        <FormLabel className="font-normal">
-                          Enable Request Body
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        <SelectContent>
+                          {Object.values(RestMethod).map((method) => (
+                            <SelectItem key={method} value={method}>
+                              <Badge className={methodColors[method]}>
+                                {method}
+                              </Badge>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                {form.watch("requestBody") && (
-                  <Card>
-                    <CardContent className="space-y-4 pt-6">
-                      <FormField
-                        control={form.control}
-                        name="requestBody.description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Request body description"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Operation description"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                      <FormField
-                        control={form.control}
-                        name="requestBody.contentJson"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Content</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder="JSON content" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                <FormField
+                  control={form.control}
+                  name="deprecated"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="font-normal">Deprecated</FormLabel>
+                    </FormItem>
+                  )}
+                />
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <FormLabel>Responses</FormLabel>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addResponse}
-                  >
-                    <Plus className="mr-1 h-4 w-4" />
-                    Add Response
-                  </Button>
-                </div>
-
-                {form.watch("responses")?.map((response, index) => (
-                  <Card key={index} className="relative">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Parameters</FormLabel>
                     <Button
                       type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-2"
-                      onClick={() => removeResponse(index)}
+                      variant="outline"
+                      size="sm"
+                      onClick={addParameter}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add Parameter
                     </Button>
-                    <CardContent className="space-y-4 pt-6">
-                      <FormField
-                        control={form.control}
-                        name={`responses.${index}.statusCode`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Status Code</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="Status code"
-                                {...field}
-                                onChange={(e) =>
-                                  field.onChange(parseInt(e.target.value))
+                  </div>
+
+                  {form.watch("parameters")?.map((param, index) => (
+                    <Card key={index} className="relative">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-2"
+                        onClick={() => removeParameter(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <CardContent className="space-y-4 pt-6">
+                        <FormField
+                          control={form.control}
+                          name={`parameters.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Name</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Parameter name"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`parameters.${index}.description`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Parameter description"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`parameters.${index}.parameterLocation`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Location</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select a location" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {Object.values(ParameterLocation).map(
+                                    (location) => (
+                                      <SelectItem
+                                        key={location}
+                                        value={location}
+                                      >
+                                        {location}
+                                      </SelectItem>
+                                    ),
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="flex items-center space-x-4">
+                          <FormField
+                            control={form.control}
+                            name={`parameters.${index}.required`}
+                            render={({ field }) => (
+                              <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  Required
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`parameters.${index}.deprecated`}
+                            render={({ field }) => (
+                              <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  Deprecated
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name={`parameters.${index}.schemaJson`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Schema</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="JSON schema"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Request Body</FormLabel>
+                    <FormField
+                      control={form.control}
+                      name="requestBody"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={!!field.value}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  field.onChange({
+                                    id: createId(),
+                                    description: "",
+                                    contentJson: "{}",
+                                  });
+                                } else {
+                                  field.onChange(null);
                                 }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Enable Request Body
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-                      <FormField
-                        control={form.control}
-                        name={`responses.${index}.description`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Response description"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                  {form.watch("requestBody") && (
+                    <Card>
+                      <CardContent className="space-y-4 pt-6">
+                        <FormField
+                          control={form.control}
+                          name="requestBody.description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Request body description"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={form.control}
-                        name={`responses.${index}.contentJson`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Content</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder="JSON content" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                          control={form.control}
+                          name="requestBody.contentJson"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Content</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="JSON content"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
 
-                      <FormField
-                        control={form.control}
-                        name={`responses.${index}.headersJson`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Headers</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="JSON headers"
-                                value={field.value ?? ""}
-                                onChange={field.onChange}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Responses</FormLabel>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addResponse}
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      Add Response
+                    </Button>
+                  </div>
 
-          <div className="flex justify-end space-x-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-            >
-              Cancel
-            </Button>
-            <Button type="submit">Save Changes</Button>
-          </div>
-        </form>
-      </Form>
+                  {form.watch("responses")?.map((response, index) => (
+                    <Card key={index} className="relative">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-2"
+                        onClick={() => removeResponse(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <CardContent className="space-y-4 pt-6">
+                        <FormField
+                          control={form.control}
+                          name={`responses.${index}.statusCode`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Status Code</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  placeholder="Status code"
+                                  {...field}
+                                  onChange={(e) =>
+                                    field.onChange(parseInt(e.target.value))
+                                  }
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`responses.${index}.description`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Response description"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`responses.${index}.contentJson`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Content</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="JSON content"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`responses.${index}.headersJson`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Headers</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="JSON headers"
+                                  value={field.value ?? ""}
+                                  onChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end space-x-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Save Changes</Button>
+            </div>
+          </form>
+        </Form>
+      </div>
     </div>
   );
 }

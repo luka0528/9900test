@@ -27,7 +27,7 @@ import {
   type SchemaViewerProps,
 } from "~/components/auto-generation/SchemaViewer";
 import { useSession } from "next-auth/react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -99,7 +99,15 @@ export default function EndpointPage() {
   );
 
   if (!endpoint) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex h-full w-full xl:max-w-[96rem]">
+        <ServiceSidebar serviceId={params.serviceId as string} />
+        <div className="flex h-full grow flex-col items-center justify-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin" />
+          <p>Loading endpoint...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -125,6 +133,21 @@ export default function EndpointPage() {
           </div>
 
           <Accordion type="multiple" className="space-y-4">
+            {endpoint.operations.length === 0 && (
+              <div className="flex items-center justify-center">
+                <div className="flex flex-col gap-2 text-muted-foreground">
+                  <p className="flex justify-center text-lg font-medium">
+                    No operations found for this endpoint.
+                  </p>
+                  {isOwner && (
+                    <p className="flex justify-center text-sm text-muted-foreground">
+                      Looks like you own this service! Add some operations to
+                      get started.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
             {endpoint.operations.map((operation) => (
               <AccordionItem key={operation.id} value={operation.id}>
                 <AccordionTrigger className="flex gap-3 py-4">
@@ -190,159 +213,181 @@ export default function EndpointPage() {
                         </div>
                       )}
                     </div>
+                    {operation.parameters.length > 0 ||
+                    operation.requestBody ||
+                    operation.responses.length > 0 ? (
+                      <Tabs defaultValue="parameters">
+                        <TabsList className="justify-start">
+                          {operation.parameters.length > 0 && (
+                            <TabsTrigger value="parameters">
+                              Parameters
+                            </TabsTrigger>
+                          )}
+                          {operation.requestBody && (
+                            <TabsTrigger value="requestBody">
+                              Request Body
+                            </TabsTrigger>
+                          )}
+                          {operation.responses.length > 0 && (
+                            <TabsTrigger value="responses">
+                              Responses
+                            </TabsTrigger>
+                          )}
+                        </TabsList>
 
-                    <Tabs defaultValue="parameters">
-                      <TabsList className="justify-start">
                         {operation.parameters.length > 0 && (
-                          <TabsTrigger value="parameters">
-                            Parameters
-                          </TabsTrigger>
-                        )}
-                        {operation.requestBody && (
-                          <TabsTrigger value="requestBody">
-                            Request Body
-                          </TabsTrigger>
-                        )}
-                        {operation.responses.length > 0 && (
-                          <TabsTrigger value="responses">Responses</TabsTrigger>
-                        )}
-                      </TabsList>
-
-                      {operation.parameters.length > 0 && (
-                        <TabsContent value="parameters" className="mt-4">
-                          <div className="rounded-md border">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Name</TableHead>
-                                  <TableHead>Description</TableHead>
-                                  <TableHead>Schema</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {operation.parameters.map((param) => (
-                                  <TableRow key={param.id}>
-                                    <TableCell className="gap-2 font-medium">
-                                      <div className="flex flex-col gap-2">
-                                        <div className="flex items-center gap-2">
-                                          {param.deprecated && (
-                                            <Badge variant="destructive">
-                                              Deprecated
-                                            </Badge>
-                                          )}
-                                          {param.required ? (
-                                            <Badge>Required</Badge>
-                                          ) : (
-                                            <Badge variant="secondary">
-                                              Optional
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        <p>{param.name}</p>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="flex flex-col gap-2">
-                                        <Badge
-                                          variant="secondary"
-                                          className="w-fit"
-                                        >
-                                          {param.parameterLocation}
-                                        </Badge>
-                                        <p>{param.description}</p>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="w-1/2">
-                                      <SchemaViewer
-                                        schema={
-                                          JSON.parse(
-                                            param.schemaJson,
-                                          ) as SchemaViewerProps["schema"]
-                                        }
-                                      />
-                                    </TableCell>
+                          <TabsContent value="parameters" className="mt-4">
+                            <div className="rounded-md border">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Schema</TableHead>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </TabsContent>
-                      )}
-
-                      {operation.requestBody && (
-                        <TabsContent value="requestBody" className="mt-4">
-                          <div className="space-y-4">
-                            <div>
-                              <h4 className="font-medium">Description</h4>
-                              <p className="text-muted-foreground">
-                                {operation.requestBody.description}
-                              </p>
+                                </TableHeader>
+                                <TableBody>
+                                  {operation.parameters.map((param) => (
+                                    <TableRow key={param.id}>
+                                      <TableCell className="gap-2 font-medium">
+                                        <div className="flex flex-col gap-2">
+                                          <div className="flex items-center gap-2">
+                                            {param.deprecated && (
+                                              <Badge variant="destructive">
+                                                Deprecated
+                                              </Badge>
+                                            )}
+                                            {param.required ? (
+                                              <Badge>Required</Badge>
+                                            ) : (
+                                              <Badge variant="secondary">
+                                                Optional
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <p>{param.name}</p>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex flex-col gap-2">
+                                          <Badge
+                                            variant="secondary"
+                                            className="w-fit"
+                                          >
+                                            {param.parameterLocation}
+                                          </Badge>
+                                          <p>{param.description}</p>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="w-1/2">
+                                        <SchemaViewer
+                                          schema={
+                                            JSON.parse(
+                                              param.schemaJson,
+                                            ) as SchemaViewerProps["schema"]
+                                          }
+                                        />
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
                             </div>
-                            <div>
-                              <h4 className="font-medium">Schema</h4>
-                              <pre className="mt-2 rounded-lg bg-muted p-4">
-                                {JSON.stringify(
-                                  JSON.parse(operation.requestBody.contentJson),
-                                  null,
-                                  2,
-                                )}
-                              </pre>
-                            </div>
-                          </div>
-                        </TabsContent>
-                      )}
+                          </TabsContent>
+                        )}
 
-                      {operation.responses.length > 0 && (
-                        <TabsContent value="responses" className="mt-4">
-                          <div className="space-y-6">
-                            {operation.responses.map((response) => (
-                              <div key={response.id} className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                  <Badge
-                                    className={
-                                      response.statusCode < 400
-                                        ? "bg-green-500"
-                                        : "bg-red-500"
-                                    }
-                                  >
-                                    {response.statusCode}
-                                  </Badge>
-                                  <h4 className="font-medium">
-                                    {response.description}
-                                  </h4>
-                                </div>
-                                <div>
-                                  <h5 className="text-sm font-medium">
-                                    Content
-                                  </h5>
-                                  <pre className="mt-2 rounded-lg bg-muted p-4">
-                                    {JSON.stringify(
-                                      JSON.parse(response.contentJson),
-                                      null,
-                                      2,
-                                    )}
-                                  </pre>
-                                </div>
-                                {response.headersJson && (
+                        {operation.requestBody && (
+                          <TabsContent value="requestBody" className="mt-4">
+                            <div className="space-y-4">
+                              <div>
+                                <h4 className="font-medium">Description</h4>
+                                <p className="text-muted-foreground">
+                                  {operation.requestBody.description}
+                                </p>
+                              </div>
+                              <div>
+                                <h4 className="font-medium">Schema</h4>
+                                <pre className="mt-2 rounded-lg bg-muted p-4">
+                                  {JSON.stringify(
+                                    JSON.parse(
+                                      operation.requestBody.contentJson,
+                                    ),
+                                    null,
+                                    2,
+                                  )}
+                                </pre>
+                              </div>
+                            </div>
+                          </TabsContent>
+                        )}
+
+                        {operation.responses.length > 0 && (
+                          <TabsContent value="responses" className="mt-4">
+                            <div className="space-y-6">
+                              {operation.responses.map((response) => (
+                                <div key={response.id} className="space-y-4">
+                                  <div className="flex items-center gap-2">
+                                    <Badge
+                                      className={
+                                        response.statusCode < 400
+                                          ? "bg-green-500"
+                                          : "bg-red-500"
+                                      }
+                                    >
+                                      {response.statusCode}
+                                    </Badge>
+                                    <h4 className="font-medium">
+                                      {response.description}
+                                    </h4>
+                                  </div>
                                   <div>
                                     <h5 className="text-sm font-medium">
-                                      Headers
+                                      Content
                                     </h5>
                                     <pre className="mt-2 rounded-lg bg-muted p-4">
                                       {JSON.stringify(
-                                        JSON.parse(response.headersJson),
+                                        JSON.parse(response.contentJson),
                                         null,
                                         2,
                                       )}
                                     </pre>
                                   </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </TabsContent>
-                      )}
-                    </Tabs>
+                                  {response.headersJson && (
+                                    <div>
+                                      <h5 className="text-sm font-medium">
+                                        Headers
+                                      </h5>
+                                      <pre className="mt-2 rounded-lg bg-muted p-4">
+                                        {JSON.stringify(
+                                          JSON.parse(response.headersJson),
+                                          null,
+                                          2,
+                                        )}
+                                      </pre>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </TabsContent>
+                        )}
+                      </Tabs>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        {isOwner ? (
+                          <p className="text-muted-foreground">
+                            Add some parameters, request body, or responses with
+                            the <span className="font-bold">Edit</span> button
+                            to get started!
+                          </p>
+                        ) : (
+                          <p className="text-muted-foreground">
+                            No parameters, request body, or responses found for
+                            this operation.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
