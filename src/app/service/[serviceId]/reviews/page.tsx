@@ -43,6 +43,12 @@ export default function ReviewsPage() {
     error: serviceError,
   } = api.service.getServiceMetadataById.useQuery({ serviceId });
 
+  const {
+    data: subscription,
+    isLoading: subscriptionLoading,
+    error: subscriptionError,
+  } = api.subscription.isUserSubscribedToService.useQuery({ serviceId });
+
   const [reviews, setReviews] = useState<ReviewContent[]>([]);
   const [newCardData, setNewCardData] = useState<NewCard>({
     isVisible: false,
@@ -191,12 +197,13 @@ export default function ReviewsPage() {
       service?.owners.some((owner) => owner.user.id === session.user.id)
     ) {
       setIsUserOwner(true);
+      setTopButton("Owned");
     }
-  }, [session, service]);
+  }, [session, service?.owners]);
 
   // Load review cards
   useEffect(() => {
-    if (service) {
+    if (service && subscription) {
       if (service.ratings.length > 0) {
         const reviewContents = service.ratings.map((review) => ({
           id: review.id,
@@ -225,20 +232,12 @@ export default function ReviewsPage() {
         // Has posted a review
         // TODO for future - make it so that the edit button at the top directly opens the modal
         // for subscribers who have already posted a review
-        if (
-          service.subscriptionTiers.some((sub) =>
-            sub.consumers.some((userId) => userId.userId === session.user.id),
-          )
-        ) {
+        if (subscription.isSubscribed) {
           setTopButton("EditSubbed");
         } else {
           setTopButton("EditUnsubbed");
         }
-      } else if (
-        service.subscriptionTiers.some((sub) =>
-          sub.consumers.some((userId) => userId.userId === session.user.id),
-        )
-      ) {
+      } else if (subscription.isSubscribed) {
         // Is subscribed and hasn't posted a review before
         setTopButton("Add");
       } else if (
@@ -250,10 +249,10 @@ export default function ReviewsPage() {
         setTopButton(null);
       }
     }
-  }, [service, session]);
+  }, [service, session, subscription, subscription?.isSubscribed]);
 
   // Show loading state
-  if (serviceLoading) {
+  if (serviceLoading || subscriptionLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -262,7 +261,7 @@ export default function ReviewsPage() {
   }
 
   // Show error state
-  if (serviceError || !service) {
+  if (serviceError || !service || subscriptionError) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="text-center">
@@ -351,7 +350,7 @@ export default function ReviewsPage() {
             />
           )}
 
-          {reviews.length == 0 && (
+          {reviews.length == 0 && !newCardData.isVisible && (
             <div className="w-full">
               <Separator className="my-6" />
               <div className="flex h-[60vh] items-center justify-center">
