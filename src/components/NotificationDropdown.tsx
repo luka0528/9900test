@@ -28,9 +28,9 @@ export function NotificationDropdown() {
     },
     { 
       enabled: !!session,
-      refetchInterval: 30000, // Poll every 30 seconds
+      refetchInterval: 30000,
       refetchIntervalInBackground: true,
-      staleTime: 10000, // Consider data stale after 10 seconds
+      staleTime: 10000,
     }
   );
 
@@ -46,13 +46,9 @@ export function NotificationDropdown() {
 
   const { mutate: deleteNotification } = api.notification.deleteNotification.useMutation({
     onMutate: async ({ notificationId }) => {
-      // Cancel outgoing refetches
       await utils.notification.getMyNotifications.cancel();
-      
-      // Get current notifications
       const prevData = utils.notification.getMyNotifications.getData({ includeRead: true, limit: 50 });
       
-      // Optimistically remove the notification
       utils.notification.getMyNotifications.setData(
         { includeRead: true, limit: 50 },
         (old) => {
@@ -74,7 +70,6 @@ export function NotificationDropdown() {
       setIsDeleting(false);
     },
     onError: (_, __, context) => {
-      // If mutation fails, restore previous data
       if (context?.prevData) {
         utils.notification.getMyNotifications.setData(
           { includeRead: true, limit: 50 },
@@ -84,27 +79,20 @@ export function NotificationDropdown() {
       setDeletingId(null);
       setIsDeleting(false);
     },
-    // Disable automatic refetch on success since we're handling updates optimistically
     onSettled: () => {
       void utils.notification.getMyNotifications.invalidate();
     }
   });
 
-  // Memoized delete handler with better guard clauses
   const handleDelete = useCallback((notificationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    // Guard clauses to prevent multiple deletions
-    if (isDeleting) return;
-    if (deletingId === notificationId) return;
-    
+    if (isDeleting || deletingId === notificationId) return;
     setDeletingId(notificationId);
     deleteNotification({ notificationId });
   }, [deletingId, isDeleting, deleteNotification]);
 
   const unreadCount = data?.notifications.filter((n) => !n.read).length ?? 0;
 
-  // Move conditional return after all hooks
   if (!session) return null;
 
   return (
@@ -122,57 +110,63 @@ export function NotificationDropdown() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80" align="end">
-        <DropdownMenuLabel className="flex justify-between">
-          <span>Notifications</span>
+      <DropdownMenuContent className="w-96" align="end">
+        <DropdownMenuLabel className="flex justify-between items-center py-3">
+          <span className="text-lg font-semibold">Notifications</span>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => markAllAsRead()}
-              className="h-auto px-2 text-xs"
+              className="h-8 px-3 text-xs hover:bg-secondary"
             >
               Mark all as read
             </Button>
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <ScrollArea className="h-[300px]">
-          <DropdownMenuGroup>
+        <ScrollArea className="h-[500px]">
+          <DropdownMenuGroup className="p-2">
             {data?.notifications.length === 0 ? (
-              <div className="px-2 py-4 text-sm text-muted-foreground text-center pointer-events-none">
+              <div className="px-4 py-8 text-sm text-muted-foreground text-center">
                 No notifications
               </div>
             ) : (
               data?.notifications.map((notification) => (
-                <DropdownMenuItem
+                <div
                   key={notification.id}
-                  className="flex flex-col items-start gap-1 p-4"
+                  className={`mb-2 rounded-lg border p-4 transition-colors ${
+                    !notification.read ? 'bg-secondary/40' : 'hover:bg-secondary/20'
+                  }`}
                   onClick={() => !notification.read && markAsRead({ notificationId: notification.id })}
                 >
-                  <div className="flex w-full items-start justify-between gap-2 pr-6">
-                    <span className="font-medium">
-                      {notification.sender.name ?? "Unknown"}
-                    </span>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                    </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-col gap-1 flex-grow">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {notification.sender.name ?? "Unknown"}
+                        </span>
+                        {!notification.read && (
+                          <Badge variant="secondary" className="h-5">New</Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 rounded-full hover:bg-destructive/10 hover:text-destructive"
+                      onClick={(e) => handleDelete(notification.id, e)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2 pr-6">
+                  <p className="mt-2 text-sm text-foreground/90 whitespace-pre-wrap">
                     {notification.content}
                   </p>
-                  {!notification.read && (
-                    <Badge variant="secondary" className="mt-1">New</Badge>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-2 h-6 w-6 p-0 hover:bg-muted"
-                    onClick={(e) => handleDelete(notification.id, e)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuItem>
+                </div>
               ))
             )}
           </DropdownMenuGroup>
