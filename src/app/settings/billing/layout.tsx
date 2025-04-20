@@ -1,6 +1,12 @@
 "use client";
 
-import { EyeIcon, Package, ReceiptText, PlusSquare } from "lucide-react";
+import {
+  EyeIcon,
+  Package,
+  ReceiptText,
+  PlusSquare,
+  LockKeyhole,
+} from "lucide-react";
 import {
   DefaultSideBar,
   type SidebarItem,
@@ -13,6 +19,7 @@ export default function BillingLayout({
 }) {
   const items: SidebarItem[] = [
     { title: "Profile", url: `/settings/profile`, icon: EyeIcon },
+    { title: "Credentials", url: `/settings/credentials`, icon: LockKeyhole },
     { title: "Billing", url: `/settings/billing`, icon: ReceiptText },
     { title: "Services", url: `/settings/services`, icon: Package },
     {

@@ -3,14 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { toast } from "sonner";
+import { toast, Toaster } from "sonner";
 import { api } from "~/trpc/react";
 import { Loader2, ArrowLeftIcon } from "lucide-react";
-
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/card";
-
 import TiersGrid from "~/components/billing/TiersGrid";
 import PaymentMethodDialog from "~/components/billing/PaymentMethodDialog";
+import { useMakePayment } from "~/lib/hooks/useMakePayment";
 
 const PurchasePage: React.FC = () => {
   const { status } = useSession();
@@ -40,18 +39,17 @@ const PurchasePage: React.FC = () => {
 
   // 4. Mutation to subscribe/update subscription
   const subscribeMutation = api.subscription.subscribeToTier.useMutation();
+  const { makePayment } = useMakePayment();
 
   // Local state
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [autoRenew, setAutoRenew] = useState(true);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [currentTierId, setCurrentTierId] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     string | null
   >(null);
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-
-  // Track user's current tier in local state
-  const [currentTierId, setCurrentTierId] = useState<string | null>(null);
 
   // Once we know subscriptionStatus, set currentTierId
   useEffect(() => {
@@ -74,11 +72,21 @@ const PurchasePage: React.FC = () => {
 
   // 5. The purchase/update flow
   const handlePurchase = async () => {
-    if (!selectedTier || !selectedPaymentMethod) return;
-
     try {
+      if (!selectedTier || !selectedPaymentMethod) {
+        toast.error("Please select a tier and payment method.");
+        return;
+      }
+      const processPayment = await makePayment(
+        selectedTier,
+        selectedPaymentMethod,
+      );
+
+      if (!processPayment) {
+        return;
+      }
+
       await subscribeMutation.mutateAsync({
-        serviceId,
         tierId: selectedTier,
         paymentMethodId: selectedPaymentMethod,
         autoRenewal: autoRenew,
@@ -99,6 +107,7 @@ const PurchasePage: React.FC = () => {
 
   if (!status || status === "unauthenticated") {
     router.push(`/service/${serviceId}`);
+    return null;
   }
 
   // 6. Loading & error states
@@ -177,6 +186,7 @@ const PurchasePage: React.FC = () => {
           }
         />
       )}
+      <Toaster />
     </div>
   );
 };

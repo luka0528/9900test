@@ -109,7 +109,7 @@ const BillingHistory: React.FC = () => {
             {sortField === "to" && (sortOrder === "asc" ? " ↑" : " ↓")}
           </TableHead>
           <TableHead>Amount</TableHead>
-          <TableHead>Description</TableHead>
+          <TableHead>{"Description (Service | Tier)"}</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Auto Renewal</TableHead>
           <TableHead>Renewal Date</TableHead>
