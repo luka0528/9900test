@@ -355,22 +355,34 @@ export const subscriptionRouter = createTRPCRouter({
       });
 
       if (existingSubscription) {
-        return {
-          success: false,
-          message:
-            "Already subscribed to this tier. To switch tiers, please visit the subscription management page.",
-        };
+        switch (existingSubscription.subscriptionStatus) {
+          case SubscriptionStatus.ACTIVE:
+            return {
+              success: false,
+              message:
+                "Already subscribed to this tier. To switch tiers, please visit the subscription management page.",
+            };
+          default:
+            await ctx.db.serviceConsumer.update({
+              where: { id: existingSubscription.id },
+              data: {
+                subscriptionStatus: SubscriptionStatus.ACTIVE,
+                renewingSubscription: autoRenewal,
+                lastRenewed: new Date(),
+              },
+            });
+        }
+      } else {
+        await ctx.db.serviceConsumer.create({
+          data: {
+            subscriptionStatus: SubscriptionStatus.ACTIVE,
+            userId: ctx.session.user.id,
+            subscriptionTierId: tier.id,
+            paymentMethodId: paymentMethodId,
+            renewingSubscription: autoRenewal,
+          },
+        });
       }
-
-      await ctx.db.serviceConsumer.create({
-        data: {
-          subscriptionStatus: SubscriptionStatus.ACTIVE,
-          userId: ctx.session.user.id,
-          subscriptionTierId: tier.id,
-          paymentMethodId: paymentMethodId,
-          renewingSubscription: autoRenewal,
-        },
-      });
 
       return { success: true, message: "Successfully subscribed to service." };
     }),
