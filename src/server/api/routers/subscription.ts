@@ -121,36 +121,6 @@ const waitForPaymentStatus = async (
 };
 
 export const subscriptionRouter = createTRPCRouter({
-  cancelStripePaymentIntent: protectedProcedure
-    .input(z.object({ paymentIntentId: z.string() }))
-    .mutation(async ({ input }) => {
-      const { paymentIntentId } = input;
-      // 1) Find the payment intent
-      const paymentIntent =
-        await stripe.paymentIntents.retrieve(paymentIntentId);
-      if (!paymentIntent) {
-        return {
-          success: false,
-          message: "Payment intent not found",
-        };
-      }
-
-      // 2) Cancel the payment intent
-      try {
-        await stripe.paymentIntents.cancel(paymentIntentId);
-      } catch {
-        return {
-          success: false,
-          message: "Failed to cancel payment intent",
-        };
-      }
-
-      return {
-        success: true,
-        message: "Payment intent cancelled successfully",
-      };
-    }),
-
   createStripePaymentIntent: protectedProcedure
     .input(
       z.object({
@@ -187,7 +157,7 @@ export const subscriptionRouter = createTRPCRouter({
         });
       }
 
-      // 5) TODO: Call Stripe
+      // 5) Call Stripe
       const user = await ctx.db.user.findUnique({
         where: { id: ctx.session.user.id },
         select: { email: true, name: true, stripeCustomerId: true },
@@ -217,6 +187,16 @@ export const subscriptionRouter = createTRPCRouter({
           code: "BAD_REQUEST",
           message: "Already subscribed to this tier",
         });
+      }
+
+      if (subscriptionTier.price === 0) {
+        // If the subscription tier is free, create a subscription without payment
+        return {
+          success: true,
+          message: "Free subscription created successfully.",
+          status: "SUCCESS",
+          data: null,
+        };
       }
 
       let stripeCustomerId = user.stripeCustomerId;
@@ -283,6 +263,36 @@ export const subscriptionRouter = createTRPCRouter({
       }
 
       return res;
+    }),
+
+  cancelStripePaymentIntent: protectedProcedure
+    .input(z.object({ paymentIntentId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { paymentIntentId } = input;
+      // 1) Find the payment intent
+      const paymentIntent =
+        await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (!paymentIntent) {
+        return {
+          success: false,
+          message: "Payment intent not found",
+        };
+      }
+
+      // 2) Cancel the payment intent
+      try {
+        await stripe.paymentIntents.cancel(paymentIntentId);
+      } catch {
+        return {
+          success: false,
+          message: "Failed to cancel payment intent",
+        };
+      }
+
+      return {
+        success: true,
+        message: "Payment intent cancelled successfully",
+      };
     }),
 
   subscribeToTier: protectedProcedure
