@@ -1,6 +1,5 @@
 // src/lib/email.ts
 import { Resend } from "resend";
-import z from "zod";
 
 // Initialize Resend with your API key
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -93,16 +92,6 @@ export const sendPasswordResetEmail = async ({
   }
 };
 
-const billingEmailSchema = z.object({
-  paymentSuccess: z.boolean(),
-  userName: z.string(),
-  payerEmail: z.string().email(),
-  serviceName: z.string(),
-  subscriptionTierName: z.string(),
-  price: z.number(),
-  date: z.string(),
-});
-
 export const sendBillingEmail = async ({
   paymentSuccess,
   userName,
@@ -111,7 +100,15 @@ export const sendBillingEmail = async ({
   subscriptionTierName,
   price,
   date,
-}: z.infer<typeof billingEmailSchema>) => {
+}: {
+  paymentSuccess: boolean;
+  userName: string;
+  payerEmail: string;
+  serviceName: string;
+  subscriptionTierName: string;
+  price: number;
+  date: string;
+}) => {
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Your T3 App";
   if (paymentSuccess) {
     try {
