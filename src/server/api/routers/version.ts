@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 import { ChangeLogPointType } from "@prisma/client";
+import { notifyAllServiceConsumers } from "~/lib/notifications";
 // Note that documentation will be contained under versions
 export const versionRouter = createTRPCRouter({
   create: protectedProcedure
@@ -336,5 +337,13 @@ export const versionRouter = createTRPCRouter({
         where: { id: versionId },
         data: { isDeprecated },
       });
+      if (isDeprecated) {
+        await notifyAllServiceConsumers(
+          ctx.db,
+          version.service.owners[0]?.userId ?? "",
+          version.service.owners[0]?.serviceId ?? "",
+          `Version ${versionId} has been deprecated, please check the documentation for the latest version.`,
+        )
+      }
     }),
 });
