@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 import { ChangeLogPointType } from "@prisma/client";
 import { notifyAllServiceConsumers } from "~/lib/notifications";
+import { versions } from "process";
 // Note that documentation will be contained under versions
 export const versionRouter = createTRPCRouter({
   create: protectedProcedure
@@ -307,6 +308,7 @@ export const versionRouter = createTRPCRouter({
       const version = await ctx.db.serviceVersion.findUnique({
         where: { id: versionId },
         select: {
+          version: true,
           service: {
             select: {
               owners: true,
@@ -342,7 +344,7 @@ export const versionRouter = createTRPCRouter({
           ctx.db,
           version.service.owners[0]?.userId ?? "",
           version.service.owners[0]?.serviceId ?? "",
-          `Version ${versionId} has been deprecated, please check the documentation for the latest version.`,
+          `Version ${version.version} has been deprecated, please check the documentation for the latest version.`,
         )
       }
     }),

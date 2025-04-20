@@ -26,7 +26,12 @@ export function NotificationDropdown() {
       includeRead: true,
       limit: 50 
     },
-    { enabled: !!session }
+    { 
+      enabled: !!session,
+      refetchInterval: 30000, // Poll every 30 seconds
+      refetchIntervalInBackground: true,
+      staleTime: 10000, // Consider data stale after 10 seconds
+    }
   );
 
   const utils = api.useContext();
