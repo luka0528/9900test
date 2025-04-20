@@ -183,9 +183,11 @@ const SubscriptionsManagementPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center space-x-2 p-4">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Loading subscriptions...</span>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-10 w-10 animate-spin text-white" />
+          <span className="mt-4 text-white">Loading subscriptions...</span>
+        </div>
       </div>
     );
   }
@@ -227,41 +229,43 @@ const SubscriptionsManagementPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {subscriptionsData.subscriptions.map((subscription) => (
-                <TableRow key={subscription.subscriptionTier.id}>
-                  <TableCell className="text-[13.5px]">
-                    {subscription.subscriptionTier.service.name || "N/A"}
-                  </TableCell>
-                  <TableCell className="text-[13.5px]">
-                    {subscription.subscriptionTier.name}
-                  </TableCell>
-                  <TableCell className="text-[13.5px]">
-                    {subscription.subscriptionTier.price !== 0
-                      ? `$${subscription.subscriptionTier.price.toFixed(2)}`
-                      : `Free`}
-                  </TableCell>
-                  <TableCell className="text-[13.5px]">
-                    {subscription.paymentMethod
-                      ? subscription.paymentMethod.cardBrand
-                        ? `**** **** **** ${subscription.paymentMethod.last4}`
-                        : subscription.paymentMethod.stripePaymentId
-                      : "N/A"}
-                  </TableCell>
-                  <TableCell className="text-[13.5px]">
-                    {getNextBillingDate(subscription)}
-                  </TableCell>
-                  <TableCell className="text-[13.5px]">
-                    {subscription.renewingSubscription ? "Yes" : "No"}
-                  </TableCell>
-                  <TableCell className="text-[13.5px]">
-                    {subscriptionStatusMap(subscription.subscriptionStatus) ||
-                      "Unknown"}
-                  </TableCell>
-                  <TableCell className="text-[13.5px]">
-                    {serviceAction(subscription)}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {subscriptionsData.subscriptions
+                .sort((a, b) => a.id.localeCompare(b.id))
+                .map((subscription) => (
+                  <TableRow key={subscription.subscriptionTier.id}>
+                    <TableCell className="text-[13.5px]">
+                      {subscription.subscriptionTier.service.name || "N/A"}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {subscription.subscriptionTier.name}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {subscription.subscriptionTier.price !== 0
+                        ? `$${subscription.subscriptionTier.price.toFixed(2)}`
+                        : `Free`}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {subscription.paymentMethod
+                        ? subscription.paymentMethod.cardBrand
+                          ? `**** **** **** ${subscription.paymentMethod.last4}`
+                          : subscription.paymentMethod.stripePaymentId
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {getNextBillingDate(subscription)}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {subscription.renewingSubscription ? "Yes" : "No"}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {subscriptionStatusMap(subscription.subscriptionStatus) ||
+                        "Unknown"}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {serviceAction(subscription)}
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </CardContent>

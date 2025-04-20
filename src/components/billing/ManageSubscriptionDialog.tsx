@@ -12,7 +12,7 @@ import {
   AlertDialogAction,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
-import { CreditCard, Edit, Trash } from "lucide-react";
+import { CreditCard, Edit, Loader2, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import PaymentMethodDialog from "./PaymentMethodDialog";
@@ -61,7 +61,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     newTierId: selectedNewTier ?? "",
   });
 
-  const { makePayment } = useMakePayment();
+  const { makePayment, isLoading: paymentLoading } = useMakePayment();
 
   useEffect(() => {
     if (getPaymentMethodsStatus === "success" && paymentMethodsData) {
@@ -154,6 +154,17 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       toast.error("Failed to cancel subscription.");
     }
   };
+
+  if (paymentLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-10 w-10 animate-spin text-white" />
+          <span className="mt-4 text-white">Processing payment...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

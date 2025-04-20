@@ -91,3 +91,91 @@ export const sendPasswordResetEmail = async ({
     throw error;
   }
 };
+
+export const sendBillingEmail = async ({
+  paymentSuccess,
+  userName,
+  payerEmail,
+  serviceName,
+  subscriptionTierName,
+  price,
+  date,
+}: {
+  paymentSuccess: boolean;
+  userName: string;
+  payerEmail: string;
+  serviceName: string;
+  subscriptionTierName: string;
+  price: number;
+  date: string;
+}) => {
+  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Your T3 App";
+  if (paymentSuccess) {
+    try {
+      const { data, error } = await resend.emails.send({
+        from: `noreply@${process.env.RESEND_DOMAIN}`,
+        to: payerEmail,
+        subject: `Billing Receipt for ${serviceName} | ${appName}`,
+        html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1>Billing Receipt</h1>
+        <p>Hello <strong>${userName}</strong>,</p>
+        <p>Thank you for your payment for <strong>${serviceName}</strong>. Below are the details of your transaction:</p>
+        <ul>
+        <li><strong>Service Name:</strong> ${serviceName}</li>
+        <li><strong>Subscription Tier:</strong> ${subscriptionTierName}</li>
+        <li><strong>Price:</strong> $${price}</li>
+        <li><strong>Date:</strong> ${date}</li>
+        </ul>
+        <p>If you have any questions, feel free to contact us.</p>
+        <p>Thanks,<br>The ${appName} Team</p>
+      </div>
+      `,
+      });
+
+      if (error) {
+        console.error("Error sending email:", error);
+        throw new Error(error.message);
+      }
+
+      return { success: true, messageId: data?.id };
+    } catch (error) {
+      console.error("Failed to send verification email:", error);
+      throw error;
+    }
+  } else {
+    try {
+      const { data, error } = await resend.emails.send({
+        from: `noreply@${process.env.RESEND_DOMAIN}`,
+        to: payerEmail,
+        subject: `Payment Failed for ${serviceName} | ${appName}`,
+        html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1>Payment Failed</h1>
+        <p>Hello <strong>${userName}</strong>,</p>
+        <p>We encountered an issue processing your payment for <strong>${serviceName}</strong>. Below are the details:</p>
+        <ul>
+        <li><strong>Service Name:</strong> ${serviceName}</li>
+        <li><strong>Subscription Tier:</strong> ${subscriptionTierName}</li>
+        <li><strong>Price:</strong> $${price}</li>
+        <li><strong>Date:</strong> ${date}</li>
+        </ul>
+        <p>Please check your payment information and try again.</p>
+        <p>If you have any questions, feel free to contact us.</p>
+        <p>Thanks,<br>The ${appName} Team</p>
+      </div>
+      `,
+      });
+
+      if (error) {
+        console.error("Error sending email:", error);
+        throw new Error(error.message);
+      }
+
+      return { success: true, messageId: data?.id };
+    } catch (error) {
+      console.error("Failed to send verification email:", error);
+      throw error;
+    }
+  }
+};

@@ -39,7 +39,7 @@ const PurchasePage: React.FC = () => {
 
   // 4. Mutation to subscribe/update subscription
   const subscribeMutation = api.subscription.subscribeToTier.useMutation();
-  const { makePayment } = useMakePayment();
+  const { makePayment, isLoading: isPaymentLoading } = useMakePayment();
 
   // Local state
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
@@ -113,9 +113,11 @@ const PurchasePage: React.FC = () => {
   // 6. Loading & error states
   if (serviceLoading || subscriptionLoading) {
     return (
-      <div className="flex items-center space-x-2 p-4 text-sm text-gray-700">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Loading...</span>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-10 w-10 animate-spin text-white" />
+          <span className="mt-4 text-white">Loading...</span>
+        </div>
       </div>
     );
   }
@@ -187,6 +189,14 @@ const PurchasePage: React.FC = () => {
         />
       )}
       <Toaster />
+      {isPaymentLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-10 w-10 animate-spin text-white" />
+            <span className="mt-4 text-white">Processing payment...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
