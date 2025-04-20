@@ -203,7 +203,7 @@ export default function ReviewsPage() {
 
   // Load review cards
   useEffect(() => {
-    if (service && subscription) {
+    if (service) {
       if (service.ratings.length > 0) {
         const reviewContents = service.ratings.map((review) => ({
           id: review.id,
@@ -222,6 +222,12 @@ export default function ReviewsPage() {
         }));
         setReviews(reviewContents);
       }
+    }
+  }, [service, service?.ratings]);
+
+  // Handle user subscription status
+  useEffect(() => {
+    if (service && subscription) {
       if (!session) {
         setTopButton(null);
       } else if (
