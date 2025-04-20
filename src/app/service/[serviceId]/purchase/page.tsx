@@ -82,9 +82,7 @@ const PurchasePage: React.FC = () => {
         selectedPaymentMethod,
       );
 
-      if (!processPayment) {
-        return;
-      }
+      if (!processPayment) return;
 
       await subscribeMutation.mutateAsync({
         tierId: selectedTier,
