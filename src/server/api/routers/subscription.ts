@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server";
 import { BillingStatus, SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
 import { appRouter } from "../root";
+import { sendBillingEmail } from "~/lib/email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -265,6 +266,17 @@ export const subscriptionRouter = createTRPCRouter({
           paymentMethodId: paymentMethodId,
           subscriptionTierId: subscriptionTierId,
         },
+      });
+
+      // 7) Create an email receipt for the user
+      await sendBillingEmail({
+        paymentSuccess: res.status === "SUCCESS",
+        userName: user.name ?? "",
+        payerEmail: user.email ?? "",
+        serviceName: subscriptionTier.service.name,
+        subscriptionTierName: subscriptionTier.name,
+        price: subscriptionTier.price,
+        date: new Date().toLocaleDateString(),
       });
 
       // 7) TODO: Create an outgoing billing receipt for the service owner if payment was successful
