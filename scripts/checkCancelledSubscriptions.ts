@@ -1,7 +1,7 @@
-import { db } from "~/server/db";
 import { appRouter } from "~/server/api/root";
+import { db } from "~/server/db";
 
-export async function run() {
+export async function checkCancelledSubscriptions() {
   const ctx = {
     db,
     session: null,
@@ -20,7 +20,7 @@ export async function run() {
   }
 }
 
-run().catch((err) => {
+checkCancelledSubscriptions().catch((err) => {
   console.error("❌ checkCancellations failed:", err);
   process.exit(1);
 });

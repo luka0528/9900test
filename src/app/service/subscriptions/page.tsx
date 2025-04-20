@@ -6,6 +6,7 @@ import { Loader2, Package } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceManagementCard } from "~/components/service/ServiceManagementCard";
 import { AllServiceSidebar } from "~/components/service/AllServiceSidebar";
+import { SubscriptionStatus } from "@prisma/client";
 
 export default function ServicesPage() {
   const { data: session } = useSession();
@@ -57,7 +58,10 @@ export default function ServicesPage() {
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
               {services?.subscriptions
-                ?.sort((a, b) =>
+                ?.filter(
+                  (sub) => sub.subscriptionStatus === SubscriptionStatus.ACTIVE,
+                )
+                .sort((a, b) =>
                   a.subscriptionTier.service.name.localeCompare(
                     b.subscriptionTier.service.name,
                   ),

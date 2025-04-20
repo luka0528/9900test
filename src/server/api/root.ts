@@ -9,7 +9,7 @@ import { notificationRouter } from "./routers/notification";
 import { endpointRouter } from "./routers/endpoint";
 if (process.env.NODE_ENV === "development") {
   console.log("🧪 Dev mode: enabling cancellation scheduler...");
-  void import("../../../scripts/scheduleCancellations");
+  void import("scripts/scheduler");
 }
 
 /**

@@ -1,6 +1,12 @@
 "use client";
 
-import { EyeIcon, Package, ReceiptText, LockKeyhole } from "lucide-react";
+import {
+  EyeIcon,
+  Package,
+  ReceiptText,
+  LockKeyhole,
+  PlusSquare,
+} from "lucide-react";
 import {
   DefaultSideBar,
   type SidebarItem,
@@ -16,6 +22,11 @@ export default function ProfileLayout({
     { title: "Credentials", url: `/settings/credentials`, icon: LockKeyhole },
     { title: "Billing", url: `/settings/billing`, icon: ReceiptText },
     { title: "Services", url: `/settings/services`, icon: Package },
+    {
+      title: "Subscriptions",
+      url: `/settings/subscriptions`,
+      icon: PlusSquare,
+    },
   ];
 
   return (

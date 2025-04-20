@@ -12,7 +12,7 @@ import {
   AlertDialogAction,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
-import { CreditCard, Edit, Trash } from "lucide-react";
+import { CreditCard, Edit, Loader2, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import PaymentMethodDialog from "./PaymentMethodDialog";
@@ -22,6 +22,7 @@ import type {
   PaymentMethod,
   ServiceConsumer,
 } from "@prisma/client";
+import { useMakePayment } from "~/lib/hooks/useMakePayment";
 
 interface ManageSubscriptionDialogProps {
   isOpen: boolean;
@@ -54,6 +55,13 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   // Query saved payment methods
   const { data: paymentMethodsData, status: getPaymentMethodsStatus } =
     api.subscription.getPaymentMethods.useQuery();
+
+  const { data: priceData } = api.subscription.isNewTierLower.useQuery({
+    oldTierId: serviceConsumer.subscriptionTier.id,
+    newTierId: selectedNewTier ?? "",
+  });
+
+  const { makePayment, isLoading: paymentLoading } = useMakePayment();
 
   useEffect(() => {
     if (getPaymentMethodsStatus === "success" && paymentMethodsData) {
@@ -108,6 +116,17 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       return;
     }
     try {
+      if (!priceData?.isLower) {
+        const res = await makePayment(
+          selectedNewTier,
+          selectedPaymentMethod ?? "",
+        );
+        if (!res) {
+          toast.error("Payment failed. Please try again.");
+          return;
+        }
+      }
+
       await switchSubscriptionTierMutation.mutateAsync({
         oldTierId: serviceConsumer.subscriptionTier.id,
         newTierId: selectedNewTier,
@@ -135,6 +154,17 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       toast.error("Failed to cancel subscription.");
     }
   };
+
+  if (paymentLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-10 w-10 animate-spin text-white" />
+          <span className="mt-4 text-white">Processing payment...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
