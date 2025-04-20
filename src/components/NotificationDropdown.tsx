@@ -11,19 +11,25 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { useSession } from "next-auth/react";
 import { api } from "~/trpc/react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import { Badge } from "~/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 
 export function NotificationDropdown() {
   const { data: session } = useSession();
-  const [includeRead, setIncludeRead] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { data, refetch } = api.notification.getMyNotifications.useQuery(
-    { includeRead },
+    { 
+      includeRead: true,
+      limit: 50 
+    },
     { enabled: !!session }
   );
+
+  const utils = api.useContext();
 
   const { mutate: markAsRead } = api.notification.markAsRead.useMutation({
     onSuccess: () => refetch(),
@@ -34,12 +40,67 @@ export function NotificationDropdown() {
   });
 
   const { mutate: deleteNotification } = api.notification.deleteNotification.useMutation({
-    onSuccess: () => refetch(),
+    onMutate: async ({ notificationId }) => {
+      // Cancel outgoing refetches
+      await utils.notification.getMyNotifications.cancel();
+      
+      // Get current notifications
+      const prevData = utils.notification.getMyNotifications.getData({ includeRead: true, limit: 50 });
+      
+      // Optimistically remove the notification
+      utils.notification.getMyNotifications.setData(
+        { includeRead: true, limit: 50 },
+        (old) => {
+          if (!old) return prevData;
+          return {
+            ...old,
+            notifications: old.notifications.filter((n) => n.id !== notificationId),
+          };
+        }
+      );
+
+      setDeletingId(notificationId);
+      setIsDeleting(true);
+      
+      return { prevData };
+    },
+    onSuccess: () => {
+      setDeletingId(null);
+      setIsDeleting(false);
+    },
+    onError: (_, __, context) => {
+      // If mutation fails, restore previous data
+      if (context?.prevData) {
+        utils.notification.getMyNotifications.setData(
+          { includeRead: true, limit: 50 },
+          context.prevData
+        );
+      }
+      setDeletingId(null);
+      setIsDeleting(false);
+    },
+    // Disable automatic refetch on success since we're handling updates optimistically
+    onSettled: () => {
+      void utils.notification.getMyNotifications.invalidate();
+    }
   });
 
-  if (!session) return null;
+  // Memoized delete handler with better guard clauses
+  const handleDelete = useCallback((notificationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Guard clauses to prevent multiple deletions
+    if (isDeleting) return;
+    if (deletingId === notificationId) return;
+    
+    setDeletingId(notificationId);
+    deleteNotification({ notificationId });
+  }, [deletingId, isDeleting, deleteNotification]);
 
   const unreadCount = data?.notifications.filter((n) => !n.read).length ?? 0;
+
+  // Move conditional return after all hooks
+  if (!session) return null;
 
   return (
     <DropdownMenu>
@@ -102,10 +163,7 @@ export function NotificationDropdown() {
                     variant="ghost"
                     size="sm"
                     className="absolute right-2 top-2 h-6 w-6 p-0 hover:bg-muted"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteNotification({ notificationId: notification.id });
-                    }}
+                    onClick={(e) => handleDelete(notification.id, e)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
