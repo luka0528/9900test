@@ -14,6 +14,3 @@ cron.schedule(
     timezone: "Australia/Sydney", // or your TZ
   },
 );
-
-checkCancelledSubscriptions();
-checkRenewals();
