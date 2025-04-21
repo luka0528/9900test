@@ -102,20 +102,6 @@ export const versionRouter = createTRPCRouter({
                 create: content.endpoints.map((endpoint) => ({
                   path: endpoint.path,
                   description: endpoint.description,
-                  operations: {
-                    create:
-                      endpoint.path === "/api/key"
-                        ? (["GET", "DELETE"] as RestMethod[]).map(
-                            (restTYPE) => ({
-                              method: restTYPE,
-                              description:
-                                restTYPE === "GET"
-                                  ? "Generate an API key"
-                                  : "Revoke an API key",
-                            }),
-                          )
-                        : undefined,
-                  },
                 })),
               },
             })),

@@ -22,6 +22,7 @@ export const serviceRouter = createTRPCRouter({
         version: z.string().min(1),
         description: z.string().min(1),
         tags: z.array(z.string()).default([]),
+        masterAPIKey: z.string().min(1),
         subscriptionTiers: z.array(
           z.object({
             name: z.string().min(1),
@@ -50,10 +51,13 @@ export const serviceRouter = createTRPCRouter({
           message: "You must be logged in to create a service",
         });
       }
-
+      console.log(
+        `API KEY: ------------------------------------${input.masterAPIKey}------------------------------------`,
+      );
       const service = await ctx.db.service.create({
         data: {
           name: input.name,
+          masterAPIKey: input.masterAPIKey,
           tags: {
             connectOrCreate: input.tags.map((tag) => ({
               where: { name: tag },
@@ -92,20 +96,6 @@ export const serviceRouter = createTRPCRouter({
                     create: content.endpoints.map((endpoint) => ({
                       path: endpoint.path,
                       description: endpoint.description,
-                      operations: {
-                        create:
-                          endpoint.path === "/api/key"
-                            ? (["GET", "DELETE"] as RestMethod[]).map(
-                                (restTYPE) => ({
-                                  method: restTYPE,
-                                  description:
-                                    restTYPE === "GET"
-                                      ? "Generate an API key"
-                                      : "Revoke an API key",
-                                }),
-                              )
-                            : undefined,
-                      },
                     })),
                   },
                 })),

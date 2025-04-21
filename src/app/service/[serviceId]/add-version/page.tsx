@@ -82,15 +82,9 @@ export default function AddServicePage() {
       version: "",
       contents: [
         {
-          title: "Routes",
-          description: "Available routes for this service.",
-          endpoints: [
-            {
-              path: "/api/key",
-              description: "Generate or revoke an API Key",
-            },
-            { path: "", description: "" },
-          ],
+          title: "",
+          description: "",
+          endpoints: [{ path: "", description: "" }],
         },
       ],
       changelogPoints: [],
@@ -206,17 +200,10 @@ export default function AddServicePage() {
       endpoints: [],
     };
 
-    if (content.endpoints[rowIndex]?.path == "/api/key") {
-      toast.error(
-        "You cannot remove the mandatory route for API key generation/revocation.",
-      );
+    if (content.endpoints.length <= 1) {
+      toast.error("You must have at least one route in this table.");
       return;
-    }
-
-    if (content.endpoints.length <= 2) {
-      toast.error("You must have at least one custom route in this table.");
-      return;
-    } // Keep at least one row + 1 mandatory route for api key creation/deletion
+    } // Keep at least one row
 
     const updatedContents = [...contents];
     updatedContents[contentIndex] = {
@@ -328,7 +315,6 @@ export default function AddServicePage() {
             />
 
             <Separator />
-
             {/* Details */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -412,7 +398,6 @@ export default function AddServicePage() {
                             {content.endpoints.map(
                               (endpoint, endpointIndex) => {
                                 // detect your “mandatory” row – e.g. the very first one:
-                                const isMandatoryRow = endpointIndex === 0;
 
                                 return (
                                   <div
@@ -428,7 +413,6 @@ export default function AddServicePage() {
                                             <FormControl>
                                               <Input
                                                 placeholder="Path"
-                                                disabled={isMandatoryRow}
                                                 {...field}
                                               />
                                             </FormControl>
@@ -443,7 +427,6 @@ export default function AddServicePage() {
                                             <FormControl>
                                               <Input
                                                 placeholder="Description"
-                                                disabled={isMandatoryRow}
                                                 {...field}
                                               />
                                             </FormControl>

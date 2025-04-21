@@ -374,24 +374,37 @@ export const subscriptionRouter = createTRPCRouter({
         },
       });
 
+      if (
+        existingSubscription?.subscriptionStatus === SubscriptionStatus.ACTIVE
+      ) {
+        return {
+          success: false,
+          message:
+            "Already subscribed to this tier. To switch tiers, please visit the subscription management page.",
+        };
+      }
+
+      // TODO: GENERATE API KEY:
+      // const newApiKey = await getRequest({
+      // url: `${service.url}/api/get`,
+      // params: {masterKey: service.masterKey, subscriptionTier: subscriptionTier.name, userEmail: ctx.session.user.email}
+      // });
+      const newApiKey = "SAMPLE_API_KEY"; // TODO: REMOVE THIS LINE
       if (existingSubscription) {
-        switch (existingSubscription.subscriptionStatus) {
-          case SubscriptionStatus.ACTIVE:
-            return {
-              success: false,
-              message:
-                "Already subscribed to this tier. To switch tiers, please visit the subscription management page.",
-            };
-          default:
-            await ctx.db.serviceConsumer.update({
-              where: { id: existingSubscription.id },
-              data: {
-                subscriptionStatus: SubscriptionStatus.ACTIVE,
-                renewingSubscription: autoRenewal,
-                lastRenewed: new Date(),
-              },
-            });
-        }
+        // TODO: REVOKE OLD API KEY
+        // await revokeApiKey = await deleteRequest({
+        // url: `${service.url}/api/delete`,
+        // params: {masterKey: service.masterKey, oldAPIKey: existing, userEmail: ctx.session.user.email}
+        // });
+        await ctx.db.serviceConsumer.update({
+          where: { id: existingSubscription.id },
+          data: {
+            subscriptionStatus: SubscriptionStatus.ACTIVE,
+            renewingSubscription: autoRenewal,
+            lastRenewed: new Date(),
+            apiKey: newApiKey,
+          },
+        });
       } else {
         await ctx.db.serviceConsumer.create({
           data: {
@@ -400,6 +413,7 @@ export const subscriptionRouter = createTRPCRouter({
             subscriptionTierId: tier.id,
             paymentMethodId: paymentMethodId,
             renewingSubscription: autoRenewal,
+            apiKey: newApiKey,
           },
         });
       }
@@ -436,7 +450,15 @@ export const subscriptionRouter = createTRPCRouter({
         };
       }
 
-      // 3) Update the subscription record
+      // 3) TODO: REVOKE OLD API KEY
+      if (subscription.subscriptionTier.price === 0) {
+        // await revokeApiKey = await deleteRequest({
+        // url: `${service.url}/api/delete`,
+        // params: {masterKey: service.masterKey, oldAPIKey: subcription.apiKey, userEmail: ctx.session.user.email}
+        // });
+      }
+
+      // 4) Update the subscription record
       await ctx.db.serviceConsumer.update({
         where: { id: subscription.id },
         data: {
@@ -447,11 +469,12 @@ export const subscriptionRouter = createTRPCRouter({
         },
       });
 
-      // 4) If service was free (i.e. cancelled immediately), revoke the API key here
-
       return { success: true, message: "Subscription cancelled." };
     }),
 
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   deleteSubscription: protectedProcedure
     .input(z.object({ subscriptionTierId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
@@ -482,6 +505,12 @@ export const subscriptionRouter = createTRPCRouter({
       await ctx.db.serviceConsumer.delete({
         where: { id: subscription.id },
       });
+
+      // TODO: Final check that any existing API keys are revoked
+      // await revokeApiKey = await deleteRequest({
+      // url: `${service.url}/api/delete`,
+      // params: {masterKey: service.masterKey, oldAPIKey: subcription.apiKey, userEmail: ctx.session.user.email}
+      // });
 
       return { success: true, message: "Subscription deleted" };
     }),
@@ -536,13 +565,23 @@ export const subscriptionRouter = createTRPCRouter({
       }
 
       // 6 Revoke the API key for the old tier
+      // await revokeApiKey = await deleteRequest({
+      // url: `${service.url}/api/delete`,
+      // params: {masterKey: service.masterKey, oldAPIKey: subcription.apiKey, userEmail: ctx.session.user.email}
+      // });
 
       // 7) Invoke a API key for the new tier
+      // TODO: GENERATE API KEY:
+      // const newApiKey = await getRequest({
+      // url: `${service.url}/api/get`,
+      // params: {masterKey: service.masterKey, subscriptionTier: subscriptionTier.name, userEmail: ctx.session.user.email}
+      // });
+      const newApiKey = "SAMPLE_API_KEY"; // TODO: REMOVE THIS LINE
 
       // 8) Update the subscription with the new tier
       await ctx.db.serviceConsumer.update({
         where: { id: subscription.id },
-        data: { subscriptionTierId: newTier.id },
+        data: { subscriptionTierId: newTier.id, apiKey: newApiKey },
       });
 
       return {
@@ -925,12 +964,17 @@ export const subscriptionRouter = createTRPCRouter({
 
     // 2) Change their status to cancelled
     for (const consumer of toCancel) {
+      // 2a) Notify the user about the cancellation
+
+      // 2b) Revoke the API key
+      // await revokeApiKey = await deleteRequest({
+      // url: `${service.url}/api/delete`,
+      // params: {masterKey: service.masterKey, oldAPIKey: subcription.apiKey, userEmail: ctx.session.user.email}
+      // });
       await ctx.db.serviceConsumer.update({
         where: { id: consumer.id },
         data: { subscriptionStatus: SubscriptionStatus.CANCELLED },
       });
-
-      // 2a) Revoke api key
     }
 
     return { success: true, count: toCancel.length };
@@ -1023,6 +1067,12 @@ export const subscriptionRouter = createTRPCRouter({
       });
 
       if (paymentResponse.status !== "SUCCESS") {
+        // Revoke the API key
+        // await revokeApiKey = await deleteRequest({
+        // url: `${service.url}/api/delete`,
+        // params: {masterKey: service.masterKey, oldAPIKey: subcription.apiKey, userEmail: ctx.session.user.email}
+        // });
+
         // Mark as pending cancellation
         // Notify the user about the pending cancellation
         await notifyServiceConsumer(
