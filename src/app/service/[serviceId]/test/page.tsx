@@ -64,6 +64,14 @@ interface KeyValue {
   id: string;
 }
 
+// Route interface to match the new backend structure
+interface ApiRoute {
+  method: HttpMethod;
+  route: string;
+  description?: string;
+  version: string;
+}
+
 export default function ApiTesterPage() {
   const params = useParams();
   const serviceId = params.serviceId as string;
@@ -94,16 +102,13 @@ export default function ApiTesterPage() {
   const [bodyEnabled, setBodyEnabled] = useState<boolean>(true);
 
   // API Call Reference
-  const [serviceRoutes, setServiceRoutes] = useState<any[]>([]);
+  const [serviceRoutes, setServiceRoutes] = useState<ApiRoute[]>([]);
 
   // Extract API routes from service data
   useEffect(() => {
-    if (
-      serviceData &&
-      serviceData.versions &&
-      serviceData.versions.length > 0
-    ) {
-      const routes: any[] = [];
+    if (serviceData?.versions && serviceData.versions.length > 0) {
+      const routes: ApiRoute[] = [];
+
       // Extract unique versions
       const uniqueVersions = serviceData.versions.map((version) => ({
         id: version.id,
@@ -117,23 +122,37 @@ export default function ApiTesterPage() {
         setSelectedVersion(uniqueVersions[0]!.version);
       }
 
+      // Extract routes from the new data structure
+      // serviceData.versions.forEach((version) => {
+      //   version.contents?.forEach((content) => {
+      //     content.endpoints?.forEach((endpoint) => {
+      //       endpoint.operations?.forEach((operation) => {
+      //         routes.push({
+      //           method: operation.method as HttpMethod,
+      //           route: endpoint.path,
+      //           description: operation.description,
+      //           version: version.version,
+      //         });
+      //       });
+      //     });
+      //   });
+      // });
+
       serviceData.versions.forEach((version) => {
-        if (version.contents) {
-          version.contents.forEach((content) => {
-            if (content.endpoints) {
-              content.endpoints.forEach((endpoints) => {
-                routes.push({
-                  path: endpoints.path,
-                  description: endpoints.description,
-                  version: version.version,
-                });
-              });
-            }
+        version.contents?.forEach((content) => {
+          content.endpoints?.forEach((endpoint) => {
+            routes.push({
+              method: "GET",
+              route: endpoint.path,
+              description: endpoint.description,
+              version: version.version,
+            });
           });
-        }
+        });
       });
 
       setServiceRoutes(routes);
+
       // If we have routes, show the reference panel by default
       if (routes.length > 0) {
         setShowReferencePanel(true);
@@ -145,10 +164,15 @@ export default function ApiTesterPage() {
     if (method === "GET") {
       setBody("");
       setBodyEnabled(false);
+
+      // If on body tab, switch to params tab when changing to GET
+      if (activeTab === "body") {
+        setActiveTab("params");
+      }
     } else if (!bodyEnabled && ["POST", "PUT", "PATCH"].includes(method)) {
       setBodyEnabled(true);
     }
-  }, [method]);
+  }, [method, activeTab]);
 
   // Add row functions
   const addHeader = () => {
@@ -253,7 +277,7 @@ export default function ApiTesterPage() {
       };
 
       // Add body for methods that support it
-      if (["POST", "PUT", "PATCH"].includes(method) && body) {
+      if (["POST", "PUT", "PATCH"].includes(method) && bodyEnabled && body) {
         try {
           // Try to parse as JSON first
           JSON.parse(body);
@@ -325,9 +349,9 @@ export default function ApiTesterPage() {
   };
 
   // Pre-fill URL from service route
-  const handleSelectRoute = (route: any) => {
+  const handleSelectRoute = (route: ApiRoute) => {
     setUrl(route.route);
-    setMethod(route.method as HttpMethod);
+    setMethod(route.method);
   };
 
   // Has API reference data?
@@ -391,7 +415,11 @@ export default function ApiTesterPage() {
                   <Input
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
-                    placeholder="Enter URL"
+                    placeholder={
+                      hasApiReference
+                        ? "Select an endpoint from API Reference →"
+                        : "Enter URL"
+                    }
                     className="flex-1"
                   />
                   <Button
@@ -401,9 +429,9 @@ export default function ApiTesterPage() {
                   >
                     Test
                     {isLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <ArrowRightCircle className="h-4 w-4" />
+                      <ArrowRightCircle className="ml-2 h-4 w-4" />
                     )}
                   </Button>
                 </div>
@@ -417,7 +445,9 @@ export default function ApiTesterPage() {
                   <TabsList>
                     <TabsTrigger value="params">Query Parameters</TabsTrigger>
                     <TabsTrigger value="headers">Headers</TabsTrigger>
-                    <TabsTrigger value="body">Body</TabsTrigger>
+                    <TabsTrigger value="body" disabled={method === "GET"}>
+                      Body {method === "GET" && "(N/A)"}
+                    </TabsTrigger>
                   </TabsList>
 
                   {/* Query Parameters Tab */}
@@ -596,23 +626,13 @@ export default function ApiTesterPage() {
                             id="body-enabled"
                             checked={bodyEnabled}
                             onChange={(e) => setBodyEnabled(e.target.checked)}
-                            disabled={method === "GET"}
                             className="h-4 w-4 rounded border-gray-300"
                           />
-                          <label
-                            htmlFor="body-enabled"
-                            className={`font-medium ${method === "GET" ? "text-muted-foreground" : ""}`}
-                          >
+                          <label htmlFor="body-enabled" className="font-medium">
                             Request Body
                           </label>
                         </div>
-                        {method === "GET" && (
-                          <div className="ml-2 flex items-center text-xs text-muted-foreground">
-                            <Info className="mr-1 h-3 w-3" />
-                            GET requests don't include a request body
-                          </div>
-                        )}
-                        {bodyEnabled && !method.includes("GET") && (
+                        {bodyEnabled && (
                           <div className="ml-auto">
                             <Badge variant="outline" className="text-xs">
                               Content-Type: application/json
@@ -622,31 +642,25 @@ export default function ApiTesterPage() {
                       </div>
 
                       <Textarea
-                        placeholder={
-                          method === "GET"
-                            ? "GET requests don't include a request body"
-                            : `{
+                        placeholder={`{
   "name": "value",
   "example": true
-}`
-                        }
+}`}
                         value={body}
                         onChange={(e) => setBody(e.target.value)}
                         className="h-60 resize-none rounded-none border-0 font-mono focus-visible:ring-0 focus-visible:ring-offset-0"
-                        disabled={method === "GET" || !bodyEnabled}
+                        disabled={!bodyEnabled}
                       />
                     </div>
 
                     {/* Additional help text */}
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>
-                        {method === "GET"
-                          ? "Use query parameters instead of body for GET requests."
-                          : bodyEnabled
-                            ? "Enter JSON data for your request body."
-                            : "Enable the checkbox to add a request body."}
+                        {bodyEnabled
+                          ? "Enter JSON data for your request body."
+                          : "Enable the checkbox to add a request body."}
                       </span>
-                      {bodyEnabled && !method.includes("GET") && (
+                      {bodyEnabled && (
                         <Button
                           variant="ghost"
                           size="sm"
