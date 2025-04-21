@@ -84,7 +84,13 @@ export default function AddServicePage() {
         {
           title: "",
           description: "",
-          endpoints: [],
+          endpoints: [
+            {
+              path: "/api/key",
+              description: "Generate or revoke an API Key",
+            },
+            { path: "", description: "" },
+          ],
         },
       ],
       changelogPoints: [],
@@ -200,7 +206,17 @@ export default function AddServicePage() {
       endpoints: [],
     };
 
-    if (content.endpoints.length <= 1) return; // Keep at least one row
+    if (content.endpoints[rowIndex]?.path == "/api/key") {
+      toast.error(
+        "You cannot remove the mandatory route for API key generation/revocation.",
+      );
+      return;
+    }
+
+    if (content.endpoints.length <= 2) {
+      toast.error("You must have at least one custom route in this table.");
+      return;
+    } // Keep at least one row + 1 mandatory route for api key creation/deletion
 
     const updatedContents = [...contents];
     updatedContents[contentIndex] = {
