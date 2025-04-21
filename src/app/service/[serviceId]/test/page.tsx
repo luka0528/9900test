@@ -51,7 +51,7 @@ interface ApiResponse {
   status: number;
   statusText: string;
   headers: Record<string, string>;
-  data: any;
+  data: unknown;
   time: number;
   size: number;
 }
@@ -76,11 +76,9 @@ export default function ApiTesterPage() {
   const params = useParams();
   const serviceId = params.serviceId as string;
 
-  // Get service documentation for reference
   const { data: serviceData, isLoading: isLoadingService } =
     api.service.getServiceById.useQuery(serviceId);
 
-  // State
   const [url, setUrl] = useState<string>("");
   const [method, setMethod] = useState<HttpMethod>("GET");
   const [headers, setHeaders] = useState<KeyValue[]>([
@@ -101,15 +99,12 @@ export default function ApiTesterPage() {
   );
   const [bodyEnabled, setBodyEnabled] = useState<boolean>(true);
 
-  // API Call Reference
   const [serviceRoutes, setServiceRoutes] = useState<ApiRoute[]>([]);
 
-  // Extract API routes from service data
   useEffect(() => {
     if (serviceData?.versions && serviceData.versions.length > 0) {
       const routes: ApiRoute[] = [];
 
-      // Extract unique versions
       const uniqueVersions = serviceData.versions.map((version) => ({
         id: version.id,
         version: version.version,
@@ -117,26 +112,9 @@ export default function ApiTesterPage() {
 
       setVersions(uniqueVersions);
 
-      // Set initial selected version to latest version
       if (uniqueVersions.length > 0 && !selectedVersion) {
         setSelectedVersion(uniqueVersions[0]!.version);
       }
-
-      // Extract routes from the new data structure
-      // serviceData.versions.forEach((version) => {
-      //   version.contents?.forEach((content) => {
-      //     content.endpoints?.forEach((endpoint) => {
-      //       endpoint.operations?.forEach((operation) => {
-      //         routes.push({
-      //           method: operation.method as HttpMethod,
-      //           route: endpoint.path,
-      //           description: operation.description,
-      //           version: version.version,
-      //         });
-      //       });
-      //     });
-      //   });
-      // });
 
       serviceData.versions.forEach((version) => {
         version.contents?.forEach((content) => {
@@ -153,7 +131,6 @@ export default function ApiTesterPage() {
 
       setServiceRoutes(routes);
 
-      // If we have routes, show the reference panel by default
       if (routes.length > 0) {
         setShowReferencePanel(true);
       }
@@ -165,16 +142,14 @@ export default function ApiTesterPage() {
       setBody("");
       setBodyEnabled(false);
 
-      // If on body tab, switch to params tab when changing to GET
       if (activeTab === "body") {
         setActiveTab("params");
       }
     } else if (!bodyEnabled && ["POST", "PUT", "PATCH"].includes(method)) {
       setBodyEnabled(true);
     }
-  }, [method, activeTab]);
+  }, [method, bodyEnabled, activeTab]);
 
-  // Add row functions
   const addHeader = () => {
     setHeaders([
       ...headers,
@@ -189,7 +164,6 @@ export default function ApiTesterPage() {
     ]);
   };
 
-  // Remove row functions
   const removeHeader = (id: string) => {
     setHeaders(headers.filter((h) => h.id !== id));
   };
@@ -198,7 +172,6 @@ export default function ApiTesterPage() {
     setQueryParams(queryParams.filter((p) => p.id !== id));
   };
 
-  // Update row functions
   const updateHeader = (
     id: string,
     key: string,
@@ -221,11 +194,11 @@ export default function ApiTesterPage() {
     );
   };
 
-  // Formatting helpers
-  const formatJSON = (json: any): string => {
+  const formatJSON = (json: unknown): string => {
     try {
       return JSON.stringify(json, null, 2);
-    } catch (_) {
+    } catch (error) {
+      console.error("Error formatting JSON:", error);
       return String(json);
     }
   };
@@ -238,7 +211,6 @@ export default function ApiTesterPage() {
     return "bg-gray-500";
   };
 
-  // Handle API call
   const handleSendRequest = async () => {
     if (!url.trim()) {
       toast.error("Please enter a URL");
@@ -249,7 +221,6 @@ export default function ApiTesterPage() {
     setResponse(null);
 
     try {
-      // Build request URL with params
       let requestUrl = url;
       const enabledParams = queryParams.filter((p) => p.enabled && p.key);
       if (enabledParams.length > 0) {
@@ -262,7 +233,6 @@ export default function ApiTesterPage() {
         requestUrl = `${requestUrl}${requestUrl.includes("?") ? "&" : "?"}${queryString}`;
       }
 
-      // Build headers
       const requestHeaders: Record<string, string> = {};
       headers
         .filter((h) => h.enabled && h.key)
@@ -270,40 +240,31 @@ export default function ApiTesterPage() {
           requestHeaders[h.key] = h.value;
         });
 
-      // Prepare request options
       const options: RequestInit = {
         method,
         headers: requestHeaders,
       };
 
-      // Add body for methods that support it
       if (["POST", "PUT", "PATCH"].includes(method) && bodyEnabled && body) {
         try {
-          // Try to parse as JSON first
           JSON.parse(body);
           options.headers = {
             ...options.headers,
             "Content-Type": "application/json",
           };
           options.body = body;
-        } catch (_) {
-          // If not valid JSON, send as text
+        } catch (error) {
+          console.warn("Invalid JSON body, sending as text:", error);
           options.body = body;
         }
       }
 
-      // Measure time
       const startTime = performance.now();
-
-      // Send request
       const response = await fetch(requestUrl, options);
-
-      // Calculate timing
       const endTime = performance.now();
       const responseTime = endTime - startTime;
 
-      // Get response data
-      let responseData;
+      let responseData: unknown;
       const responseText = await response.text();
       const responseSize = new Blob([responseText]).size;
 
@@ -313,13 +274,11 @@ export default function ApiTesterPage() {
         responseData = responseText;
       }
 
-      // Get response headers
       const responseHeaders: Record<string, string> = {};
       response.headers.forEach((value, key) => {
         responseHeaders[key] = value;
       });
 
-      // Set the response
       setResponse({
         status: response.status,
         statusText: response.statusText,
@@ -348,13 +307,28 @@ export default function ApiTesterPage() {
     }
   };
 
-  // Pre-fill URL from service route
   const handleSelectRoute = (route: ApiRoute) => {
     setUrl(route.route);
     setMethod(route.method);
+
+    setQueryParams([
+      { key: "", value: "", enabled: true, id: crypto.randomUUID() },
+    ]);
+
+    setHeaders([
+      { key: "", value: "", enabled: true, id: crypto.randomUUID() },
+    ]);
+
+    setBody("");
+    setBodyEnabled(!["GET"].includes(route.method));
+
+    if (route.method === "GET") {
+      setActiveTab("params");
+    } else {
+      setActiveTab("body");
+    }
   };
 
-  // Has API reference data?
   const hasApiReference = serviceRoutes.length > 0;
 
   return (
@@ -674,6 +648,7 @@ export default function ApiTesterPage() {
                               setBody(formatted);
                               toast.success("JSON formatted");
                             } catch (error) {
+                              console.error("Invalid JSON:", error);
                               toast.error("Invalid JSON");
                             }
                           }}
@@ -736,9 +711,7 @@ export default function ApiTesterPage() {
                       </div>
                       <ScrollArea className="h-[400px] rounded-md border bg-muted/50 p-4">
                         <pre className="font-mono text-sm">
-                          {typeof response.data === "object"
-                            ? formatJSON(response.data)
-                            : String(response.data)}
+                          {formatJSON(response.data)}
                         </pre>
                       </ScrollArea>
                     </div>
