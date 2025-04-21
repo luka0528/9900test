@@ -60,7 +60,7 @@ export const MarketplaceService = ({
   // Calculate total active subscribers across all tiers
   const totalSubscribers = subscriptionTiers.reduce(
     (sum, tier) => sum + (tier.consumers?.length ?? 0),
-    0
+    0,
   );
 
   const formattedSubscriberCount = formatSubscriberCount(totalSubscribers);

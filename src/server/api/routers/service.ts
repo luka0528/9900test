@@ -835,9 +835,9 @@ export const serviceRouter = createTRPCRouter({
               price: true,
               consumers: {
                 where: {
-                  subscriptionStatus: "ACTIVE"
-                }
-              }
+                  subscriptionStatus: "ACTIVE",
+                },
+              },
             },
           },
           versions: {
