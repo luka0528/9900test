@@ -104,7 +104,11 @@ export default function NavBar() {
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" sideOffset={40} className="w-72">
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={40}
+                  className="w-72"
+                >
                   <DropdownMenuItem
                     className="cursor-pointer"
                     onClick={() => router.push(`/settings/profile`)}

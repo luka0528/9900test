@@ -1006,7 +1006,7 @@ export const subscriptionRouter = createTRPCRouter({
           service.owners[0]?.userId ?? "",
           subscription.userId,
           `Your subscription to ${subscriptionTier.service.name} is pending cancellation due to payment issues. Please update your payment method.`,
-        )
+        );
         await ctx.db.serviceConsumer.update({
           where: { id: subscription.id },
           data: {

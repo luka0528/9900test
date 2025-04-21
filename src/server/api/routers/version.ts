@@ -3,7 +3,6 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 import { ChangeLogPointType } from "@prisma/client";
 import { notifyAllServiceConsumers } from "~/lib/notifications";
-import { versions } from "process";
 // Note that documentation will be contained under versions
 export const versionRouter = createTRPCRouter({
   create: protectedProcedure
@@ -223,7 +222,7 @@ export const versionRouter = createTRPCRouter({
           message: "Version not found or you do not have permission to edit it",
         });
       }
-      // Notify service consumers 
+      // Notify service consumers
       await notifyAllServiceConsumers(
         ctx.db,
         ctx.session.user.id,
@@ -350,7 +349,7 @@ export const versionRouter = createTRPCRouter({
           version.service.owners[0]?.userId ?? "",
           version.service.owners[0]?.serviceId ?? "",
           `Version ${version.version} has been deprecated, please check the documentation for the latest version.`,
-        )
+        );
       }
     }),
 });

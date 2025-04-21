@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import {
-  createTRPCRouter,
-  protectedProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 export const notificationRouter = createTRPCRouter({
   // Get all notifications for the current user
   getMyNotifications: protectedProcedure
@@ -12,7 +9,7 @@ export const notificationRouter = createTRPCRouter({
         limit: z.number().min(1).max(100).default(50),
         cursor: z.string().nullish(),
         includeRead: z.boolean().default(false),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const notifications = await ctx.db.notification.findMany({
