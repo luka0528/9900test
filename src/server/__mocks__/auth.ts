@@ -11,9 +11,11 @@ type MockSession = Session & {
 };
 
 // Mock auth function that returns null by default (unauthenticated)
-export const auth = vi.fn().mockImplementation((): Promise<MockSession | null> => {
-  return Promise.resolve(null);
-});
+export const auth = vi
+  .fn()
+  .mockImplementation((): Promise<MockSession | null> => {
+    return Promise.resolve(null);
+  });
 
 // Export other auth-related functions that might be used
 export const handlers = {
