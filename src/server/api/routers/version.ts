@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
-import { ChangeLogPointType } from "@prisma/client";
+import { ChangeLogPointType, RestMethod } from "@prisma/client";
 import { notifyAllServiceConsumers } from "~/lib/notifications";
 // Note that documentation will be contained under versions
 export const versionRouter = createTRPCRouter({
@@ -102,6 +102,20 @@ export const versionRouter = createTRPCRouter({
                 create: content.endpoints.map((endpoint) => ({
                   path: endpoint.path,
                   description: endpoint.description,
+                  operations: {
+                    create:
+                      endpoint.path === "/api/key"
+                        ? (["GET", "DELETE"] as RestMethod[]).map(
+                            (restTYPE) => ({
+                              method: restTYPE,
+                              description:
+                                restTYPE === "GET"
+                                  ? "Generate an API key"
+                                  : "Revoke an API key",
+                            }),
+                          )
+                        : undefined,
+                  },
                 })),
               },
             })),
