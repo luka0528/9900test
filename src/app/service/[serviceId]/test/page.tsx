@@ -120,12 +120,11 @@ export default function ApiTesterPage() {
       serviceData.versions.forEach((version) => {
         if (version.contents) {
           version.contents.forEach((content) => {
-            if (content.rows) {
-              content.rows.forEach((row) => {
+            if (content.endpoints) {
+              content.endpoints.forEach((endpoints) => {
                 routes.push({
-                  method: row.method,
-                  route: row.routeName,
-                  description: row.description,
+                  path: endpoints.path,
+                  description: endpoints.description,
                   version: version.version,
                 });
               });
