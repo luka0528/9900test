@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
-import { ChangeLogPointType, type RestMethod } from "@prisma/client";
+import { ChangeLogPointType } from "@prisma/client";
 import { notifyAllServiceConsumers } from "~/lib/notifications";
 // Note that documentation will be contained under versions
 export const versionRouter = createTRPCRouter({

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import type { Prisma, RestMethod } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import {
   createTRPCRouter,
