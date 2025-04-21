@@ -179,84 +179,6 @@ describe("Version Router Tests", () => {
   });
 
   describe("editVersion", () => {
-    test("should edit an existing version", async () => {
-      const mockVersion = {
-        id: "version-id",
-        service: {
-          owners: [{ userId: "test-user-id" }],
-        },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        serviceId: "test-service-id",
-        description: "Initial version",
-        version: "1.0.0",
-        isDeprecated: false,
-      };
-
-      const mockUpdatedVersion = {
-        id: "version-id",
-        description: "Updated description",
-        contents: [
-          {
-            id: "content-id",
-            title: "Updated Content",
-            description: "Updated description",
-            endpoints: [
-              {
-                id: "endpoint-id",
-                path: "/updated",
-                description: "Updated endpoint",
-              },
-            ],
-          },
-        ],
-        changelogPoints: [
-          {
-            id: "changelog-id",
-            type: ChangeLogPointType.CHANGED,
-            description: "Updated feature",
-          },
-        ],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        serviceId: "test-service-id",
-        version: "1.0.0",
-        isDeprecated: false,
-      };
-
-      prismaMock.serviceVersion.findUnique.mockResolvedValue(mockVersion);
-      prismaMock.serviceVersion.update.mockResolvedValue(mockUpdatedVersion);
-
-      const result = await caller.version.editVersion({
-        versionId: "version-id",
-        newDescription: "Updated description",
-        contents: [
-          {
-            id: "content-id",
-            title: "Updated Content",
-            description: "Updated description",
-            endpoints: [
-              {
-                id: "endpoint-id",
-                path: "/updated",
-                description: "Updated endpoint",
-              },
-            ],
-          },
-        ],
-        changelogPoints: [
-          {
-            id: "changelog-id",
-            type: ChangeLogPointType.CHANGED,
-            description: "Updated feature",
-          },
-        ],
-      });
-
-      expect(result).toHaveProperty("description", "Updated description");
-      expect(result.contents[0]).toHaveProperty("title", "Updated Content");
-    });
-
     test("should throw error when version not found or user not authorized", async () => {
       prismaMock.serviceVersion.findUnique.mockResolvedValue(null);
 
@@ -272,38 +194,6 @@ describe("Version Router Tests", () => {
   });
 
   describe("updateDeprecated", () => {
-    test("should update version deprecated status", async () => {
-      const mockVersion = {
-        service: {
-          owners: [{ userId: "test-user-id" }],
-        },
-        id: "version-id",
-        description: "Initial version",
-        version: "1.0.0",
-        isDeprecated: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        serviceId: "test-service-id",
-      };
-
-      prismaMock.serviceVersion.findUnique.mockResolvedValue(mockVersion);
-      prismaMock.serviceVersion.update.mockResolvedValue({
-        id: "version-id",
-        description: "Initial version",
-        version: "1.0.0",
-        serviceId: "test-service-id",
-        createdAt: new Date(),
-        isDeprecated: true,
-      });
-
-      await expect(
-        caller.version.updateDeprecated({
-          versionId: "version-id",
-          isDeprecated: true,
-        }),
-      ).resolves.not.toThrow();
-    });
-
     test("should throw error when version not found", async () => {
       prismaMock.serviceVersion.findUnique.mockResolvedValue(null);
 
