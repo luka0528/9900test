@@ -122,15 +122,16 @@ const waitForPaymentStatus = async (
 };
 
 export const subscriptionRouter = createTRPCRouter({
-  createStripePaymentIntent: protectedProcedure
+  createStripePaymentIntent: publicProcedure
     .input(
       z.object({
+        userId: z.string().optional(),
         paymentMethodId: z.string(),
         subscriptionTierId: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { paymentMethodId, subscriptionTierId } = input;
+      const { paymentMethodId, subscriptionTierId, userId } = input;
 
       const subscriptionTier = await ctx.db.subscriptionTier.findUnique({
         where: { id: subscriptionTierId },
@@ -160,7 +161,7 @@ export const subscriptionRouter = createTRPCRouter({
 
       // 5) Call Stripe
       const user = await ctx.db.user.findUnique({
-        where: { id: ctx.session.user.id },
+        where: { id: userId ?? ctx.session.user.id },
         select: { email: true, name: true, stripeCustomerId: true },
       });
       if (!user) {
@@ -975,6 +976,7 @@ export const subscriptionRouter = createTRPCRouter({
 
       const paymentResponse =
         await caller.subscription.createStripePaymentIntent({
+          userId: subscription.userId,
           paymentMethodId: subscription.paymentMethodId,
           subscriptionTierId: subscription.subscriptionTierId,
         });
