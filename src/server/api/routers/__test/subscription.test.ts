@@ -146,6 +146,7 @@ describe("Subscription Router Tests", () => {
     subscriptionStatus: SubscriptionStatus.ACTIVE,
     userId: "test-user-id",
     paymentMethodId: "test-payment-method-id",
+    apiKey: "test-api-key",
     ...overrides,
   });
 

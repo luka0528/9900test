@@ -23,6 +23,7 @@ export const serviceRouter = createTRPCRouter({
         version: z.string().min(1),
         description: z.string().min(1),
         tags: z.array(z.string()).default([]),
+        masterAPIKey: z.string().min(1),
         subscriptionTiers: z.array(
           z.object({
             name: z.string().min(1),
@@ -51,10 +52,13 @@ export const serviceRouter = createTRPCRouter({
           message: "You must be logged in to create a service",
         });
       }
-
+      console.log(
+        `API KEY: ------------------------------------${input.masterAPIKey}------------------------------------`,
+      );
       const service = await ctx.db.service.create({
         data: {
           name: input.name,
+          masterAPIKey: input.masterAPIKey,
           tags: {
             connectOrCreate: input.tags.map((tag) => ({
               where: { name: tag },
