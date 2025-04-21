@@ -122,15 +122,27 @@ const waitForPaymentStatus = async (
 };
 
 export const subscriptionRouter = createTRPCRouter({
-  createStripePaymentIntent: protectedProcedure
+  createStripePaymentIntent: publicProcedure
     .input(
       z.object({
         paymentMethodId: z.string(),
         subscriptionTierId: z.string(),
+        userId: z.string().optional(),
+        renewalPayment: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { paymentMethodId, subscriptionTierId } = input;
+      const { renewalPayment, userId, paymentMethodId, subscriptionTierId } =
+        input;
+      if (!userId && !(ctx.session && ctx.session.user)) {
+        return {
+          success: false,
+          message: "User was not found",
+          status: "RETRY_PAYMENT",
+          data: null,
+        };
+      }
+      const payerId = userId ?? ctx.session?.user.id;
 
       const subscriptionTier = await ctx.db.subscriptionTier.findUnique({
         where: { id: subscriptionTierId },
@@ -141,38 +153,44 @@ export const subscriptionRouter = createTRPCRouter({
 
       // 1. Validate the service/tier
       if (!subscriptionTier) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Service or Tier not found",
-        });
+        return {
+          success: false,
+          message: "Service or subscription tier not found",
+          status: "FAILED",
+          data: null,
+        };
       }
 
       // 4) Verify the payment method belongs to the user
       const paymentMethod = await ctx.db.paymentMethod.findUnique({
         where: { id: paymentMethodId },
       });
-      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Payment method not found or doesn't belong to user",
-        });
+      if (!paymentMethod || paymentMethod.userId !== payerId) {
+        return {
+          success: false,
+          message: "Chosen payment method not found",
+          status: "FAILED",
+          data: null,
+        };
       }
 
       // 5) Call Stripe
       const user = await ctx.db.user.findUnique({
-        where: { id: ctx.session.user.id },
+        where: { id: payerId },
         select: { email: true, name: true, stripeCustomerId: true },
       });
       if (!user) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
+        return {
+          success: false,
           message: "User not found",
-        });
+          status: "FAILED",
+          data: null,
+        };
       }
 
       const existingSubscription = await ctx.db.serviceConsumer.findFirst({
         where: {
-          userId: ctx.session.user.id,
+          userId: payerId,
           subscriptionTier: {
             id: subscriptionTierId,
           },
@@ -180,21 +198,24 @@ export const subscriptionRouter = createTRPCRouter({
       });
 
       if (
+        !renewalPayment && // If not a renewal payment
         existingSubscription &&
         existingSubscription.id === subscriptionTierId &&
         existingSubscription.subscriptionStatus === "ACTIVE"
       ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Already subscribed to this tier",
-        });
+        return {
+          success: false,
+          message:
+            "You are already subscribed to this tier. To switch tiers, please visit the subscription management page.",
+          status: "FAILED",
+          data: null,
+        };
       }
 
       if (subscriptionTier.price === 0) {
-        // If the subscription tier is free, create a subscription without payment
         return {
           success: true,
-          message: "Free subscription created successfully.",
+          message: "Free subscription, no payment required.",
           status: "SUCCESS",
           data: null,
         };
@@ -208,7 +229,7 @@ export const subscriptionRouter = createTRPCRouter({
         });
         stripeCustomerId = customer.id;
         await ctx.db.user.update({
-          where: { id: ctx.session.user.id },
+          where: { id: payerId },
           data: { stripeCustomerId },
         });
       }
@@ -223,7 +244,7 @@ export const subscriptionRouter = createTRPCRouter({
         confirm: true,
         description: `Subscription to ${subscriptionTier.service.name}, for ${subscriptionTier.name}`,
         metadata: {
-          userId: ctx.session.user.id,
+          userId: payerId,
           subscriptionTierId,
         },
       });
@@ -235,7 +256,7 @@ export const subscriptionRouter = createTRPCRouter({
         data: {
           amount: subscriptionTier.price,
           description: `${subscriptionTier.service.name} | ${subscriptionTier.name}`,
-          fromId: ctx.session.user.id ?? "",
+          fromId: payerId ?? "",
           toId: subscriptionTier.service.owners[0]?.userId ?? "",
           status:
             res.status === "SUCCESS"
@@ -258,26 +279,10 @@ export const subscriptionRouter = createTRPCRouter({
         price: subscriptionTier.price,
         date: new Date().toLocaleDateString(),
       });
-
-      // 7) TODO: Create an outgoing billing receipt for the service owner if payment was successful
-      if (res.status === "SUCCESS") {
-        await ctx.db.billingReceipt.create({
-          data: {
-            amount: subscriptionTier.price,
-            description: `${subscriptionTier.service.name} | ${subscriptionTier.name}`,
-            fromId: ctx.session.user.id ?? "",
-            toId: subscriptionTier.service.owners[0]?.userId ?? "",
-            status: BillingStatus.RECEIVED,
-            paymentMethodId: paymentMethodId,
-            subscriptionTierId: subscriptionTierId,
-          },
-        });
-      }
-
       return res;
     }),
 
-  cancelStripePaymentIntent: protectedProcedure
+  cancelStripePaymentIntent: publicProcedure
     .input(z.object({ paymentIntentId: z.string() }))
     .mutation(async ({ input }) => {
       const { paymentIntentId } = input;
@@ -629,7 +634,7 @@ export const subscriptionRouter = createTRPCRouter({
 
   getBillingHistory: protectedProcedure.query(async ({ ctx }) => {
     const receipts = await ctx.db.billingReceipt.findMany({
-      where: { toId: ctx.session.user.id },
+      where: { fromId: ctx.session.user.id },
       include: {
         from: {
           select: {
@@ -646,6 +651,7 @@ export const subscriptionRouter = createTRPCRouter({
       },
       orderBy: { date: "desc" },
     });
+
     return receipts;
   }),
 
@@ -975,6 +981,8 @@ export const subscriptionRouter = createTRPCRouter({
 
       const paymentResponse =
         await caller.subscription.createStripePaymentIntent({
+          userId: subscription.userId,
+          renewalPayment: true,
           paymentMethodId: subscription.paymentMethodId,
           subscriptionTierId: subscription.subscriptionTierId,
         });

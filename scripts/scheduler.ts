@@ -6,7 +6,7 @@ import { checkRenewals } from "./checkRenewals";
 cron.schedule(
   "0 0 * * *",
   () => {
-    console.log("🕛 Running daily cancellation check…");
+    console.log("🕛 Running daily checks…");
     checkCancelledSubscriptions();
     checkRenewals();
   },

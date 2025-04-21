@@ -14,7 +14,7 @@ export async function checkRenewals() {
     await caller.subscription.checkSubscriptionRenewals();
 
   if (success) {
-    console.log(`✅ Processed subscription renewals: ${count}`);
+    console.log(`✅✅ Processed subscription renewals: ${count}`);
   } else {
     console.log(`⚠️ No subscription renewals processed.`);
   }
