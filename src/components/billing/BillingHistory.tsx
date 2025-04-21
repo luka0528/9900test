@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { useSession } from "next-auth/react";
 
 // Helper to map billing status to a badge variant
 function getStatusVariant(
@@ -32,8 +33,12 @@ function getStatusVariant(
 }
 
 const BillingHistory: React.FC = () => {
+  const { status } = useSession();
+
   const { data, isLoading, error } =
-    api.subscription.getBillingHistory.useQuery();
+    api.subscription.getBillingHistory.useQuery(undefined, {
+      enabled: status == "authenticated",
+    });
 
   // 1) Sort state: field can be "date" or "to"; order can be "asc" or "desc"
   const [sortField, setSortField] = useState<"date" | "to">("date");

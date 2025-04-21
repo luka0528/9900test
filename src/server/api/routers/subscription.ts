@@ -125,10 +125,10 @@ export const subscriptionRouter = createTRPCRouter({
   createStripePaymentIntent: publicProcedure
     .input(
       z.object({
-        renewalPayment: z.boolean().optional(),
-        userId: z.string().optional(),
         paymentMethodId: z.string(),
         subscriptionTierId: z.string(),
+        userId: z.string().optional(),
+        renewalPayment: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -634,7 +634,7 @@ export const subscriptionRouter = createTRPCRouter({
 
   getBillingHistory: protectedProcedure.query(async ({ ctx }) => {
     const receipts = await ctx.db.billingReceipt.findMany({
-      where: { toId: ctx.session.user.id },
+      where: { fromId: ctx.session.user.id },
       include: {
         from: {
           select: {
@@ -651,6 +651,7 @@ export const subscriptionRouter = createTRPCRouter({
       },
       orderBy: { date: "desc" },
     });
+
     return receipts;
   }),
 
@@ -981,6 +982,7 @@ export const subscriptionRouter = createTRPCRouter({
       const paymentResponse =
         await caller.subscription.createStripePaymentIntent({
           userId: subscription.userId,
+          renewalPayment: true,
           paymentMethodId: subscription.paymentMethodId,
           subscriptionTierId: subscription.subscriptionTierId,
         });
