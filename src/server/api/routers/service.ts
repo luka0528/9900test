@@ -833,6 +833,11 @@ export const serviceRouter = createTRPCRouter({
               id: true,
               name: true,
               price: true,
+              consumers: {
+                where: {
+                  subscriptionStatus: "ACTIVE"
+                }
+              }
             },
           },
           versions: {

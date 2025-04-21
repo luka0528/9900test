@@ -31,10 +31,19 @@ interface MarketplaceServiceProps {
       id: string;
       name: string;
       price: number;
+      consumers: unknown[];
     }[];
   };
   onClick: () => void;
 }
+
+// Add a helper function to format the subscriber count
+const formatSubscriberCount = (count: number) => {
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(1)}K`;
+  }
+  return count.toString();
+};
 
 export const MarketplaceService = ({
   service,
@@ -47,6 +56,14 @@ export const MarketplaceService = ({
     version: "",
   };
   const creatorName = service.owners[0]?.user?.name;
+
+  // Calculate total active subscribers across all tiers
+  const totalSubscribers = subscriptionTiers.reduce(
+    (sum, tier) => sum + (tier.consumers?.length ?? 0),
+    0
+  );
+
+  const formattedSubscriberCount = formatSubscriberCount(totalSubscribers);
 
   // Get the lowest subscription tier price
   const lowestTier = subscriptionTiers?.[0];
@@ -83,7 +100,7 @@ export const MarketplaceService = ({
           <div className="grid grid-cols-1 gap-2 text-sm">
             <div className="flex items-center gap-1.5">
               <Download className="h-4 w-4 text-muted-foreground" />
-              <span>0K</span>
+              <span>{formattedSubscriberCount}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4 text-muted-foreground" />
