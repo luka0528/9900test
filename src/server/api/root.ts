@@ -5,6 +5,7 @@ import { versionRouter } from "./routers/version";
 import { analyticsRouter } from "./routers/analytics";
 import { autoDocsRouter } from "./routers/auto-docs";
 import { subscriptionRouter } from "./routers/subscription";
+import { notificationRouter } from "./routers/notification";
 import { endpointRouter } from "./routers/endpoint";
 if (process.env.NODE_ENV === "development") {
   console.log("🧪 Dev mode: enabling cancellation scheduler...");
@@ -24,6 +25,7 @@ export const appRouter = createTRPCRouter({
   autoDocs: autoDocsRouter,
   subscription: subscriptionRouter,
   endpoint: endpointRouter,
+  notification: notificationRouter,
 });
 
 // export type definition of API

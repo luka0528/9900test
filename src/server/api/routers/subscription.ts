@@ -9,6 +9,7 @@ import { BillingStatus, SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
 import { appRouter } from "../root";
 import { sendBillingEmail } from "~/lib/email";
+import { notifyServiceConsumer } from "~/lib/notifications";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -634,7 +635,9 @@ export const subscriptionRouter = createTRPCRouter({
 
   getBillingHistory: protectedProcedure.query(async ({ ctx }) => {
     const receipts = await ctx.db.billingReceipt.findMany({
-      where: { fromId: ctx.session.user.id },
+      where: {
+        OR: [{ fromId: ctx.session.user.id }, { toId: ctx.session.user.id }],
+      },
       include: {
         from: {
           select: {
@@ -1007,6 +1010,13 @@ export const subscriptionRouter = createTRPCRouter({
 
       if (paymentResponse.status !== "SUCCESS") {
         // Mark as pending cancellation
+        // Notify the user about the pending cancellation
+        await notifyServiceConsumer(
+          ctx.db,
+          service.owners[0]?.userId ?? "",
+          subscription.userId,
+          `Your subscription to ${subscriptionTier.service.name} is pending cancellation due to payment issues. Please update your payment method.`,
+        );
         await ctx.db.serviceConsumer.update({
           where: { id: subscription.id },
           data: {
