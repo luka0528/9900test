@@ -300,6 +300,9 @@ export const versionRouter = createTRPCRouter({
             })),
           },
         },
+        select: {
+          contents: true,
+        }
       });
     }),
 

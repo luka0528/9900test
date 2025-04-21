@@ -1,0 +1,341 @@
+import { test, expect, describe } from "vitest";
+import { appRouter } from "~/server/api/root";
+import type { PrismaClient } from "@prisma/client";
+import { mockDeep } from "vitest-mock-extended";
+import { TRPCError } from "@trpc/server";
+import { ChangeLogPointType } from "@prisma/client";
+
+describe("Version Router Tests", () => {
+  const prismaMock = mockDeep<PrismaClient>();
+  const mockContext = {
+    db: prismaMock,
+    session: {
+      user: { id: "test-user-id", name: "Test User" },
+      expires: new Date().toISOString(),
+    },
+    headers: new Headers(),
+  };
+  const caller = appRouter.createCaller(mockContext);
+
+  describe("create", () => {
+    test("should create a new version", async () => {
+      const mockInput = {
+        serviceId: "test-service-id",
+        newVersion: "1.0.0",
+        versionDescription: "Initial version",
+        contents: [
+          {
+            title: "Test Content",
+            description: "Content description",
+            endpoints: [
+              {
+                path: "/test",
+                description: "Test endpoint",
+              },
+            ],
+          },
+        ],
+        changelogPoints: [
+          {
+            type: ChangeLogPointType.ADDED,
+            description: "Added new feature",
+          },
+        ],
+      };
+
+      const mockService = {
+        id: "test-service-id",
+        owners: [{ user: { id: "test-user-id" } }],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        name: "New Service",
+      };
+
+      const mockVersion = {
+        id: "new-version-id",
+        version: "1.0.0",
+        description: "Initial version",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        serviceId: "test-service-id",
+        isDeprecated: false,
+      };
+
+      prismaMock.service.findUnique.mockResolvedValue(mockService);
+      prismaMock.serviceVersion.findUnique.mockResolvedValue(null);
+      prismaMock.serviceVersion.create.mockResolvedValue(mockVersion);
+
+      const result = await caller.version.create(mockInput);
+
+      expect(result).toHaveProperty("version", "1.0.0");
+      expect(result).toHaveProperty("description", "Initial version");
+    });
+
+    test("should throw error when service not found", async () => {
+      prismaMock.service.findUnique.mockResolvedValue(null);
+
+      await expect(
+        caller.version.create({
+          serviceId: "non-existent-service",
+          newVersion: "1.0.0",
+          versionDescription: "Test",
+          contents: [],
+          changelogPoints: [],
+        }),
+      ).rejects.toThrow(TRPCError);
+    });
+
+    test("should throw error when version already exists", async () => {
+      const mockService = {
+        id: "test-service-id",
+        owners: [{ user: { id: "test-user-id" } }],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        name: "New Service",
+      };
+
+      const mockVersion = {
+        id: "existing-version-id",
+        version: "1.0.0",
+        description: "Initial version",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        serviceId: "test-service-id",
+        isDeprecated: false,
+      };
+
+      prismaMock.service.findUnique.mockResolvedValue(mockService);
+      prismaMock.serviceVersion.findUnique.mockResolvedValue(mockVersion);
+
+      await expect(
+        caller.version.create({
+          serviceId: "test-service-id",
+          newVersion: "1.0.0",
+          versionDescription: "Test",
+          contents: [],
+          changelogPoints: [],
+        }),
+      ).rejects.toThrow(TRPCError);
+    });
+  });
+
+  describe("getDocumentationByVersionId", () => {
+    test("should return version documentation", async () => {
+      const mockVersion = {
+        id: "version-id",
+        version: "1.0.0",
+        description: "Test version",
+        createdAt: new Date(),
+        isDeprecated: false,
+        serviceId: "test-service-id",
+        contents: [
+          {
+            id: "content-id",
+            title: "Test Content",
+            description: "Content description",
+            createdAt: new Date(),
+            versionId: "version-id",
+            endpoints: [
+              {
+                id: "endpoint-id",
+                path: "/test",
+                description: "Test endpoint",
+                operations: "GET",
+                createdAt: new Date(),
+                contentId: "content-id",
+              },
+            ],
+          },
+        ],
+        changelogPoints: [
+          {
+            id: "changelog-id",
+            type: ChangeLogPointType.ADDED,
+            description: "Added new feature",
+          },
+        ],
+      };
+
+      prismaMock.serviceVersion.findUnique.mockResolvedValue(mockVersion);
+
+      const result = await caller.version.getDocumentationByVersionId({
+        versionId: "version-id",
+      });
+
+      expect(result).toHaveProperty("version", "1.0.0");
+      expect(result.contents).toHaveLength(1);
+      expect(result.changelogPoints).toHaveLength(1);
+    });
+
+    test("should throw error when version not found", async () => {
+      prismaMock.serviceVersion.findUnique.mockResolvedValue(null);
+
+      await expect(
+        caller.version.getDocumentationByVersionId({
+          versionId: "non-existent-version",
+        }),
+      ).rejects.toThrow(TRPCError);
+    });
+  });
+
+  describe("editVersion", () => {
+    test("should edit an existing version", async () => {
+      const mockVersion = {
+        id: "version-id",
+        service: {
+          owners: [{ userId: "test-user-id" }],
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        serviceId: "test-service-id",
+        description: "Initial version",
+        version: "1.0.0",
+        isDeprecated: false,
+      };
+
+      const mockUpdatedVersion = {
+        id: "version-id",
+        description: "Updated description",
+        contents: [
+          {
+            id: "content-id",
+            title: "Updated Content",
+            description: "Updated description",
+            endpoints: [
+              {
+                id: "endpoint-id",
+                path: "/updated",
+                description: "Updated endpoint",
+              },
+            ],
+          },
+        ],
+        changelogPoints: [
+          {
+            id: "changelog-id",
+            type: ChangeLogPointType.CHANGED,
+            description: "Updated feature",
+          },
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        serviceId: "test-service-id",
+        version: "1.0.0",
+        isDeprecated: false,
+      };
+
+      prismaMock.serviceVersion.findUnique.mockResolvedValue(mockVersion);
+      prismaMock.serviceVersion.update.mockResolvedValue(mockUpdatedVersion);
+
+      const result = await caller.version.editVersion({
+        versionId: "version-id",
+        newDescription: "Updated description",
+        contents: [
+          {
+            id: "content-id",
+            title: "Updated Content",
+            description: "Updated description",
+            endpoints: [
+              {
+                id: "endpoint-id",
+                path: "/updated",
+                description: "Updated endpoint",
+              },
+            ],
+          },
+        ],
+        changelogPoints: [
+          {
+            id: "changelog-id",
+            type: ChangeLogPointType.CHANGED,
+            description: "Updated feature",
+          },
+        ],
+      });
+
+      expect(result).toHaveProperty("description", "Updated description");
+      expect(result.contents[0]).toHaveProperty("title", "Updated Content");
+    });
+
+    test("should throw error when version not found or user not authorized", async () => {
+      prismaMock.serviceVersion.findUnique.mockResolvedValue(null);
+
+      await expect(
+        caller.version.editVersion({
+          versionId: "non-existent-version",
+          newDescription: "Test",
+          contents: [],
+          changelogPoints: [],
+        }),
+      ).rejects.toThrow(TRPCError);
+    });
+  });
+
+  describe("updateDeprecated", () => {
+    test("should update version deprecated status", async () => {
+      const mockVersion = {
+        service: {
+          owners: [{ userId: "test-user-id" }],
+        },
+        id: "version-id",
+        description: "Initial version",
+        version: "1.0.0",
+        isDeprecated: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        serviceId: "test-service-id",
+      };
+
+      prismaMock.serviceVersion.findUnique.mockResolvedValue(mockVersion);
+      prismaMock.serviceVersion.update.mockResolvedValue({
+        id: "version-id",
+        description: "Initial version",
+        version: "1.0.0",
+        serviceId: "test-service-id",
+        createdAt: new Date(),
+        isDeprecated: true,
+      });
+
+      await expect(
+        caller.version.updateDeprecated({
+          versionId: "version-id",
+          isDeprecated: true,
+        }),
+      ).resolves.not.toThrow();
+    });
+
+    test("should throw error when version not found", async () => {
+      prismaMock.serviceVersion.findUnique.mockResolvedValue(null);
+
+      await expect(
+        caller.version.updateDeprecated({
+          versionId: "non-existent-version",
+          isDeprecated: true,
+        }),
+      ).rejects.toThrow(TRPCError);
+    });
+
+    test("should throw error when user not authorized", async () => {
+      const mockVersion = {
+        service: {
+          owners: [{ userId: "different-user-id" }],
+        },
+        id: "version-id",
+        description: "Initial version",
+        version: "1.0.0",
+        serviceId: "test-service-id",
+        createdAt: new Date(),
+        isDeprecated: false,
+      };
+
+      prismaMock.serviceVersion.findUnique.mockResolvedValue(mockVersion);
+
+      await expect(
+        caller.version.updateDeprecated({
+          versionId: "version-id",
+          isDeprecated: true,
+        }),
+      ).rejects.toThrow(TRPCError);
+    });
+  });
+});
