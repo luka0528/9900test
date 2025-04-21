@@ -32,7 +32,8 @@ function getStatusVariant(
 }
 
 const BillingHistory: React.FC = () => {
-  const { data, isLoading, error } = api.user.getBillingHistory.useQuery();
+  const { data, isLoading, error } =
+    api.subscription.getBillingHistory.useQuery();
 
   // 1) Sort state: field can be "date" or "to"; order can be "asc" or "desc"
   const [sortField, setSortField] = useState<"date" | "to">("date");
@@ -108,7 +109,7 @@ const BillingHistory: React.FC = () => {
             {sortField === "to" && (sortOrder === "asc" ? " ↑" : " ↓")}
           </TableHead>
           <TableHead>Amount</TableHead>
-          <TableHead>Description</TableHead>
+          <TableHead>{"Description (Service | Tier)"}</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Auto Renewal</TableHead>
           <TableHead>Renewal Date</TableHead>

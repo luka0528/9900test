@@ -142,18 +142,80 @@ model ServiceContent {
   version     ServiceVersion    @relation(fields: [versionId], references: [id], onDelete: Cascade)
   title       String
   description String
-  rows        ContentTableRow[]
+  endpoints   EndPoint[]
+  schemas     Schema[]
   createdAt   DateTime          @default(now())
 }
 
-model ContentTableRow {
+model EndPoint {
   id          String         @id @default(cuid())
   contentId   String
   content     ServiceContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  routeName   String
+  path   String
   description String
-  method      RestMethod     @default(GET)
+  operations Operation[]
   createdAt   DateTime       @default(now())
+}
+
+model Operation {
+  id          String         @id @default(cuid())
+  endPointId  String
+  endPoint    EndPoint       @relation(fields: [endPointId], references: [id], onDelete: Cascade)
+  method      RestMethod     @default(GET)
+  description String
+  deprecated  Boolean        @default(false)
+  parameters  Parameter[]
+  requestBody RequestBody?
+  responses   Response[]
+}
+
+model Parameter {
+  id          String         @id @default(cuid())
+  operationId String
+  operation   Operation      @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  name        String
+  description String
+  required    Boolean        @default(false)
+  deprecated  Boolean        @default(false)
+  schemaJson  String         @db.Text // Parameter schema as JSON
+  parameterLocation ParameterLocation
+  examples    ParameterExample[]
+}
+
+model ParameterExample {
+  id          String         @id @default(cuid())
+  parameterId String
+  parameter   Parameter      @relation(fields: [parameterId], references: [id], onDelete: Cascade)
+  example     String         @db.Text // Parameter example as JSON
+}
+
+model RequestBody {
+  id          String         @id @default(cuid())
+  description String
+  operationId String         @unique
+  operation   Operation      @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  required    Boolean        @default(false)
+  contentJson String         @db.Text // Request body content as JSON
+}
+
+model Response {
+  id          String         @id @default(cuid())
+  operationId String
+  operation   Operation      @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  statusCode  Int
+  description String
+  contentJson String         @db.Text // Response content as JSON
+  headersJson String         @db.Text // Response headers as JSON
+}
+
+model Schema {
+  id          String         @id @default(cuid())
+  name        String
+  contentId   String
+  content     ServiceContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  schemaJson  String         @db.Text // Schema as JSON
+
+  @@unique([contentId, name])
 }
 
 enum RestMethod {
@@ -165,6 +227,14 @@ enum RestMethod {
   OPTIONS
   HEAD
   TRACE
+}
+
+enum ParameterLocation {
+  QUERY
+  PATH
+  HEADER
+  BODY
+  COOKIE
 }
 
 // Service Memberships
@@ -189,7 +259,6 @@ model ServiceConsumer {
   
   renewingSubscription  Boolean             @default(false)
   lastRenewed           DateTime            @default(now())
-  subscriptionStartDate DateTime            @default(now())
   subscriptionStatus    SubscriptionStatus  @default(ACTIVE)
 
   ratings               ServiceRating[]
@@ -330,6 +399,7 @@ enum BillingStatus {
   PENDING
   PROCESSING
   FAILED
+  RECEIVED
 }
 
 model PaymentMethod {

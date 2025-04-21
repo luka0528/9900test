@@ -37,7 +37,7 @@ export const ReviewCardForm = ({
         starValue: selectedRating,
         content: textAreaRef.current ? textAreaRef.current.value : null,
       });
-      setTopButton(null);
+      setTopButton("EditSubbed");
     }
   };
 

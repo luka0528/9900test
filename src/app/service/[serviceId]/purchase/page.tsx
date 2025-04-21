@@ -3,14 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { toast } from "sonner";
+import { toast, Toaster } from "sonner";
 import { api } from "~/trpc/react";
 import { Loader2, ArrowLeftIcon } from "lucide-react";
-
 import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/card";
-
 import TiersGrid from "~/components/billing/TiersGrid";
 import PaymentMethodDialog from "~/components/billing/PaymentMethodDialog";
+import { useMakePayment } from "~/lib/hooks/useMakePayment";
 
 const PurchasePage: React.FC = () => {
   const { status } = useSession();
@@ -23,6 +22,7 @@ const PurchasePage: React.FC = () => {
     data: service,
     isLoading: serviceLoading,
     error: serviceError,
+    refetch: serviceRefetch,
   } = api.service.getServiceById.useQuery(serviceId);
 
   // 2. Check if user is already subscribed to this service
@@ -31,26 +31,25 @@ const PurchasePage: React.FC = () => {
     isLoading: subscriptionLoading,
     error: subscriptionError,
     refetch: subscriptionStatusRefetch,
-  } = api.user.isUserSubscribedToService.useQuery({ serviceId });
+  } = api.subscription.isUserSubscribedToService.useQuery({ serviceId });
 
   // 3. Fetch payment methods
   const { data: paymentMethodsData, isLoading: isPaymentDataLoading } =
-    api.user.getPaymentMethods.useQuery();
+    api.subscription.getPaymentMethods.useQuery();
 
   // 4. Mutation to subscribe/update subscription
-  const subscribeMutation = api.service.subscribeToTier.useMutation();
+  const subscribeMutation = api.subscription.subscribeToTier.useMutation();
+  const { makePayment, isLoading: isPaymentLoading } = useMakePayment();
 
   // Local state
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [autoRenew, setAutoRenew] = useState(true);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [currentTierId, setCurrentTierId] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     string | null
   >(null);
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-
-  // Track user's current tier in local state
-  const [currentTierId, setCurrentTierId] = useState<string | null>(null);
 
   // Once we know subscriptionStatus, set currentTierId
   useEffect(() => {
@@ -68,21 +67,30 @@ const PurchasePage: React.FC = () => {
   }, [isPaymentDataLoading, paymentMethodsData]);
 
   useEffect(() => {
-    setIsSubscribed(subscriptionStatus?.isSubscribed ?? false);
+    setIsSubscribed(!!subscriptionStatus?.isSubscribed);
   }, [subscriptionStatus]);
 
   // 5. The purchase/update flow
   const handlePurchase = async () => {
-    if (!selectedTier || !selectedPaymentMethod) return;
-
     try {
+      if (!selectedTier || !selectedPaymentMethod) {
+        toast.error("Please select a tier and payment method.");
+        return;
+      }
+      const processPayment = await makePayment(
+        selectedTier,
+        selectedPaymentMethod,
+      );
+
+      if (!processPayment) return;
+
       await subscribeMutation.mutateAsync({
-        serviceId,
         tierId: selectedTier,
         paymentMethodId: selectedPaymentMethod,
         autoRenewal: autoRenew,
       });
       setCurrentTierId(selectedTier);
+      void serviceRefetch();
       if (subscriptionStatus?.isSubscribed) {
         toast.success("Successfully updated subscription.");
       } else {
@@ -97,14 +105,17 @@ const PurchasePage: React.FC = () => {
 
   if (!status || status === "unauthenticated") {
     router.push(`/service/${serviceId}`);
+    return null;
   }
 
   // 6. Loading & error states
   if (serviceLoading || subscriptionLoading) {
     return (
-      <div className="flex items-center space-x-2 p-4 text-sm text-gray-700">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Loading...</span>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-10 w-10 animate-spin text-white" />
+          <span className="mt-4 text-white">Loading...</span>
+        </div>
       </div>
     );
   }
@@ -174,6 +185,15 @@ const PurchasePage: React.FC = () => {
               : "Select a payment method and confirm your purchase."
           }
         />
+      )}
+      <Toaster />
+      {isPaymentLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-10 w-10 animate-spin text-white" />
+            <span className="mt-4 text-white">Processing payment...</span>
+          </div>
+        </div>
       )}
     </div>
   );

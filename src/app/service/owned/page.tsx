@@ -2,20 +2,15 @@
 
 import { useSession } from "next-auth/react";
 import { Button } from "~/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
 import { Separator } from "~/components/ui/separator";
-import { Upload, UserPen, Loader2, Package } from "lucide-react";
+import { Loader2, Package } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceCard } from "~/components/service/ServiceCard";
-import Link from "next/link";
 import { AllServiceSidebar } from "~/components/service/AllServiceSidebar";
+import { useRouter } from "next/navigation";
 
 export default function ServicesPage() {
+  const router = useRouter();
   const { data: session } = useSession();
 
   const {
@@ -30,23 +25,14 @@ export default function ServicesPage() {
       <div className="flex h-full grow flex-col">
         <div className="flex min-h-[5rem] items-center justify-between p-4">
           <h1 className="text-2xl font-bold">Your Services</h1>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="flex items-center gap-2">Add Service</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <Link href="/service/add" className="w-full">
-                <DropdownMenuItem key={"manual"}>
-                  <UserPen />
-                  Manual Input
-                </DropdownMenuItem>
-              </Link>
-              <DropdownMenuItem key={"automatic"}>
-                <Upload />
-                Automatic Extraction
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            className="flex items-center gap-2"
+            onClick={() => {
+              router.push("/service/add");
+            }}
+          >
+            Add Service
+          </Button>
         </div>
 
         <Separator className="mb-6" />
@@ -86,7 +72,7 @@ export default function ServicesPage() {
                   service={{
                     id: service.id,
                     name: service.name,
-                    owner: service.owner ?? "No Name",
+                    owner: service.owners[0] ?? "No Name",
                     tags: service.tags,
                     latestVersionId: service.latestVersion.id,
                     latestVersion: service.latestVersion.version,

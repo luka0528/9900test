@@ -16,6 +16,13 @@ import {
   type topButtonType,
 } from "~/components/service/reviews/helper";
 import { toast } from "sonner";
+import { Separator } from "~/components/ui/separator";
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from "~/components/ui/tooltip";
 
 interface NewCard {
   isVisible: boolean;
@@ -35,6 +42,12 @@ export default function ReviewsPage() {
     isLoading: serviceLoading,
     error: serviceError,
   } = api.service.getServiceMetadataById.useQuery({ serviceId });
+
+  const {
+    data: subscription,
+    isLoading: subscriptionLoading,
+    error: subscriptionError,
+  } = api.subscription.isUserSubscribedToService.useQuery({ serviceId });
 
   const [reviews, setReviews] = useState<ReviewContent[]>([]);
   const [newCardData, setNewCardData] = useState<NewCard>({
@@ -83,7 +96,11 @@ export default function ReviewsPage() {
   const { mutate: deleteReview } = api.service.deleteReview.useMutation({
     onSuccess: (data) => {
       setReviews((prev) => prev.filter((review) => review.id !== data.deleted));
-      setTopButton("Add");
+      if (topButton === "EditSubbed") {
+        setTopButton("Add");
+      } else if (topButton === "EditUnsubbed") {
+        setTopButton(null);
+      }
       toast.success("Review deleted");
     },
     onError: (error) => {
@@ -180,8 +197,9 @@ export default function ReviewsPage() {
       service?.owners.some((owner) => owner.user.id === session.user.id)
     ) {
       setIsUserOwner(true);
+      setTopButton("Owned");
     }
-  }, [session, service]);
+  }, [session, service?.owners]);
 
   // Load review cards
   useEffect(() => {
@@ -204,25 +222,28 @@ export default function ReviewsPage() {
         }));
         setReviews(reviewContents);
       }
+    }
+  }, [service, service?.ratings]);
+
+  // Handle user subscription status
+  useEffect(() => {
+    if (service && subscription) {
       if (!session) {
         setTopButton(null);
       } else if (
-        service.subscriptionTiers.some((sub) =>
-          sub.consumers.some((userId) => userId.userId === session.user.id),
-        ) &&
         service.ratings.some(
           (rater) => rater.consumer.user.id === session.user.id,
         )
       ) {
-        // Is subscribed and posted review before
+        // Has posted a review
         // TODO for future - make it so that the edit button at the top directly opens the modal
         // for subscribers who have already posted a review
-        setTopButton("Edit");
-      } else if (
-        service.subscriptionTiers.some((sub) =>
-          sub.consumers.some((userId) => userId.userId === session.user.id),
-        )
-      ) {
+        if (subscription.isSubscribed) {
+          setTopButton("EditSubbed");
+        } else {
+          setTopButton("EditUnsubbed");
+        }
+      } else if (subscription.isSubscribed) {
         // Is subscribed and hasn't posted a review before
         setTopButton("Add");
       } else if (
@@ -234,10 +255,10 @@ export default function ReviewsPage() {
         setTopButton(null);
       }
     }
-  }, [service, session]);
+  }, [service, session, subscription, subscription?.isSubscribed]);
 
   // Show loading state
-  if (serviceLoading) {
+  if (serviceLoading || subscriptionLoading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -246,7 +267,7 @@ export default function ReviewsPage() {
   }
 
   // Show error state
-  if (serviceError || !service) {
+  if (serviceError || !service || subscriptionError) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="text-center">
@@ -286,25 +307,38 @@ export default function ReviewsPage() {
                 </Button>
               ) :*/}{" "}
               {
-                <Button
-                  className="size-min"
-                  variant="outline"
-                  disabled={
-                    topButton === null ||
-                    topButton === "Owned" ||
-                    topButton === "Edit"
-                  } // Disable the add review button if not subbed
-                  onClick={() => {
-                    setNewCardData({
-                      isVisible: true,
-                      starValue: null,
-                      content: null,
-                    });
-                  }}
-                >
-                  <MessageSquarePlus className="animate-slide-in transform transition" />
-                  Add review
-                </Button>
+                <TooltipProvider>
+                  <Tooltip open={topButton === "Add" ? false : undefined}>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button
+                          className="size-min"
+                          variant="outline"
+                          disabled={topButton !== "Add"} // Disable the add review button if not subbed/already posted
+                          onClick={() => {
+                            setNewCardData({
+                              isVisible: true,
+                              starValue: null,
+                              content: null,
+                            });
+                          }}
+                        >
+                          <MessageSquarePlus className="animate-slide-in transform transition" />
+                          Add review
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {topButton === null ? (
+                        <p>You must be subscribed to post a review.</p>
+                      ) : topButton === "Owned" ? (
+                        <p>You cannot review your own service.</p>
+                      ) : (
+                        <p>You have already posted a review.</p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               }
             </div>
           </div>
@@ -320,6 +354,17 @@ export default function ReviewsPage() {
               reviewId={"1"} //todo
               replyId={null}
             />
+          )}
+
+          {reviews.length == 0 && !newCardData.isVisible && (
+            <div className="w-full">
+              <Separator className="my-6" />
+              <div className="flex h-[60vh] items-center justify-center">
+                <span className="text-gray-400">
+                  No reviews have been posted yet
+                </span>
+              </div>
+            </div>
           )}
 
           {/* Review cards */}

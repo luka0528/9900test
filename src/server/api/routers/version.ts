@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
-import { ChangeLogPointType, RestMethod } from "@prisma/client";
+import { ChangeLogPointType } from "@prisma/client";
 // Note that documentation will be contained under versions
 export const versionRouter = createTRPCRouter({
   create: protectedProcedure
@@ -14,11 +14,10 @@ export const versionRouter = createTRPCRouter({
           z.object({
             title: z.string().min(1),
             description: z.string(),
-            rows: z.array(
+            endpoints: z.array(
               z.object({
-                routeName: z.string().min(1),
+                path: z.string().min(1),
                 description: z.string().min(1),
-                method: z.nativeEnum(RestMethod),
               }),
             ),
           }),
@@ -99,11 +98,10 @@ export const versionRouter = createTRPCRouter({
             create: input.contents.map((content) => ({
               title: content.title,
               description: content.description,
-              rows: {
-                create: content.rows.map((row) => ({
-                  routeName: row.routeName,
-                  description: row.description,
-                  method: row.method,
+              endpoints: {
+                create: content.endpoints.map((endpoint) => ({
+                  path: endpoint.path,
+                  description: endpoint.description,
                 })),
               },
             })),
@@ -144,14 +142,14 @@ export const versionRouter = createTRPCRouter({
               description: true,
               createdAt: true,
               versionId: true,
-              rows: {
+              endpoints: {
                 select: {
                   contentId: true,
                   createdAt: true,
                   id: true,
-                  routeName: true,
+                  path: true,
                   description: true,
-                  method: true,
+                  operations: true,
                 },
               },
             },
@@ -186,12 +184,11 @@ export const versionRouter = createTRPCRouter({
             id: z.string().min(1),
             title: z.string().min(1),
             description: z.string().min(1),
-            rows: z.array(
+            endpoints: z.array(
               z.object({
                 id: z.string().min(1),
-                routeName: z.string().min(1),
+                path: z.string().min(1),
                 description: z.string().min(1),
-                method: z.nativeEnum(RestMethod),
               }),
             ),
           }),
@@ -244,24 +241,22 @@ export const versionRouter = createTRPCRouter({
               update: {
                 title: content.title,
                 description: content.description,
-                // ROWS
-                rows: {
+                // ENDPOINTS
+                endpoints: {
                   deleteMany: {
                     id: {
-                      notIn: content.rows.map((row) => row.id),
+                      notIn: content.endpoints.map((endpoint) => endpoint.id),
                     },
                   },
-                  upsert: content.rows.map((row) => ({
-                    where: { id: row.id },
+                  upsert: content.endpoints.map((endpoint) => ({
+                    where: { id: endpoint.id },
                     update: {
-                      routeName: row.routeName,
-                      description: row.description,
-                      method: row.method,
+                      path: endpoint.path,
+                      description: endpoint.description,
                     },
                     create: {
-                      routeName: row.routeName,
-                      description: row.description,
-                      method: row.method,
+                      path: endpoint.path,
+                      description: endpoint.description,
                     },
                   })),
                 },
@@ -269,8 +264,11 @@ export const versionRouter = createTRPCRouter({
               create: {
                 title: content.title,
                 description: content.description,
-                rows: {
-                  create: content.rows,
+                endpoints: {
+                  create: content.endpoints.map((endpoint) => ({
+                    path: endpoint.path,
+                    description: endpoint.description,
+                  })),
                 },
               },
             })),

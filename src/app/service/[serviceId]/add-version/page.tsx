@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { GoBackSideBar } from "~/components/sidebar/GoBackSideBar";
 import React from "react";
-import { ChangeLogPointType, RestMethod } from "@prisma/client";
+import { ChangeLogPointType } from "@prisma/client";
 import {
   Select,
   SelectContent,
@@ -33,26 +33,6 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Badge } from "~/components/ui/badge";
-
-type RestMethodType =
-  | "GET"
-  | "POST"
-  | "PUT"
-  | "DELETE"
-  | "PATCH"
-  | "HEAD"
-  | "OPTIONS"
-  | "TRACE";
-const safeRestMethod: Record<RestMethodType, RestMethodType> = {
-  GET: "GET",
-  POST: "POST",
-  PUT: "PUT",
-  DELETE: "DELETE",
-  PATCH: "PATCH",
-  HEAD: "HEAD",
-  OPTIONS: "OPTIONS",
-  TRACE: "TRACE",
-};
 
 // Define form schema with consistent structure
 const formSchema = z.object({
@@ -67,12 +47,11 @@ const formSchema = z.object({
       z.object({
         title: z.string().min(2),
         description: z.string().default(""),
-        rows: z
+        endpoints: z
           .array(
             z.object({
-              routeName: z.string(),
+              path: z.string(),
               description: z.string(),
-              method: z.nativeEnum(RestMethod),
             }),
           )
           .default([]),
@@ -105,7 +84,7 @@ export default function AddServicePage() {
         {
           title: "",
           description: "",
-          rows: [],
+          endpoints: [],
         },
       ],
       changelogPoints: [],
@@ -131,10 +110,9 @@ export default function AddServicePage() {
       const contents = latestVersion.contents.map((content) => ({
         title: content.title,
         description: content.description,
-        rows: content.rows.map((row) => ({
-          routeName: row.routeName,
-          description: row.description,
-          method: row.method,
+        endpoints: content.endpoints.map((endpoint) => ({
+          path: endpoint.path,
+          description: endpoint.description,
         })),
       }));
 
@@ -149,7 +127,7 @@ export default function AddServicePage() {
                 {
                   title: "",
                   description: "",
-                  rows: [],
+                  endpoints: [],
                 },
               ],
       });
@@ -180,9 +158,7 @@ export default function AddServicePage() {
         {
           title: "",
           description: "",
-          rows: [
-            { routeName: "", description: "", method: safeRestMethod.GET },
-          ],
+          endpoints: [{ path: "", description: "" }],
         },
       ]);
     } else {
@@ -191,7 +167,7 @@ export default function AddServicePage() {
         {
           title: "",
           description: "",
-          rows: [],
+          endpoints: [],
         },
       ]);
     }
@@ -203,16 +179,13 @@ export default function AddServicePage() {
     const content = contents[contentIndex] ?? {
       title: "",
       description: "",
-      rows: [],
+      endpoints: [],
     };
 
     const updatedContents = [...contents];
     updatedContents[contentIndex] = {
       ...content,
-      rows: [
-        ...content.rows,
-        { routeName: "", description: "", method: safeRestMethod.GET },
-      ],
+      endpoints: [...content.endpoints, { path: "", description: "" }],
     };
 
     form.setValue("contents", updatedContents);
@@ -224,15 +197,15 @@ export default function AddServicePage() {
     const content = contents[contentIndex] ?? {
       title: "",
       description: "",
-      rows: [],
+      endpoints: [],
     };
 
-    if (content.rows.length <= 1) return; // Keep at least one row
+    if (content.endpoints.length <= 1) return; // Keep at least one row
 
     const updatedContents = [...contents];
     updatedContents[contentIndex] = {
       ...content,
-      rows: content.rows.filter((_, idx) => idx !== rowIndex),
+      endpoints: content.endpoints.filter((_, idx) => idx !== rowIndex),
     };
 
     form.setValue("contents", updatedContents);
@@ -391,7 +364,7 @@ export default function AddServicePage() {
                   </CardHeader>
 
                   <CardContent>
-                    {content.rows.length > 0 ? (
+                    {content.endpoints.length > 0 ? (
                       // Table content
                       <div className="space-y-4">
                         <FormField
@@ -416,114 +389,58 @@ export default function AddServicePage() {
                             Table Rows
                           </div>
                           <div className="p-4">
-                            {content.rows.map((row, rowIndex) => (
-                              <div
-                                key={rowIndex}
-                                className="mb-4 grid grid-cols-[1fr_auto] gap-4"
-                              >
-                                <div className="flex gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name={`contents.${contentIndex}.rows.${rowIndex}.method`}
-                                    render={({ field }) => (
-                                      <FormItem className="w-36">
-                                        <FormControl>
-                                          <Select
-                                            value={field.value}
-                                            onValueChange={field.onChange}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select a method" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem
-                                                value={safeRestMethod.GET}
-                                              >
-                                                GET
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={safeRestMethod.POST}
-                                              >
-                                                POST
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={safeRestMethod.PUT}
-                                              >
-                                                PUT
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={safeRestMethod.DELETE}
-                                              >
-                                                DELETE
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={safeRestMethod.PATCH}
-                                              >
-                                                PATCH
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={safeRestMethod.HEAD}
-                                              >
-                                                HEAD
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={safeRestMethod.OPTIONS}
-                                              >
-                                                OPTIONS
-                                              </SelectItem>
-                                              <SelectItem
-                                                value={safeRestMethod.TRACE}
-                                              >
-                                                TRACE
-                                              </SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-
-                                  <FormField
-                                    control={form.control}
-                                    name={`contents.${contentIndex}.rows.${rowIndex}.routeName`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormControl>
-                                          <Input
-                                            placeholder="Route Name"
-                                            {...field}
-                                          />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name={`contents.${contentIndex}.rows.${rowIndex}.description`}
-                                    render={({ field }) => (
-                                      <FormItem className="flex-1">
-                                        <FormControl>
-                                          <Input
-                                            placeholder="Description"
-                                            {...field}
-                                          />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    removeTableRow(contentIndex, rowIndex)
-                                  }
+                            {content.endpoints.map(
+                              (endpoint, endpointIndex) => (
+                                <div
+                                  key={endpointIndex}
+                                  className="mb-4 grid grid-cols-[1fr_auto] gap-4"
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
+                                  <div className="flex gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name={`contents.${contentIndex}.endpoints.${endpointIndex}.path`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormControl>
+                                            <Input
+                                              placeholder="Path"
+                                              {...field}
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name={`contents.${contentIndex}.endpoints.${endpointIndex}.description`}
+                                      render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                          <FormControl>
+                                            <Input
+                                              placeholder="Description"
+                                              {...field}
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      removeTableRow(
+                                        contentIndex,
+                                        endpointIndex,
+                                      )
+                                    }
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ),
+                            )}
                             <Button
                               type="button"
                               variant="outline"
