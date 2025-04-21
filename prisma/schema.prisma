@@ -260,6 +260,7 @@ model ServiceConsumer {
   renewingSubscription  Boolean             @default(false)
   lastRenewed           DateTime            @default(now())
   subscriptionStatus    SubscriptionStatus  @default(ACTIVE)
+  optedOutOfNotifs      Boolean             @default(false)
 
   ratings               ServiceRating[]
   events                ConsumerEvent[]
@@ -283,6 +284,8 @@ model Notification {
   recipient   User     @relation("UserNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
   senderId    String
   sender      User     @relation("UserSentNotifications", fields: [senderId], references: [id], onDelete: Cascade)
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   content     String
   read        Boolean  @default(false)
