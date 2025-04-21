@@ -416,6 +416,7 @@ export const serviceRouter = createTRPCRouter({
               consumers: {
                 select: {
                   userId: true,
+                  subscriptionStatus: true,
                 },
               },
               name: true,

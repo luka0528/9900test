@@ -22,7 +22,12 @@ export type setUpdateReviewType = (prev: {
   id: string | null;
 }) => void;
 
-export type topButtonType = "Add" | "Edit" | "Owned" | null;
+export type topButtonType =
+  | "Add"
+  | "EditSubbed"
+  | "EditUnsubbed"
+  | "Owned"
+  | null;
 
 export interface updateReviewType {
   ready: boolean;
