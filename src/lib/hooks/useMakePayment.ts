@@ -51,6 +51,8 @@ export function useMakePayment() {
 
             case "RETRY_PAYMENT":
               return false;
+            case "FAILED":
+              return false;
           }
         } else {
           toast.success("Payment processed successfully.");

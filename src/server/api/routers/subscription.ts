@@ -132,156 +132,170 @@ export const subscriptionRouter = createTRPCRouter({
         renewalPayment: z.boolean().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const { renewalPayment, userId, paymentMethodId, subscriptionTierId } =
-        input;
-      if (!userId && !(ctx.session && ctx.session.user)) {
-        return {
-          success: false,
-          message: "User was not found",
-          status: "RETRY_PAYMENT",
-          data: null,
-        };
-      }
-      const payerId = userId ?? ctx.session?.user.id;
+    .mutation(
+      async ({
+        ctx,
+        input,
+      }): Promise<{
+        success: boolean;
+        message: string;
+        status:
+          | "SUCCESS"
+          | "FAILED"
+          | "RETRY_PAYMENT"
+          | "CONFIRMATION_REQUIRED";
+        data: Stripe.PaymentIntent | null;
+      }> => {
+        const { renewalPayment, userId, paymentMethodId, subscriptionTierId } =
+          input;
+        if (!userId && !(ctx.session && ctx.session.user)) {
+          return {
+            success: false,
+            message: "User was not found",
+            status: "RETRY_PAYMENT",
+            data: null,
+          };
+        }
+        const payerId = userId ?? ctx.session?.user.id;
 
-      const subscriptionTier = await ctx.db.subscriptionTier.findUnique({
-        where: { id: subscriptionTierId },
-        include: {
-          service: { include: { owners: true } },
-        },
-      });
-
-      // 1. Validate the service/tier
-      if (!subscriptionTier) {
-        return {
-          success: false,
-          message: "Service or subscription tier not found",
-          status: "FAILED",
-          data: null,
-        };
-      }
-
-      // 4) Verify the payment method belongs to the user
-      const paymentMethod = await ctx.db.paymentMethod.findUnique({
-        where: { id: paymentMethodId },
-      });
-      if (!paymentMethod || paymentMethod.userId !== payerId) {
-        return {
-          success: false,
-          message: "Chosen payment method not found",
-          status: "FAILED",
-          data: null,
-        };
-      }
-
-      // 5) Call Stripe
-      const user = await ctx.db.user.findUnique({
-        where: { id: payerId },
-        select: { email: true, name: true, stripeCustomerId: true },
-      });
-      if (!user) {
-        return {
-          success: false,
-          message: "User not found",
-          status: "FAILED",
-          data: null,
-        };
-      }
-
-      const existingSubscription = await ctx.db.serviceConsumer.findFirst({
-        where: {
-          userId: payerId,
-          subscriptionTier: {
-            id: subscriptionTierId,
+        const subscriptionTier = await ctx.db.subscriptionTier.findUnique({
+          where: { id: subscriptionTierId },
+          include: {
+            service: { include: { owners: true } },
           },
-        },
-      });
-
-      if (
-        !renewalPayment && // If not a renewal payment
-        existingSubscription &&
-        existingSubscription.id === subscriptionTierId &&
-        existingSubscription.subscriptionStatus === "ACTIVE"
-      ) {
-        return {
-          success: false,
-          message:
-            "You are already subscribed to this tier. To switch tiers, please visit the subscription management page.",
-          status: "FAILED",
-          data: null,
-        };
-      }
-
-      if (subscriptionTier.price === 0) {
-        return {
-          success: true,
-          message: "Free subscription, no payment required.",
-          status: "SUCCESS",
-          data: null,
-        };
-      }
-
-      let stripeCustomerId = user.stripeCustomerId;
-      if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
-          email: user.email ?? undefined,
-          name: user.name ?? undefined,
         });
-        stripeCustomerId = customer.id;
-        await ctx.db.user.update({
+
+        // 1. Validate the service/tier
+        if (!subscriptionTier) {
+          return {
+            success: false,
+            message: "Service or subscription tier not found",
+            status: "FAILED",
+            data: null,
+          };
+        }
+
+        // 4) Verify the payment method belongs to the user
+        const paymentMethod = await ctx.db.paymentMethod.findUnique({
+          where: { id: paymentMethodId },
+        });
+        if (!paymentMethod || paymentMethod.userId !== payerId) {
+          return {
+            success: false,
+            message: "Chosen payment method not found",
+            status: "FAILED",
+            data: null,
+          };
+        }
+
+        // 5) Call Stripe
+        const user = await ctx.db.user.findUnique({
           where: { id: payerId },
-          data: { stripeCustomerId },
+          select: { email: true, name: true, stripeCustomerId: true },
         });
-      }
+        if (!user) {
+          return {
+            success: false,
+            message: "User not found",
+            status: "FAILED",
+            data: null,
+          };
+        }
 
-      // Create a one-time payment (PaymentIntent) for the subscription amount
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(subscriptionTier.price * 100), // amount in cents
-        currency: "aud",
-        customer: stripeCustomerId,
-        payment_method: paymentMethod.stripePaymentId,
-        off_session: true,
-        confirm: true,
-        description: `Subscription to ${subscriptionTier.service.name}, for ${subscriptionTier.name}`,
-        metadata: {
-          userId: payerId,
-          subscriptionTierId,
-        },
-      });
+        const existingSubscription = await ctx.db.serviceConsumer.findFirst({
+          where: {
+            userId: payerId,
+            subscriptionTier: {
+              id: subscriptionTierId,
+            },
+          },
+        });
 
-      const res = await waitForPaymentStatus(paymentIntent);
+        if (
+          !renewalPayment && // If not a renewal payment
+          existingSubscription &&
+          existingSubscription.id === subscriptionTierId &&
+          existingSubscription.subscriptionStatus === "ACTIVE"
+        ) {
+          return {
+            success: false,
+            message:
+              "You are already subscribed to this tier. To switch tiers, please visit the subscription management page.",
+            status: "FAILED",
+            data: null,
+          };
+        }
 
-      // 6) Create an incoming billing receipt for purchaser
-      await ctx.db.billingReceipt.create({
-        data: {
-          amount: subscriptionTier.price,
-          description: `${subscriptionTier.service.name} | ${subscriptionTier.name}`,
-          fromId: payerId ?? "",
-          toId: subscriptionTier.service.owners[0]?.userId ?? "",
-          status:
-            res.status === "SUCCESS"
-              ? BillingStatus.PAID
-              : res.status === "CONFIRMATION_REQUIRED"
-                ? BillingStatus.PENDING
-                : BillingStatus.FAILED,
-          paymentMethodId: paymentMethodId,
-          subscriptionTierId: subscriptionTierId,
-        },
-      });
+        if (subscriptionTier.price === 0) {
+          return {
+            success: true,
+            message: "Free subscription, no payment required.",
+            status: "SUCCESS",
+            data: null,
+          };
+        }
 
-      // 7) Create an email receipt for the user
-      await sendBillingEmail({
-        paymentSuccess: res.status === "SUCCESS",
-        userName: user.name ?? "",
-        payerEmail: user.email ?? "",
-        serviceName: subscriptionTier.service.name,
-        subscriptionTierName: subscriptionTier.name,
-        price: subscriptionTier.price,
-        date: new Date().toLocaleDateString(),
-      });
-      return res;
-    }),
+        let stripeCustomerId = user.stripeCustomerId;
+        if (!stripeCustomerId) {
+          const customer = await stripe.customers.create({
+            email: user.email ?? undefined,
+            name: user.name ?? undefined,
+          });
+          stripeCustomerId = customer.id;
+          await ctx.db.user.update({
+            where: { id: payerId },
+            data: { stripeCustomerId },
+          });
+        }
+
+        // Create a one-time payment (PaymentIntent) for the subscription amount
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(subscriptionTier.price * 100), // amount in cents
+          currency: "aud",
+          customer: stripeCustomerId,
+          payment_method: paymentMethod.stripePaymentId,
+          off_session: true,
+          confirm: true,
+          description: `Subscription to ${subscriptionTier.service.name}, for ${subscriptionTier.name}`,
+          metadata: {
+            userId: payerId,
+            subscriptionTierId,
+          },
+        });
+
+        const res = await waitForPaymentStatus(paymentIntent);
+
+        // 6) Create an incoming billing receipt for purchaser
+        await ctx.db.billingReceipt.create({
+          data: {
+            amount: subscriptionTier.price,
+            description: `${subscriptionTier.service.name} | ${subscriptionTier.name}`,
+            fromId: payerId ?? "",
+            toId: subscriptionTier.service.owners[0]?.userId ?? "",
+            status:
+              res.status === "SUCCESS"
+                ? BillingStatus.PAID
+                : res.status === "CONFIRMATION_REQUIRED"
+                  ? BillingStatus.PENDING
+                  : BillingStatus.FAILED,
+            paymentMethodId: paymentMethodId,
+            subscriptionTierId: subscriptionTierId,
+          },
+        });
+
+        // 7) Create an email receipt for the user
+        await sendBillingEmail({
+          paymentSuccess: res.status === "SUCCESS",
+          userName: user.name ?? "",
+          payerEmail: user.email ?? "",
+          serviceName: subscriptionTier.service.name,
+          subscriptionTierName: subscriptionTier.name,
+          price: subscriptionTier.price,
+          date: new Date().toLocaleDateString(),
+        });
+        return res;
+      },
+    ),
 
   cancelStripePaymentIntent: publicProcedure
     .input(z.object({ paymentIntentId: z.string() }))
@@ -1015,15 +1029,21 @@ export const subscriptionRouter = createTRPCRouter({
           ctx.db,
           service.owners[0]?.userId ?? "",
           subscription.userId,
-          `Your subscription to ${subscriptionTier.service.name} is pending cancellation due to payment issues. Please update your payment method.`,
+          `Your subscription to ${subscriptionTier.service.name} was not able to be renewed due to payment issues. Please update your payment method or retry.`,
         );
         await ctx.db.serviceConsumer.update({
           where: { id: subscription.id },
           data: {
-            subscriptionStatus: SubscriptionStatus.PENDING_CANCELLATION,
+            subscriptionStatus: SubscriptionStatus.CANCELLED,
           },
         });
       } else {
+        await notifyServiceConsumer(
+          ctx.db,
+          service.owners[0]?.userId ?? "",
+          subscription.userId,
+          `Your subscription to ${subscriptionTier.service.name} was successfully renewed.`,
+        );
         // Mark renewal timestamp
         await ctx.db.serviceConsumer.update({
           where: { id: subscription.id },
