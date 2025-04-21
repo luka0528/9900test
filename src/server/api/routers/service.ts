@@ -11,6 +11,7 @@ import {
   getRevenueTotalForService,
   getRevenueMonthlyForService,
 } from "~/lib/analytics";
+import { notifyAllServiceConsumers } from "~/lib/notifications";
 
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";
@@ -158,6 +159,12 @@ export const serviceRouter = createTRPCRouter({
       });
 
       // TODO for future ticket: finally, notify all subscribers that this service is scheduled to be deleted
+      await notifyAllServiceConsumers(
+        ctx.db,
+        ctx.session.user.id,
+        service.id,
+        `Service ${service.name} has now been deleted, please adjust your subscriptions accordingly.`,
+      );
 
       return { success: true };
     }),
