@@ -634,7 +634,9 @@ export const subscriptionRouter = createTRPCRouter({
 
   getBillingHistory: protectedProcedure.query(async ({ ctx }) => {
     const receipts = await ctx.db.billingReceipt.findMany({
-      where: { fromId: ctx.session.user.id },
+      where: {
+        OR: [{ fromId: ctx.session.user.id }, { toId: ctx.session.user.id }],
+      },
       include: {
         from: {
           select: {
