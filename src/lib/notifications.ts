@@ -31,7 +31,6 @@ async function notifyAllServiceConsumers(
 async function notifyServiceConsumer(
   db: PrismaClient,
   userId: string,
-  serviceId: string,
   consumerId: string,
   content: string
 ) {
@@ -47,5 +46,5 @@ async function notifyServiceConsumer(
   return notification;
 }
 
-// Export both functions
+
 export { notifyAllServiceConsumers, notifyServiceConsumer };

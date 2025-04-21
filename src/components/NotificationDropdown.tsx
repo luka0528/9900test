@@ -31,6 +31,12 @@ export function NotificationDropdown() {
       refetchInterval: 30000,
       refetchIntervalInBackground: true,
       staleTime: 10000,
+      select: (data) => ({
+        ...data,
+        notifications: [...data.notifications].sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      })
     }
   );
 
@@ -136,8 +142,8 @@ export function NotificationDropdown() {
                 <div
                   key={notification.id}
                   className={`mb-2 rounded-lg border p-4 transition-colors ${
-                    !notification.read ? 'bg-secondary/40' : 'hover:bg-secondary/20'
-                  }`}
+                    !notification.read ? 'bg-secondary/40' : ''
+                  } hover:bg-secondary/20`}
                   onClick={() => !notification.read && markAsRead({ notificationId: notification.id })}
                 >
                   <div className="flex items-start justify-between gap-2">

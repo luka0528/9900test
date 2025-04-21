@@ -85,7 +85,6 @@ export const versionRouter = createTRPCRouter({
           message: "This version already exists for the service",
         });
       }
-
       // Create the version
       const createdVersion = await ctx.db.serviceVersion.create({
         data: {
@@ -224,7 +223,13 @@ export const versionRouter = createTRPCRouter({
           message: "Version not found or you do not have permission to edit it",
         });
       }
-
+      // Notify service consumers 
+      await notifyAllServiceConsumers(
+        ctx.db,
+        ctx.session.user.id,
+        version.serviceId,
+        `Version ${version.version} has been updated, please check the documentation for the changes made.`,
+      );
       return await ctx.db.serviceVersion.update({
         where: {
           id: input.versionId,
