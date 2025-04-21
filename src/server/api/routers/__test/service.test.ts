@@ -25,6 +25,7 @@ describe("Service Router Tests", () => {
           id: "test-service-id",
           createdAt: new Date(),
           updatedAt: new Date(),
+          masterAPIKey: "test-key",
         },
       ];
 
@@ -45,6 +46,7 @@ describe("Service Router Tests", () => {
           name: "test-service",
           createdAt: new Date(),
           updatedAt: new Date(),
+          masterAPIKey: "test-key",
           owners: [{ user: { name: "Test User" } }],
           tags: [{ name: "test-tag" }],
           versions: [{ version: "1.0.0", id: "version-id" }],
@@ -77,6 +79,7 @@ describe("Service Router Tests", () => {
         version: "1.0.0",
         description: "Test description",
         tags: ["test-tag"],
+        masterAPIKey: "test-key",
         subscriptionTiers: [
           {
             name: "Basic",
@@ -104,6 +107,7 @@ describe("Service Router Tests", () => {
         name: "New Service",
         createdAt: new Date(),
         updatedAt: new Date(),
+        masterAPIKey: "test-key",
       };
 
       prismaMock.service.create.mockResolvedValue(mockService);
@@ -128,6 +132,7 @@ describe("Service Router Tests", () => {
           tags: [],
           subscriptionTiers: [],
           contents: [],
+          masterAPIKey: "test-key",
         }),
       ).rejects.toThrow(TRPCError);
     });
@@ -176,6 +181,7 @@ describe("Service Router Tests", () => {
           tags: [{ name: "test-tag" }],
           createdAt: new Date(),
           updatedAt: new Date(),
+          masterAPIKey: "test-key",
         },
       ];
 
@@ -203,6 +209,7 @@ describe("Service Router Tests", () => {
         updatedAt: new Date(),
         name: "New Service",
         id: "service-id",
+        masterAPIKey: "test-key",
       };
 
       const mockConsumer = {
@@ -216,6 +223,7 @@ describe("Service Router Tests", () => {
         subscriptionStatus: SubscriptionStatus.ACTIVE,
         userId: "test-user-id",
         paymentMethodId: "payment-method-id",
+        apiKey: "test-key",
       };
 
       const mockRating = {
@@ -251,6 +259,7 @@ describe("Service Router Tests", () => {
         updatedAt: new Date(),
         name: "New Service",
         id: "service-id",
+        masterAPIKey: "test-key",
       };
 
       prismaMock.service.findUnique.mockResolvedValue(mockService);
