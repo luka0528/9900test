@@ -1171,9 +1171,10 @@ export const subscriptionRouter = createTRPCRouter({
         // const oldAPIKey = serviceConsumer.apiKey;
         // const userEmail = serviceConsumer.user.email;
         // const masterKey = serviceConsumer.subscriptionTier.service.masterAPIKey;
+        // const serviceUrl = serviceConsumer.subscriptionTier.service.url
 
         // revokeApiKey = await deleteRequest({
-        //   url: `${service.url}/api/delete`,
+        //   url: `${serviceUrl}/api/delete`,
         //   params: {masterKey, oldAPIKey, userEmail}
         // });
 
@@ -1219,9 +1220,10 @@ export const subscriptionRouter = createTRPCRouter({
         // const userEmail = serviceConsumer.user.email;
         // const subscriptionTier = serviceConsumer.subscriptionTier.name;
         // const masterKey = serviceConsumer.subscriptionTier.service.masterAPIKey;
+        // const serviceUrl = serviceConsumer.subscriptionTier.service.url
 
         // generateApiKey = await getRequest({
-        //   url: `${service.url}/api/key`,
+        //   url: `${serviceUrl}/api/key`,
         //   params: {masterKey, subscriptionTier, userEmail}
         // });
 
@@ -1232,10 +1234,85 @@ export const subscriptionRouter = createTRPCRouter({
         //     : "Error revoking key.",
         //   data: generateApiKey.success ? generateApiKey.key : null,
         // };
+        const randomString = Array.from({ length: 32 }, () =>
+          Math.random().toString(36).charAt(2),
+        ).join("");
         return {
           success: true,
-          message: "Key successfully revoked",
-          data: "TEST_API_KEY",
+          message: "Key successfully generated",
+          data: randomString,
+        };
+      },
+    ),
+
+  regenerateAPIKey: publicProcedure
+    .input(
+      z.object({
+        userId: z.string().min(1),
+        subscriptionTierId: z.string().min(1),
+      }),
+    )
+    .mutation(
+      async ({
+        ctx,
+        input,
+      }): Promise<{
+        success: boolean;
+        message: string;
+        data: string | null;
+      }> => {
+        const { userId, subscriptionTierId } = input;
+        const caller = appRouter.createCaller(ctx);
+
+        const serviceConsumer = await ctx.db.serviceConsumer.findFirst({
+          where: { userId, subscriptionTierId },
+          include: {
+            subscriptionTier: {
+              include: { service: { select: { masterAPIKey: true } } },
+            },
+            user: { select: { email: true } },
+          },
+        });
+        if (!serviceConsumer) {
+          return {
+            success: false,
+            message: "Subscription could not be found.",
+            data: null,
+          };
+        }
+
+        await caller.subscription.revokeAPIKey({ userId, subscriptionTierId });
+        const newKey = await caller.subscription.generateAPIKey({
+          userId,
+          subscriptionTierId,
+        });
+
+        console.log(
+          `~~~~~~~~~~~~~~~~~~~~~~~~New Key: ${newKey.data}~~~~~~~~~~~~~~~~~~~~~~~~`,
+        );
+        console.log(
+          `~~~~~~~~~~~~~~~~~~~~~~~~serviceConsumerId: ${serviceConsumer.id}~~~~~~~~~~~~~~~~~~~~~~~~`,
+        );
+        console.log(
+          `~~~~~~~~~~~~~~~~~~~~~~~~changing to: ${newKey.success ? newKey.data : null}~~~~~~~~~~~~~~~~~~~~~~~~`,
+        );
+
+        await ctx.db.serviceConsumer.update({
+          where: { id: serviceConsumer.id },
+          data: { apiKey: newKey.success ? newKey.data : null },
+        });
+
+        if (!newKey.success) {
+          return {
+            success: false,
+            message: "New API Key Could not be made",
+            data: null,
+          };
+        }
+        return {
+          success: true,
+          message: "Key successfully regenerated.",
+          data: newKey.data,
         };
       },
     ),
