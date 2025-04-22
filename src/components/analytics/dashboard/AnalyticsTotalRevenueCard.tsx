@@ -18,7 +18,7 @@ export const AnalyticsTotalRevenueCard = () => {
   const { data: revenue, isLoading } =
     api.analytics.getTotalRevenueOfUser.useQuery();
 
-  const { data: monthlyRevenue, isLoading: isMonthlyRevenueLoading } =
+  const { data: monthlyRevenue, isLoading: isMonthlyRevenue } =
     api.analytics.getMonthlyRevenueOfUser.useQuery();
 
   return (
@@ -39,15 +39,24 @@ export const AnalyticsTotalRevenueCard = () => {
       <CardFooter className="flex-col items-start gap-1 text-sm">
         <div className="inline text-muted-foreground">
           <div>
-                You've earned
-                <Badge
-                  variant="outline_positive"
-                  className="mx-1 inline-flex gap-1 rounded-lg text-xs"
-                >
+            You&apos;ve earned
+            <Badge
+              variant="outline_positive"
+              className="mx-1 inline-flex gap-1 rounded-lg text-xs"
+            > 
+              {isMonthlyRevenue ? (
+                <span className="text-sm">
+                  ${0.00}
+                </span>
+              ) : (
+                <span className="text-sm">
                   ${monthlyRevenue?.toFixed(2)}
-                </Badge>{""}
-                so far this month.
-              </div>
+                </span>
+              )}
+            </Badge>
+            {""}
+            so far this month.
+          </div>
         </div>
       </CardFooter>
     </Card>

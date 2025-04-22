@@ -22,7 +22,7 @@ export const analyticsRouter = createTRPCRouter({
     const userId = ctx.session.user.id;
     return await getRevenueMonthlyForUser(userId);
   }),
-  
+
   getAverageRating: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
     return await getRatingForUser(userId);
