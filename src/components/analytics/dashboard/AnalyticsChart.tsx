@@ -38,8 +38,8 @@ export const AnalyticsChart = () => {
       "hsl(var(--chart-1))",
       "hsl(var(--chart-2))",
       "hsl(var(--chart-3))",
-      "hsl(var(--chart-2))",
-      "hsl(var(--chart-1))",
+      "hsl(var(--chart-4))",
+      "hsl(var(--chart-5))",
     ];
 
     if (!serviceRevenueData || serviceRevenueData.length === 0) {
@@ -49,7 +49,8 @@ export const AnalyticsChart = () => {
     // Remove the 'date' key from the legend.
     const serviceTypes = Object.keys(serviceRevenueData[0]!).filter(
       (key) => key !== "date",
-    );
+    ).sort();
+
 
     type ChartConfigPoint = { label: string; color: string };
     const config: Record<string, ChartConfigPoint> = {};
@@ -58,10 +59,11 @@ export const AnalyticsChart = () => {
 
       config[service] = {
         label: service,
-        color: colors[i % colors.length]!,
+        color: colors[i % colors.length] ?? "#ccc",
       };
     }
 
+    console.log("🤩 config", config);
     return config as ChartConfig;
   }, [serviceRevenueData]);
 
@@ -132,7 +134,6 @@ export const AnalyticsChart = () => {
             <ChartLegend content={<ChartLegendContent />} />
             <defs>
               {Object.entries(chartConfig)
-                .sort()
                 .map(([key, config]) => (
                   <linearGradient
                     key={key}
@@ -191,7 +192,6 @@ export const AnalyticsChart = () => {
               }
             />
             {Object.entries(chartConfig)
-              .sort()
               .map(([key, config]) => (
                 <Area
                   key={key}
@@ -199,7 +199,6 @@ export const AnalyticsChart = () => {
                   type={timeRange === "30d" ? "monotone" : "step"}
                   fill={`url(#fill-${key.replace(/\s+/g, "-")})`}
                   stroke={config.color}
-                  stackId="a"
                 />
               ))}
           </AreaChart>
