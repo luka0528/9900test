@@ -35,6 +35,7 @@ import { useMakePayment } from "~/lib/hooks/useMakePayment";
 import { Input } from "../ui/input";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import ConfirmModal from "./ConfirmDialog";
 
 interface ManageSubscriptionDialogProps {
   isOpen: boolean;
@@ -66,6 +67,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   const [selectedNewTier, setSelectedNewTier] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string>("");
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
 
   // Query service details; only run when the consumer is available
   const { data: service } = api.service.getServiceById.useQuery(
@@ -127,6 +129,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       toast.success("Payment method updated successfully.");
       refetchSubscriptions();
       setShowPaymentDialog(false);
+      onClose();
     } catch {
       toast.error("Failed to update payment method.");
     }
@@ -203,6 +206,14 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     toast.success("API key copied to clipboard.");
   };
 
+  const nextBillingDate = serviceConsumer.renewingSubscription
+    ? new Date(
+        new Date(serviceConsumer.lastRenewed).setDate(
+          new Date(serviceConsumer.lastRenewed).getDate() + 30,
+        ),
+      ).toLocaleDateString("en-GB")
+    : "Not a recurring subscription";
+
   if (paymentLoading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -238,24 +249,10 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
               <p>
                 {"Subscription tier: "}
                 <strong>{serviceConsumer.subscriptionTier.name}</strong>
-                {""}
               </p>
               <p>
-                {" "}
                 {` Next billing date: `}
-                <strong>
-                  {" "}
-                  {`${
-                    serviceConsumer.renewingSubscription
-                      ? new Date(
-                          new Date(serviceConsumer.lastRenewed).setDate(
-                            new Date(serviceConsumer.lastRenewed).getDate() +
-                              30,
-                          ),
-                        ).toLocaleDateString("en-GB")
-                      : "Not a recurring subscription"
-                  }`}{" "}
-                </strong>
+                <strong> {`${nextBillingDate}`} </strong>
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -319,7 +316,10 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
             </Button>
 
             {/* Cancel Subscription */}
-            <Button variant="destructive" onClick={handleCancelSubscription}>
+            <Button
+              variant="destructive"
+              onClick={() => setShowCancelConfirmModal(true)}
+            >
               <Trash className="mr-2 h-4 w-4" />
               Cancel Subscription
             </Button>
@@ -387,6 +387,16 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      <ConfirmModal
+        open={showCancelConfirmModal}
+        title="Cancel Subscription"
+        description={`Are you sure you want to cancel? ${serviceConsumer.subscriptionTier.price !== 0 ? "Your subscription will remain active until the end of the billing period." : "You will lose access to your subscription immediately."}`}
+        onConfirm={() => handleCancelSubscription()}
+        onCancel={() => {
+          setShowCancelConfirmModal(false);
+        }}
+      />
     </>
   );
 };
