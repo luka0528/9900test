@@ -12,7 +12,16 @@ import {
   AlertDialogAction,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
-import { CreditCard, Edit, Loader2, Trash } from "lucide-react";
+import {
+  Copy,
+  CreditCard,
+  Edit,
+  Eye,
+  EyeOff,
+  Loader2,
+  RefreshCw,
+  Trash,
+} from "lucide-react";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import PaymentMethodDialog from "./PaymentMethodDialog";
@@ -23,6 +32,9 @@ import type {
   ServiceConsumer,
 } from "@prisma/client";
 import { useMakePayment } from "~/lib/hooks/useMakePayment";
+import { Input } from "../ui/input";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface ManageSubscriptionDialogProps {
   isOpen: boolean;
@@ -37,6 +49,12 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   serviceConsumer,
   refetchSubscriptions,
 }) => {
+  const session = useSession();
+  const router = useRouter();
+  if (!session.status || !session.data?.user.id) {
+    router.push("/login");
+  }
+
   // Local states
   const [showPaymentDialog, setShowPaymentDialog] = useState<boolean>(false);
   const [showTierDialog, setShowTierDialog] = useState<boolean>(false);
@@ -46,6 +64,8 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     string | null
   >(null);
   const [selectedNewTier, setSelectedNewTier] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string>("");
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Query service details; only run when the consumer is available
   const { data: service } = api.service.getServiceById.useQuery(
@@ -71,6 +91,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
 
   useEffect(() => {
     if (serviceConsumer) {
+      setApiKey(serviceConsumer.apiKey ?? "");
       setSelectedNewTier(serviceConsumer.subscriptionTier.id);
       setAutoRenew(serviceConsumer.renewingSubscription);
       if (serviceConsumer.paymentMethodId) {
@@ -87,6 +108,8 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     api.subscription.switchSubscriptionTier.useMutation();
   // Mutation for unsubscribing
   const unsubscribeMutation = api.subscription.unsubscribeToTier.useMutation();
+  const regenerateApiKeyMutation =
+    api.subscription.regenerateAPIKey.useMutation();
 
   // Handler for updating the payment method
   const handlePaymentMethodUpdate = async () => {
@@ -155,6 +178,42 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     }
   };
 
+  const handleRegenerateApiKey = async () => {
+    try {
+      if (!session.data?.user.id) {
+        return;
+      }
+      const regenerateAPIKey = await regenerateApiKeyMutation.mutateAsync({
+        userId: session.data?.user.id,
+        subscriptionTierId: serviceConsumer.subscriptionTierId,
+      });
+      if (regenerateAPIKey.success) {
+        refetchSubscriptions();
+        setApiKey(regenerateAPIKey?.data ?? "");
+        toast.success("API key regenerated successfully.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to regenerate API key.");
+    }
+  };
+
+  const handleCopyApiKey = async () => {
+    void navigator.clipboard.writeText(apiKey);
+    toast.success("API key copied to clipboard.");
+  };
+
+  if (paymentLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-10 w-10 animate-spin text-white" />
+          <span className="mt-4 text-white">Processing payment...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (paymentLoading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -182,6 +241,48 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
               date: TBA.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {/* API Key Section */}
+          <div className="rounded-lg border p-4">
+            <h3 className="mb-2 font-medium">API Key</h3>
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1">
+                <Input
+                  type={showApiKey ? "text" : "password"}
+                  value={apiKey}
+                  readOnly
+                  className="pr-10"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <Button variant="outline" size="icon" onClick={handleCopyApiKey}>
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleRegenerateApiKey}
+                disabled={regenerateApiKeyMutation.isPending}
+              >
+                {regenerateApiKeyMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Regenerate
+              </Button>
+            </div>
+          </div>
 
           <div className="flex flex-col space-y-4">
             {/* Update Payment Method */}
