@@ -61,6 +61,7 @@ export const AnalyticsPieChart = () => {
   );
 
   const chartData = React.useMemo(() => {
+    console.log("Service Tier Data: 😃 ", serviceTierData);
     if (!serviceTierData) return [];
 
     const data = serviceTierData.map((tier, index) => ({
@@ -101,7 +102,7 @@ export const AnalyticsPieChart = () => {
   }, [serviceTierData]);
 
   return (
-    <Card className="flex h-64 w-1/3 flex-col">
+    <Card className="flex h-full w-3/5 flex-col lg:w-2/5">
       {servicesLoading ? (
         <div className="flex h-full w-full items-center justify-center">
           Loading...

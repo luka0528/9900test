@@ -196,3 +196,46 @@ export const getRevenueOverTimeByService = async (serviceId: string) => {
 
   return receipts;
 };
+
+export const getRecentCommentsByUser = async (userId: string, n: number) => {
+  const comments = await db.serviceRating.findMany({
+    where: {
+      service: {
+        owners: {
+          some: {
+            userId: userId,
+          },
+        },
+      },
+    },
+    take: n,
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      content: true,
+      starValue: true,
+      createdAt: true,
+      service: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      consumer: {
+        select: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return comments;
+};

@@ -6,6 +6,7 @@ import {
   getRevenueTotalForUser,
   getServicesByUser,
   getSubscriptionTiersByService,
+  getRecentCommentsByUser,
 } from "~/lib/analytics";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -73,7 +74,6 @@ export const analyticsRouter = createTRPCRouter({
 
       const subscriptionTiers = await getSubscriptionTiersByService(service);
 
-      console.log("😇 Subscription Tiers: ", subscriptionTiers);
       const tierBreakdown = subscriptionTiers.map((tier) => {
         const customerCount = tier.consumers.length;
         return {
@@ -82,8 +82,6 @@ export const analyticsRouter = createTRPCRouter({
           customerCount,
         };
       });
-
-      console.log("😇 tier", tierBreakdown);
 
       return tierBreakdown;
     }),
@@ -153,4 +151,14 @@ export const analyticsRouter = createTRPCRouter({
     const services = await getServicesByUser(userId);
     return services;
   }),
+
+  getRecentCommentsByUser: protectedProcedure
+    .input(z.object({ n: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const { n } = input;
+      const userId = ctx.session.user.id;
+      const comments = await getRecentCommentsByUser(userId, n);
+
+      return comments;
+    }),
 });
