@@ -7,6 +7,7 @@ import {
   getServicesByUser,
   getSubscriptionTiersByService,
   getRecentCommentsByUser,
+  getRevenueMonthlyForUser,
 } from "~/lib/analytics";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -15,6 +16,11 @@ export const analyticsRouter = createTRPCRouter({
   getTotalRevenueOfUser: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
     return await getRevenueTotalForUser(userId);
+  }),
+
+  getMonthlyRevenueOfUser: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    return await getRevenueMonthlyForUser(userId);
   }),
 
   getAverageRating: protectedProcedure.query(async ({ ctx }) => {
