@@ -11,6 +11,7 @@ import {
   DefaultSideBar,
   type SidebarItem,
 } from "~/components/sidebar/DefaultSideBar";
+import { TooltipProvider } from "~/components/ui/tooltip";
 
 export default function BillingLayout({
   children,
@@ -32,7 +33,11 @@ export default function BillingLayout({
   return (
     <div className="flex h-full w-full xl:max-w-[96rem]">
       <DefaultSideBar items={items} />
-      <main className="h-full flex-1 overflow-y-auto p-0">{children}</main>
+      <main className="h-full flex-1 overflow-y-auto p-0">
+        <TooltipProvider delayDuration={100} skipDelayDuration={50}>
+          {children}
+        </TooltipProvider>
+      </main>
     </div>
   );
 }

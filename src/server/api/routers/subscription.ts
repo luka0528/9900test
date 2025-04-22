@@ -9,6 +9,7 @@ import { BillingStatus, SubscriptionStatus } from "@prisma/client";
 import Stripe from "stripe";
 import { appRouter } from "../root";
 import { sendBillingEmail } from "~/lib/email";
+import { notifyServiceConsumer } from "~/lib/notifications";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -131,156 +132,170 @@ export const subscriptionRouter = createTRPCRouter({
         renewalPayment: z.boolean().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const { renewalPayment, userId, paymentMethodId, subscriptionTierId } =
-        input;
-      if (!userId && !(ctx.session && ctx.session.user)) {
-        return {
-          success: false,
-          message: "User was not found",
-          status: "RETRY_PAYMENT",
-          data: null,
-        };
-      }
-      const payerId = userId ?? ctx.session?.user.id;
+    .mutation(
+      async ({
+        ctx,
+        input,
+      }): Promise<{
+        success: boolean;
+        message: string;
+        status:
+          | "SUCCESS"
+          | "FAILED"
+          | "RETRY_PAYMENT"
+          | "CONFIRMATION_REQUIRED";
+        data: Stripe.PaymentIntent | null;
+      }> => {
+        const { renewalPayment, userId, paymentMethodId, subscriptionTierId } =
+          input;
+        if (!userId && !(ctx.session && ctx.session.user)) {
+          return {
+            success: false,
+            message: "User was not found",
+            status: "RETRY_PAYMENT",
+            data: null,
+          };
+        }
+        const payerId = userId ?? ctx.session?.user.id;
 
-      const subscriptionTier = await ctx.db.subscriptionTier.findUnique({
-        where: { id: subscriptionTierId },
-        include: {
-          service: { include: { owners: true } },
-        },
-      });
-
-      // 1. Validate the service/tier
-      if (!subscriptionTier) {
-        return {
-          success: false,
-          message: "Service or subscription tier not found",
-          status: "FAILED",
-          data: null,
-        };
-      }
-
-      // 4) Verify the payment method belongs to the user
-      const paymentMethod = await ctx.db.paymentMethod.findUnique({
-        where: { id: paymentMethodId },
-      });
-      if (!paymentMethod || paymentMethod.userId !== payerId) {
-        return {
-          success: false,
-          message: "Chosen payment method not found",
-          status: "FAILED",
-          data: null,
-        };
-      }
-
-      // 5) Call Stripe
-      const user = await ctx.db.user.findUnique({
-        where: { id: payerId },
-        select: { email: true, name: true, stripeCustomerId: true },
-      });
-      if (!user) {
-        return {
-          success: false,
-          message: "User not found",
-          status: "FAILED",
-          data: null,
-        };
-      }
-
-      const existingSubscription = await ctx.db.serviceConsumer.findFirst({
-        where: {
-          userId: payerId,
-          subscriptionTier: {
-            id: subscriptionTierId,
+        const subscriptionTier = await ctx.db.subscriptionTier.findUnique({
+          where: { id: subscriptionTierId },
+          include: {
+            service: { include: { owners: true } },
           },
-        },
-      });
-
-      if (
-        !renewalPayment && // If not a renewal payment
-        existingSubscription &&
-        existingSubscription.id === subscriptionTierId &&
-        existingSubscription.subscriptionStatus === "ACTIVE"
-      ) {
-        return {
-          success: false,
-          message:
-            "You are already subscribed to this tier. To switch tiers, please visit the subscription management page.",
-          status: "FAILED",
-          data: null,
-        };
-      }
-
-      if (subscriptionTier.price === 0) {
-        return {
-          success: true,
-          message: "Free subscription, no payment required.",
-          status: "SUCCESS",
-          data: null,
-        };
-      }
-
-      let stripeCustomerId = user.stripeCustomerId;
-      if (!stripeCustomerId) {
-        const customer = await stripe.customers.create({
-          email: user.email ?? undefined,
-          name: user.name ?? undefined,
         });
-        stripeCustomerId = customer.id;
-        await ctx.db.user.update({
+
+        // 1. Validate the service/tier
+        if (!subscriptionTier) {
+          return {
+            success: false,
+            message: "Service or subscription tier not found",
+            status: "FAILED",
+            data: null,
+          };
+        }
+
+        // 4) Verify the payment method belongs to the user
+        const paymentMethod = await ctx.db.paymentMethod.findUnique({
+          where: { id: paymentMethodId },
+        });
+        if (!paymentMethod || paymentMethod.userId !== payerId) {
+          return {
+            success: false,
+            message: "Chosen payment method not found",
+            status: "FAILED",
+            data: null,
+          };
+        }
+
+        // 5) Call Stripe
+        const user = await ctx.db.user.findUnique({
           where: { id: payerId },
-          data: { stripeCustomerId },
+          select: { email: true, name: true, stripeCustomerId: true },
         });
-      }
+        if (!user) {
+          return {
+            success: false,
+            message: "User not found",
+            status: "FAILED",
+            data: null,
+          };
+        }
 
-      // Create a one-time payment (PaymentIntent) for the subscription amount
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(subscriptionTier.price * 100), // amount in cents
-        currency: "aud",
-        customer: stripeCustomerId,
-        payment_method: paymentMethod.stripePaymentId,
-        off_session: true,
-        confirm: true,
-        description: `Subscription to ${subscriptionTier.service.name}, for ${subscriptionTier.name}`,
-        metadata: {
-          userId: payerId,
-          subscriptionTierId,
-        },
-      });
+        const existingSubscription = await ctx.db.serviceConsumer.findFirst({
+          where: {
+            userId: payerId,
+            subscriptionTier: {
+              id: subscriptionTierId,
+            },
+          },
+        });
 
-      const res = await waitForPaymentStatus(paymentIntent);
+        if (
+          !renewalPayment && // If not a renewal payment
+          existingSubscription &&
+          existingSubscription.id === subscriptionTierId &&
+          existingSubscription.subscriptionStatus === "ACTIVE"
+        ) {
+          return {
+            success: false,
+            message:
+              "You are already subscribed to this tier. To switch tiers, please visit the subscription management page.",
+            status: "FAILED",
+            data: null,
+          };
+        }
 
-      // 6) Create an incoming billing receipt for purchaser
-      await ctx.db.billingReceipt.create({
-        data: {
-          amount: subscriptionTier.price,
-          description: `${subscriptionTier.service.name} | ${subscriptionTier.name}`,
-          fromId: payerId ?? "",
-          toId: subscriptionTier.service.owners[0]?.userId ?? "",
-          status:
-            res.status === "SUCCESS"
-              ? BillingStatus.PAID
-              : res.status === "CONFIRMATION_REQUIRED"
-                ? BillingStatus.PENDING
-                : BillingStatus.FAILED,
-          paymentMethodId: paymentMethodId,
-          subscriptionTierId: subscriptionTierId,
-        },
-      });
+        if (subscriptionTier.price === 0) {
+          return {
+            success: true,
+            message: "Free subscription, no payment required.",
+            status: "SUCCESS",
+            data: null,
+          };
+        }
 
-      // 7) Create an email receipt for the user
-      await sendBillingEmail({
-        paymentSuccess: res.status === "SUCCESS",
-        userName: user.name ?? "",
-        payerEmail: user.email ?? "",
-        serviceName: subscriptionTier.service.name,
-        subscriptionTierName: subscriptionTier.name,
-        price: subscriptionTier.price,
-        date: new Date().toLocaleDateString(),
-      });
-      return res;
-    }),
+        let stripeCustomerId = user.stripeCustomerId;
+        if (!stripeCustomerId) {
+          const customer = await stripe.customers.create({
+            email: user.email ?? undefined,
+            name: user.name ?? undefined,
+          });
+          stripeCustomerId = customer.id;
+          await ctx.db.user.update({
+            where: { id: payerId },
+            data: { stripeCustomerId },
+          });
+        }
+
+        // Create a one-time payment (PaymentIntent) for the subscription amount
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(subscriptionTier.price * 100), // amount in cents
+          currency: "aud",
+          customer: stripeCustomerId,
+          payment_method: paymentMethod.stripePaymentId,
+          off_session: true,
+          confirm: true,
+          description: `Subscription to ${subscriptionTier.service.name}, for ${subscriptionTier.name}`,
+          metadata: {
+            userId: payerId,
+            subscriptionTierId,
+          },
+        });
+
+        const res = await waitForPaymentStatus(paymentIntent);
+
+        // 6) Create an incoming billing receipt for purchaser
+        await ctx.db.billingReceipt.create({
+          data: {
+            amount: subscriptionTier.price,
+            description: `${subscriptionTier.service.name} | ${subscriptionTier.name}`,
+            fromId: payerId ?? "",
+            toId: subscriptionTier.service.owners[0]?.userId ?? "",
+            status:
+              res.status === "SUCCESS"
+                ? BillingStatus.PAID
+                : res.status === "CONFIRMATION_REQUIRED"
+                  ? BillingStatus.PENDING
+                  : BillingStatus.FAILED,
+            paymentMethodId: paymentMethodId,
+            subscriptionTierId: subscriptionTierId,
+          },
+        });
+
+        // 7) Create an email receipt for the user
+        await sendBillingEmail({
+          paymentSuccess: res.status === "SUCCESS",
+          userName: user.name ?? "",
+          payerEmail: user.email ?? "",
+          serviceName: subscriptionTier.service.name,
+          subscriptionTierName: subscriptionTier.name,
+          price: subscriptionTier.price,
+          date: new Date().toLocaleDateString(),
+        });
+        return res;
+      },
+    ),
 
   cancelStripePaymentIntent: publicProcedure
     .input(z.object({ paymentIntentId: z.string() }))
@@ -320,77 +335,104 @@ export const subscriptionRouter = createTRPCRouter({
         autoRenewal: z.boolean().default(false),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const { tierId, paymentMethodId, autoRenewal } = input;
+    .mutation(
+      async ({
+        ctx,
+        input,
+      }): Promise<{ success: boolean; message: string }> => {
+        const { tierId, paymentMethodId, autoRenewal } = input;
+        const caller = appRouter.createCaller(ctx);
 
-      // 2. Validate the tier
-      const tier = await ctx.db.subscriptionTier.findUnique({
-        where: { id: tierId },
-        include: {
-          service: { include: { owners: true } },
-        },
-      });
-      if (!tier) {
-        return {
-          success: false,
-          message: "Subscription tier not found.",
-        };
-      }
-      const service = tier.service;
-
-      // 4) Verify the payment method belongs to the user
-      const paymentMethod = await ctx.db.paymentMethod.findUnique({
-        where: { id: paymentMethodId },
-      });
-      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
-        return {
-          success: false,
-          message: "Payment method not found.",
-        };
-      }
-
-      // 9. Update or create the subscription
-      const existingSubscription = await ctx.db.serviceConsumer.findFirst({
-        where: {
-          userId: ctx.session.user.id,
-          subscriptionTier: {
-            serviceId: service.id,
-          },
-        },
-      });
-
-      if (existingSubscription) {
-        switch (existingSubscription.subscriptionStatus) {
-          case SubscriptionStatus.ACTIVE:
-            return {
-              success: false,
-              message:
-                "Already subscribed to this tier. To switch tiers, please visit the subscription management page.",
-            };
-          default:
-            await ctx.db.serviceConsumer.update({
-              where: { id: existingSubscription.id },
-              data: {
-                subscriptionStatus: SubscriptionStatus.ACTIVE,
-                renewingSubscription: autoRenewal,
-                lastRenewed: new Date(),
-              },
-            });
-        }
-      } else {
-        await ctx.db.serviceConsumer.create({
-          data: {
-            subscriptionStatus: SubscriptionStatus.ACTIVE,
-            userId: ctx.session.user.id,
-            subscriptionTierId: tier.id,
-            paymentMethodId: paymentMethodId,
-            renewingSubscription: autoRenewal,
+        // 2. Validate the tier
+        const subscriptionTier = await ctx.db.subscriptionTier.findUnique({
+          where: { id: tierId },
+          include: {
+            service: { include: { owners: true } },
           },
         });
-      }
+        if (!subscriptionTier) {
+          return {
+            success: false,
+            message: "Subscription tier not found.",
+          };
+        }
+        const service = subscriptionTier.service;
 
-      return { success: true, message: "Successfully subscribed to service." };
-    }),
+        // 4) Verify the payment method belongs to the user
+        const paymentMethod = await ctx.db.paymentMethod.findUnique({
+          where: { id: paymentMethodId },
+        });
+        if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
+          return {
+            success: false,
+            message: "Payment method not found.",
+          };
+        }
+
+        // 9. Update or create the subscription
+        const existingServiceConsumer = await ctx.db.serviceConsumer.findFirst({
+          where: {
+            userId: ctx.session.user.id,
+            subscriptionTier: {
+              serviceId: service.id,
+            },
+          },
+        });
+
+        if (
+          existingServiceConsumer?.subscriptionStatus ===
+          SubscriptionStatus.ACTIVE
+        ) {
+          return {
+            success: false,
+            message:
+              "Already subscribed to this tier. To switch tiers, please visit the subscription management page.",
+          };
+        }
+
+        // 10) GENERATE API KEY:
+        const newKey = await caller.subscription.generateAPIKey({
+          userId: ctx.session.user.id,
+          subscriptionTierId: tierId,
+        });
+
+        // 11) deal with existing consumer
+        if (existingServiceConsumer) {
+          // 11a) Revoke existing API key
+          await caller.subscription.revokeAPIKey({
+            userId: ctx.session.user.id,
+            subscriptionTierId: existingServiceConsumer.subscriptionTierId,
+          });
+          // 11b) Update user details
+          await ctx.db.serviceConsumer.update({
+            where: { id: existingServiceConsumer.id },
+            data: {
+              subscriptionStatus: SubscriptionStatus.ACTIVE,
+              renewingSubscription: autoRenewal,
+              lastRenewed: new Date(),
+              apiKey: newKey.data,
+            },
+          });
+        } else {
+          // 11c) Else create a new subscription
+          await ctx.db.serviceConsumer.create({
+            data: {
+              subscriptionStatus: SubscriptionStatus.ACTIVE,
+              userId: ctx.session.user.id,
+              subscriptionTierId: subscriptionTier.id,
+              paymentMethodId: paymentMethodId,
+              renewingSubscription: autoRenewal,
+              apiKey: newKey.data,
+            },
+          });
+        }
+
+        return {
+          success: true,
+          message: "Successfully subscribed to service.",
+        };
+      },
+    ),
 
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
@@ -403,9 +445,10 @@ export const subscriptionRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { subscriptionTierId } = input;
+      const caller = appRouter.createCaller(ctx);
 
       // 1) Find the subscription
-      const subscription = await ctx.db.serviceConsumer.findFirst({
+      const serviceConsumer = await ctx.db.serviceConsumer.findFirst({
         where: {
           userId: ctx.session.user.id,
           subscriptionTierId,
@@ -414,41 +457,52 @@ export const subscriptionRouter = createTRPCRouter({
           subscriptionTier: true,
         },
       });
-      if (!subscription) {
+      if (!serviceConsumer) {
         return {
           success: false,
           message: "Subscription not found.",
         };
       }
 
-      // 3) Update the subscription record
+      // 3) TODO: REVOKE OLD API KEY
+      if (serviceConsumer.subscriptionTier.price === 0) {
+        await caller.subscription.revokeAPIKey({
+          userId: serviceConsumer.userId,
+          subscriptionTierId: serviceConsumer.subscriptionTierId,
+        });
+      }
+
+      // 4) Update the subscription record
       await ctx.db.serviceConsumer.update({
-        where: { id: subscription.id },
+        where: { id: serviceConsumer.id },
         data: {
           subscriptionStatus:
-            subscription.subscriptionTier.price !== 0
+            serviceConsumer.subscriptionTier.price !== 0
               ? SubscriptionStatus.PENDING_CANCELLATION
               : SubscriptionStatus.CANCELLED,
         },
       });
 
-      // 4) If service was free (i.e. cancelled immediately), revoke the API key here
-
       return { success: true, message: "Subscription cancelled." };
     }),
 
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
+  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   deleteSubscription: protectedProcedure
     .input(z.object({ subscriptionTierId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const { subscriptionTierId } = input;
+      const caller = appRouter.createCaller(ctx);
+
       // 1) Find the subscription
-      const subscription = await ctx.db.serviceConsumer.findFirst({
+      const serviceConsumer = await ctx.db.serviceConsumer.findFirst({
         where: {
           userId: ctx.session.user.id,
           subscriptionTierId,
         },
       });
-      if (!subscription) {
+      if (!serviceConsumer) {
         return {
           success: false,
           message: "Subscription not found.",
@@ -456,7 +510,7 @@ export const subscriptionRouter = createTRPCRouter({
       }
 
       // 2) Check subscription isnt active
-      if (subscription.subscriptionStatus == SubscriptionStatus.ACTIVE) {
+      if (serviceConsumer.subscriptionStatus == SubscriptionStatus.ACTIVE) {
         return {
           success: false,
           message: "Cannot delete an active subscription",
@@ -465,7 +519,13 @@ export const subscriptionRouter = createTRPCRouter({
 
       // 3) Delete the subscription record
       await ctx.db.serviceConsumer.delete({
-        where: { id: subscription.id },
+        where: { id: serviceConsumer.id },
+      });
+
+      // 4) Final check that any existing API keys are revoked
+      await caller.subscription.revokeAPIKey({
+        userId: serviceConsumer.userId,
+        subscriptionTierId: serviceConsumer.subscriptionTierId,
       });
 
       return { success: true, message: "Subscription deleted" };
@@ -481,60 +541,81 @@ export const subscriptionRouter = createTRPCRouter({
         newTierId: z.string(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      const { oldTierId, newTierId } = input;
+    .mutation(
+      async ({
+        ctx,
+        input,
+      }): Promise<{ success: boolean; message: string }> => {
+        const { oldTierId, newTierId } = input;
+        const caller = appRouter.createCaller(ctx);
 
-      // 1) Find the user's subscription
-      const subscription = await ctx.db.serviceConsumer.findFirst({
-        where: {
-          userId: ctx.session.user.id,
-          subscriptionTierId: oldTierId,
-        },
-        include: {
-          subscriptionTier: {
-            include: {
-              service: {
-                include: {
-                  owners: true,
+        // 1) Find the user's subscription
+        const serviceConsumer = await ctx.db.serviceConsumer.findFirst({
+          where: {
+            userId: ctx.session.user.id,
+            subscriptionTierId: oldTierId,
+          },
+          include: {
+            subscriptionTier: {
+              include: {
+                service: {
+                  include: {
+                    owners: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
-      if (!subscription) {
+        });
+        if (!serviceConsumer) {
+          return {
+            success: false,
+            message: "Subscription not found.",
+          };
+        }
+
+        // 2) Validate the new tier
+        const newTier = await ctx.db.subscriptionTier.findUnique({
+          where: { id: newTierId },
+        });
+        if (!newTier) {
+          return {
+            success: false,
+            message: "New tier not found.",
+          };
+        }
+
+        // 6 Revoke the API key for the old tier
+        await caller.subscription.revokeAPIKey({
+          userId: ctx.session.user.id,
+          subscriptionTierId: serviceConsumer.subscriptionTierId,
+        });
+
+        // 7) Invoke a API key for the new tier
+        const newKey = await caller.subscription.generateAPIKey({
+          userId: ctx.session.user.id,
+          subscriptionTierId: serviceConsumer.subscriptionTierId,
+        });
+
+        if (!newKey.success) {
+          return {
+            success: false,
+            message: "New key could not be generated",
+          };
+        }
+
+        // 8) Update the subscription with the new tier
+        await ctx.db.serviceConsumer.update({
+          where: { id: serviceConsumer.id },
+          data: { subscriptionTierId: newTier.id, apiKey: newKey.data },
+        });
+
         return {
-          success: false,
-          message: "Subscription not found.",
+          success: true,
+          message: "Subscription tier switched successfully.",
         };
-      }
-
-      // 2) Validate the new tier
-      const newTier = await ctx.db.subscriptionTier.findUnique({
-        where: { id: newTierId },
-      });
-      if (!newTier) {
-        return {
-          success: false,
-          message: "New tier not found.",
-        };
-      }
-
-      // 6 Revoke the API key for the old tier
-
-      // 7) Invoke a API key for the new tier
-
-      // 8) Update the subscription with the new tier
-      await ctx.db.serviceConsumer.update({
-        where: { id: subscription.id },
-        data: { subscriptionTierId: newTier.id },
-      });
-
-      return {
-        success: true,
-        message: "Subscription tier switched successfully",
-      };
-    }),
+      },
+    ),
 
   updateSubscriptionPaymentMethod: protectedProcedure
     .input(
@@ -634,7 +715,9 @@ export const subscriptionRouter = createTRPCRouter({
 
   getBillingHistory: protectedProcedure.query(async ({ ctx }) => {
     const receipts = await ctx.db.billingReceipt.findMany({
-      where: { fromId: ctx.session.user.id },
+      where: {
+        OR: [{ fromId: ctx.session.user.id }, { toId: ctx.session.user.id }],
+      },
       include: {
         from: {
           select: {
@@ -893,10 +976,11 @@ export const subscriptionRouter = createTRPCRouter({
     }),
 
   checkSubscriptionCancellations: publicProcedure.mutation(async ({ ctx }) => {
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const caller = appRouter.createCaller(ctx);
 
     // 1) Find all subscriptions that are pending cancellation and have a start date in the past
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     const toCancel = await ctx.db.serviceConsumer.findMany({
       where: {
         subscriptionStatus: "PENDING_CANCELLATION",
@@ -908,12 +992,18 @@ export const subscriptionRouter = createTRPCRouter({
 
     // 2) Change their status to cancelled
     for (const consumer of toCancel) {
+      // 2a) TODO: Notify the user about the cancellation
+
+      // 2b) Revoke the API key
+      const revokeKey = await caller.subscription.revokeAPIKey({
+        userId: consumer.userId,
+        subscriptionTierId: consumer.subscriptionTierId,
+      });
+
       await ctx.db.serviceConsumer.update({
         where: { id: consumer.id },
         data: { subscriptionStatus: SubscriptionStatus.CANCELLED },
       });
-
-      // 2a) Revoke api key
     }
 
     return { success: true, count: toCancel.length };
@@ -1006,14 +1096,33 @@ export const subscriptionRouter = createTRPCRouter({
       });
 
       if (paymentResponse.status !== "SUCCESS") {
+        // Revoke the API key
+        // await revokeApiKey = await deleteRequest({
+        // url: `${service.url}/api/delete`,
+        // params: {masterKey: service.masterKey, oldAPIKey: subcription.apiKey, userEmail: ctx.session.user.email}
+        // });
+
         // Mark as pending cancellation
+        // Notify the user about the pending cancellation
+        await notifyServiceConsumer(
+          ctx.db,
+          service.owners[0]?.userId ?? "",
+          subscription.userId,
+          `Your subscription to ${subscriptionTier.service.name} was not able to be renewed due to payment issues. Please update your payment method or retry.`,
+        );
         await ctx.db.serviceConsumer.update({
           where: { id: subscription.id },
           data: {
-            subscriptionStatus: SubscriptionStatus.PENDING_CANCELLATION,
+            subscriptionStatus: SubscriptionStatus.CANCELLED,
           },
         });
       } else {
+        await notifyServiceConsumer(
+          ctx.db,
+          service.owners[0]?.userId ?? "",
+          subscription.userId,
+          `Your subscription to ${subscriptionTier.service.name} was successfully renewed.`,
+        );
         // Mark renewal timestamp
         await ctx.db.serviceConsumer.update({
           where: { id: subscription.id },
@@ -1028,4 +1137,183 @@ export const subscriptionRouter = createTRPCRouter({
 
     return { success: true, count: processedCount };
   }),
+
+  revokeAPIKey: publicProcedure
+    .input(
+      z.object({
+        userId: z.string().min(1),
+        subscriptionTierId: z.string().min(1),
+      }),
+    )
+    .mutation(
+      async ({
+        ctx,
+        input,
+      }): Promise<{ success: boolean; message: string }> => {
+        const { userId, subscriptionTierId } = input;
+
+        // const serviceConsumer = await ctx.db.serviceConsumer.findFirst({
+        //   where: { userId, subscriptionTierId },
+        //   include: {
+        //     subscriptionTier: {
+        //       include: { service: { select: { masterAPIKey: true } } },
+        //     },
+        //     user: { select: { email: true } },
+        //   },
+        // });
+        // if (!serviceConsumer) {
+        //   return {
+        //     success: false,
+        //     message: "Subscription could not be found.",
+        //   };
+        // }
+
+        // const oldAPIKey = serviceConsumer.apiKey;
+        // const userEmail = serviceConsumer.user.email;
+        // const masterKey = serviceConsumer.subscriptionTier.service.masterAPIKey;
+        // const serviceUrl = serviceConsumer.subscriptionTier.service.url
+
+        // revokeApiKey = await deleteRequest({
+        //   url: `${serviceUrl}/api/delete`,
+        //   params: {masterKey, oldAPIKey, userEmail}
+        // });
+
+        // return { success: revokeApiKey.success, message: revokeApiKey.success ? "Key successfully revoked" : "Error revoking key." }
+        return { success: true, message: "Key successfully revoked" };
+      },
+    ),
+
+  generateAPIKey: publicProcedure
+    .input(
+      z.object({
+        userId: z.string().min(1),
+        subscriptionTierId: z.string().min(1),
+      }),
+    )
+    .mutation(
+      async ({
+        ctx,
+        input,
+      }): Promise<{
+        success: boolean;
+        message: string;
+        data: string | null;
+      }> => {
+        const { userId, subscriptionTierId } = input;
+
+        // const serviceConsumer = await ctx.db.serviceConsumer.findFirst({
+        //   where: { userId, subscriptionTierId },
+        //   include: {
+        //     subscriptionTier: {
+        //       include: { service: { select: { masterAPIKey: true } } },
+        //     },
+        //     user: { select: { email: true } },
+        //   },
+        // });
+        // if (!serviceConsumer) {
+        //   return {
+        //     success: false,
+        //     message: "Subscription could not be found.",
+        //   };
+        // }
+
+        // const userEmail = serviceConsumer.user.email;
+        // const subscriptionTier = serviceConsumer.subscriptionTier.name;
+        // const masterKey = serviceConsumer.subscriptionTier.service.masterAPIKey;
+        // const serviceUrl = serviceConsumer.subscriptionTier.service.url
+
+        // generateApiKey = await getRequest({
+        //   url: `${serviceUrl}/api/key`,
+        //   params: {masterKey, subscriptionTier, userEmail}
+        // });
+
+        // return {
+        //   success: generateApiKey.success,
+        //   message: generateApiKey.success
+        //     ? "Key successfully revoked"
+        //     : "Error revoking key.",
+        //   data: generateApiKey.success ? generateApiKey.key : null,
+        // };
+        const randomString = Array.from({ length: 32 }, () =>
+          Math.random().toString(36).charAt(2),
+        ).join("");
+        return {
+          success: true,
+          message: "Key successfully generated",
+          data: randomString,
+        };
+      },
+    ),
+
+  regenerateAPIKey: publicProcedure
+    .input(
+      z.object({
+        userId: z.string().min(1),
+        subscriptionTierId: z.string().min(1),
+      }),
+    )
+    .mutation(
+      async ({
+        ctx,
+        input,
+      }): Promise<{
+        success: boolean;
+        message: string;
+        data: string | null;
+      }> => {
+        const { userId, subscriptionTierId } = input;
+        const caller = appRouter.createCaller(ctx);
+
+        const serviceConsumer = await ctx.db.serviceConsumer.findFirst({
+          where: { userId, subscriptionTierId },
+          include: {
+            subscriptionTier: {
+              include: { service: { select: { masterAPIKey: true } } },
+            },
+            user: { select: { email: true } },
+          },
+        });
+        if (!serviceConsumer) {
+          return {
+            success: false,
+            message: "Subscription could not be found.",
+            data: null,
+          };
+        }
+
+        await caller.subscription.revokeAPIKey({ userId, subscriptionTierId });
+        const newKey = await caller.subscription.generateAPIKey({
+          userId,
+          subscriptionTierId,
+        });
+
+        console.log(
+          `~~~~~~~~~~~~~~~~~~~~~~~~New Key: ${newKey.data}~~~~~~~~~~~~~~~~~~~~~~~~`,
+        );
+        console.log(
+          `~~~~~~~~~~~~~~~~~~~~~~~~serviceConsumerId: ${serviceConsumer.id}~~~~~~~~~~~~~~~~~~~~~~~~`,
+        );
+        console.log(
+          `~~~~~~~~~~~~~~~~~~~~~~~~changing to: ${newKey.success ? newKey.data : null}~~~~~~~~~~~~~~~~~~~~~~~~`,
+        );
+
+        await ctx.db.serviceConsumer.update({
+          where: { id: serviceConsumer.id },
+          data: { apiKey: newKey.success ? newKey.data : null },
+        });
+
+        if (!newKey.success) {
+          return {
+            success: false,
+            message: "New API Key Could not be made",
+            data: null,
+          };
+        }
+        return {
+          success: true,
+          message: "Key successfully regenerated.",
+          data: newKey.data,
+        };
+      },
+    ),
 });
