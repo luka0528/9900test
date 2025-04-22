@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { Separator } from "~/components/ui/separator";
 import { Loader2, Package } from "lucide-react";
 import { api } from "~/trpc/react";
-import { ServiceManagementCard } from "~/components/service/ServiceManagementCard";
+import { ServiceDetailsCard } from "~/components/service/ServiceDetailstCard";
 import { AllServiceSidebar } from "~/components/service/AllServiceSidebar";
 import { SubscriptionStatus } from "@prisma/client";
 
@@ -67,7 +67,7 @@ export default function ServicesPage() {
                   ),
                 )
                 .map((service, index) => (
-                  <ServiceManagementCard
+                  <ServiceDetailsCard
                     key={index}
                     service={{
                       id: service.subscriptionTier.service.id,
