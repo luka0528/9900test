@@ -235,10 +235,28 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
               Manage Subscription
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-gray-500">
-              Subscription for{" "}
-              <strong>{serviceConsumer.subscriptionTier.name}</strong> at $
-              {serviceConsumer.subscriptionTier.price.toFixed(2)}. Next billing
-              date: TBA.
+              <p>
+                {"Subscription tier: "}
+                <strong>{serviceConsumer.subscriptionTier.name}</strong>
+                {""}
+              </p>
+              <p>
+                {" "}
+                {` Next billing date: `}
+                <strong>
+                  {" "}
+                  {`${
+                    serviceConsumer.renewingSubscription
+                      ? new Date(
+                          new Date(serviceConsumer.lastRenewed).setDate(
+                            new Date(serviceConsumer.lastRenewed).getDate() +
+                              30,
+                          ),
+                        ).toLocaleDateString("en-GB")
+                      : "Not a recurring subscription"
+                  }`}{" "}
+                </strong>
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
 
