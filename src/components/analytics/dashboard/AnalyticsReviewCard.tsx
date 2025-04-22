@@ -41,21 +41,21 @@ export const AnalyticsReviewCard = ({ review }: AnalyticsReviewCardProps) => {
   }
 
   return (
-    <Card className="p-2 w-full">
+    <Card className="p-4 w-full">
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-2">
-          <Avatar className="h-6 w-6 text-xs">
+          <Avatar className="h-10 w-10">
             {review.consumer.user.image ? (
               <AvatarImage src={review.consumer.user.image || "/placeholder.svg"} />
             ) : (
-              <AvatarFallback className="text-xs">{getInitials(review.consumer.user.name)}</AvatarFallback>
+              <AvatarFallback className="text-md">{getInitials(review.consumer.user.name)}</AvatarFallback>
             )}
           </Avatar>
-          <div className="space-y-0.5">
+          <div className="space-y-0.5"> 
             <div className="text-xs font-medium">{review.consumer.user.name ?? "Unknown"}</div>
             <div className="text-xs text-muted-foreground">{formattedDate}</div>
             <div className="flex scale-75 origin-left">
-              <StarRating rating={review.starValue} size={12} />
+              <StarRating rating={review.starValue} size={16} />
             </div>
           </div>
         </div>

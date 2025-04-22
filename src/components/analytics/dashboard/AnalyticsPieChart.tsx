@@ -102,7 +102,7 @@ export const AnalyticsPieChart = () => {
   }, [serviceTierData]);
 
   return (
-    <Card className="flex h-64 w-2/5 flex-col">
+    <Card className="flex h-full w-3/5 lg:w-2/5 flex-col">
       {servicesLoading ? (
         <div className="flex h-full w-full items-center justify-center">
           Loading...
