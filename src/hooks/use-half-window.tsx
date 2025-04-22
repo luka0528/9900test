@@ -8,9 +8,11 @@ export function useIsHalfScreen() {
   );
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${HALF_SCREEN_BREAKPOINT - 1}px)`);
+    const mql = window.matchMedia(
+      `(max-width: ${HALF_SCREEN_BREAKPOINT - 1}px)`,
+    );
     const onChange = () => {
-        setIsHalfScreen(window.innerWidth < HALF_SCREEN_BREAKPOINT);
+      setIsHalfScreen(window.innerWidth < HALF_SCREEN_BREAKPOINT);
     };
     mql.addEventListener("change", onChange);
     setIsHalfScreen(window.innerWidth < HALF_SCREEN_BREAKPOINT);

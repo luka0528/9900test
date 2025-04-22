@@ -47,10 +47,9 @@ export const AnalyticsChart = () => {
     }
 
     // Remove the 'date' key from the legend.
-    const serviceTypes = Object.keys(serviceRevenueData[0]!).filter(
-      (key) => key !== "date",
-    ).sort();
-
+    const serviceTypes = Object.keys(serviceRevenueData[0]!)
+      .filter((key) => key !== "date")
+      .sort();
 
     type ChartConfigPoint = { label: string; color: string };
     const config: Record<string, ChartConfigPoint> = {};
@@ -133,28 +132,27 @@ export const AnalyticsChart = () => {
           <AreaChart data={filteredData}>
             <ChartLegend content={<ChartLegendContent />} />
             <defs>
-              {Object.entries(chartConfig)
-                .map(([key, config]) => (
-                  <linearGradient
-                    key={key}
-                    id={`fill-${key.replace(/\s+/g, "-")}`}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop
-                      offset="5%"
-                      stopColor={config.color}
-                      stopOpacity={0.75}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor={config.color}
-                      stopOpacity={0.25}
-                    />
-                  </linearGradient>
-                ))}
+              {Object.entries(chartConfig).map(([key, config]) => (
+                <linearGradient
+                  key={key}
+                  id={`fill-${key.replace(/\s+/g, "-")}`}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="5%"
+                    stopColor={config.color}
+                    stopOpacity={0.75}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor={config.color}
+                    stopOpacity={0.25}
+                  />
+                </linearGradient>
+              ))}
             </defs>
             <CartesianGrid />
             <XAxis
@@ -191,16 +189,15 @@ export const AnalyticsChart = () => {
                 />
               }
             />
-            {Object.entries(chartConfig)
-              .map(([key, config]) => (
-                <Area
-                  key={key}
-                  dataKey={key}
-                  type={timeRange === "30d" ? "monotone" : "step"}
-                  fill={`url(#fill-${key.replace(/\s+/g, "-")})`}
-                  stroke={config.color}
-                />
-              ))}
+            {Object.entries(chartConfig).map(([key, config]) => (
+              <Area
+                key={key}
+                dataKey={key}
+                type={timeRange === "30d" ? "monotone" : "step"}
+                fill={`url(#fill-${key.replace(/\s+/g, "-")})`}
+                stroke={config.color}
+              />
+            ))}
           </AreaChart>
         </ChartContainer>
       </CardContent>

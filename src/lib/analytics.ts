@@ -231,11 +231,11 @@ export const getRecentCommentsByUser = async (userId: string, n: number) => {
               name: true,
               image: true,
             },
-          }
-        }
-      }
+          },
+        },
+      },
     },
   });
 
   return comments;
-}
+};

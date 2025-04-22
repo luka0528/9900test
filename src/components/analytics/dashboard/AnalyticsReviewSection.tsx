@@ -9,8 +9,9 @@ import { useIsHalfScreen } from "~/hooks/use-half-window";
 
 export const AnalyticsReviewSection = () => {
   const [displayCount, setDisplayCount] = useState(4);
-  const { data: reviews, isLoading: isReviewsLoading } = api.analytics.getRecentCommentsByUser.useQuery({ n: displayCount });
-  
+  const { data: reviews, isLoading: isReviewsLoading } =
+    api.analytics.getRecentCommentsByUser.useQuery({ n: displayCount });
+
   const isHalfScreen = useIsHalfScreen();
 
   useEffect(() => {
@@ -23,17 +24,19 @@ export const AnalyticsReviewSection = () => {
 
   return (
     <div className="w-2/5 md:w-3/5">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {isReviewsLoading ? (
           <Loading />
         ) : reviews?.length === 0 ? (
           <div className="col-span-full">No reviews found</div>
         ) : (
-          reviews?.slice(0, displayCount).map((review) => (
-            <AnalyticsReviewCard key={review.id} review={review} />
-          ))
+          reviews
+            ?.slice(0, displayCount)
+            .map((review) => (
+              <AnalyticsReviewCard key={review.id} review={review} />
+            ))
         )}
       </div>
-    </div>   
+    </div>
   );
 };

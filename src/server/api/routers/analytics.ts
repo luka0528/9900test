@@ -6,7 +6,7 @@ import {
   getRevenueTotalForUser,
   getServicesByUser,
   getSubscriptionTiersByService,
-  getRecentCommentsByUser
+  getRecentCommentsByUser,
 } from "~/lib/analytics";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
