@@ -103,6 +103,28 @@ export const getRevenueTotalForService = async (serviceId: string) => {
   return sum;
 };
 
+export const getRevenueMonthlyForUser = async (userId: string) => {
+  const serviceIds = await db.service.findMany({
+    where: {
+      owners: {
+        some: {
+          userId: userId,
+        },
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const revenues = await Promise.all(
+    serviceIds.map((service) => getRevenueMonthlyForService(service.id)),
+  );
+
+  const sum = revenues.reduce((acc, rev) => acc + rev, 0);
+  return sum;
+};
+
 export const getRevenueMonthlyForService = async (serviceId: string) => {
   const today = new Date();
   const receipts = await db.billingReceipt.findMany({
