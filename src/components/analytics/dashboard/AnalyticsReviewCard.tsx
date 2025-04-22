@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { ExternalLink } from "lucide-react";
 import { StarRating } from "~/components/ui/stars";
+import Link from "next/link";
 
 type AnalyticsReviewCardProps = {
   review: {
@@ -67,12 +68,12 @@ export const AnalyticsReviewCard = ({ review }: AnalyticsReviewCardProps) => {
             </div>
           </div>
         </div>
-        <a
-          href={`/reviews/${review.id}`}
+        <Link
+          href={`/service/${review.service.id}/reviews/`}
           className="cursor-pointer text-gray-400 hover:text-gray-600"
         >
           <ExternalLink size={18} />
-        </a>
+        </Link>
       </div>
       <div className="mt-2 line-clamp-2 text-xs">{review.content}</div>
     </Card>
