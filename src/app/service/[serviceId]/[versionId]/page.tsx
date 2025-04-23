@@ -271,6 +271,17 @@ export default function ServicePage() {
 
           <Separator className="my-8" />
 
+          <div className="mb-8">
+            <h2 className="mb-2 text-xl font-semibold">Base Endpoint</h2>
+            {service.baseEndpoint ? (
+              <p className="font-mono">{service.baseEndpoint}</p>
+            ) : (
+              <p className="text-muted-foreground">
+                No base endpoint available
+              </p>
+            )}
+          </div>
+
           {versionLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
