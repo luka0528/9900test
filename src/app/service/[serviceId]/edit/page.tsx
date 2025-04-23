@@ -39,6 +39,9 @@ const formSchema = z.object({
       features: z.array(z.string()).default([]),
     }),
   ),
+  baseEndpoint: z.string().min(1, {
+    message: "Base endpoint must be at least 1 characters.",
+  }),
 });
 
 export default function AddServicePage() {
@@ -59,6 +62,7 @@ export default function AddServicePage() {
       name: "",
       tags: [],
       subscriptionTiers: [],
+      baseEndpoint: "",
     },
   });
 
@@ -73,6 +77,7 @@ export default function AddServicePage() {
           price: tier.price,
           features: tier.features.map((feature) => feature.feature),
         })),
+        baseEndpoint: service.baseEndpoint,
       });
     }
   }, [service, form]);
@@ -178,6 +183,7 @@ export default function AddServicePage() {
       newName: values.name,
       tags: values.tags,
       subscriptionTiers: values.subscriptionTiers,
+      baseEndpoint: values.baseEndpoint,
     });
   }
 
@@ -247,6 +253,24 @@ export default function AddServicePage() {
                 Add keywords that describe your service.
               </FormDescription>
             </FormItem>
+
+            {/* Base Endpoint */}
+            <FormField
+              control={form.control}
+              name="baseEndpoint"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Base Endpoint</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter base endpoint" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    The base endpoint for your service.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <Separator />
 

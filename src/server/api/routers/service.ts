@@ -21,6 +21,7 @@ export const serviceRouter = createTRPCRouter({
       z.object({
         name: z.string().min(1),
         version: z.string().min(1),
+        baseEndpoint: z.string().min(1),
         description: z.string().min(1),
         tags: z.array(z.string()).default([]),
         masterAPIKey: z.string().min(1),
@@ -59,6 +60,7 @@ export const serviceRouter = createTRPCRouter({
         data: {
           name: input.name,
           masterAPIKey: input.masterAPIKey,
+          baseEndpoint: input.baseEndpoint,
           tags: {
             connectOrCreate: input.tags.map((tag) => ({
               where: { name: tag },
@@ -174,6 +176,7 @@ export const serviceRouter = createTRPCRouter({
       z.object({
         serviceId: z.string().min(1),
         newName: z.string().min(1),
+        baseEndpoint: z.string().min(1),
         subscriptionTiers: z.array(
           z.object({
             id: z.string().min(1),
@@ -214,6 +217,7 @@ export const serviceRouter = createTRPCRouter({
           where: { id: input.serviceId },
           data: {
             name: input.newName,
+            baseEndpoint: input.baseEndpoint,
             subscriptionTiers: {
               deleteMany: {
                 id: {
@@ -411,6 +415,7 @@ export const serviceRouter = createTRPCRouter({
         select: {
           name: true,
           tags: true,
+          baseEndpoint: true,
           versions: {
             select: {
               version: true,

@@ -76,6 +76,7 @@ export const autoDocsRouter = createTRPCRouter({
       return await ctx.db.service.create({
         data: {
           name: serviceName,
+          baseEndpoint: "",
           // Connect or create tags
           tags: tags
             ? {

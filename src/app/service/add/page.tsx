@@ -43,6 +43,9 @@ const formSchema = z.object({
   description: z.string().min(1, {
     message: "Description must be at least 1 characters.",
   }),
+  baseEndpoint: z.string().min(1, {
+    message: "Base endpoint is required (e.g. https://api.example.com).",
+  }),
   version: z.string().min(1, {
     message: "Version is required (e.g. 1.0).",
   }),
@@ -89,6 +92,7 @@ export default function AddServicePage() {
     defaultValues: {
       name: "",
       description: "",
+      baseEndpoint: "",
       version: "",
       tags: [],
       masterAPIKey: "",
@@ -282,6 +286,7 @@ export default function AddServicePage() {
     createService({
       name: values.name,
       description: values.description,
+      baseEndpoint: values.baseEndpoint,
       version: values.version,
       contents: values.contents,
       tags: values.tags,
@@ -700,6 +705,24 @@ export default function AddServicePage() {
             </div>
             {/* assssssssssssssssssssssssssssssssssssssssssssssss */}
             <Separator />
+            <FormField
+              control={form.control}
+              name="baseEndpoint"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Base Endpoint</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://api.example.com" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    The base URL for your API (e.g. https://api.example.com)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Details */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <FormLabel className="text-lg">Content Sections</FormLabel>
