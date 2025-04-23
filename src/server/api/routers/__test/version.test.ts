@@ -49,6 +49,8 @@ describe("Version Router Tests", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         name: "New Service",
+        masterAPIKey: "test-key",
+        baseEndpoint: "test-endpoint",
       };
 
       const mockVersion = {
@@ -92,6 +94,8 @@ describe("Version Router Tests", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         name: "New Service",
+        masterAPIKey: "test-key",
+        baseEndpoint: "test-endpoint",
       };
 
       const mockVersion = {

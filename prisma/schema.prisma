@@ -95,7 +95,8 @@ model Service {
   name          String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  masterAPIKey  String? @unique
+  masterAPIKey  String?  @unique
+  baseEndpoint  String
 
   subscriptionTiers SubscriptionTier[]
   tags              Tag[]

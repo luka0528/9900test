@@ -114,7 +114,7 @@ export default function EditServicePage() {
   useEffect(() => {
     if (versionData) {
       // Set form values from loaded data
-      const data = versionData as DocumentationData;
+      const data = versionData as unknown as DocumentationData;
       form.reset({
         description: versionData.description || "",
         contents:
