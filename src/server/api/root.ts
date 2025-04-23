@@ -7,9 +7,10 @@ import { autoDocsRouter } from "./routers/auto-docs";
 import { subscriptionRouter } from "./routers/subscription";
 import { notificationRouter } from "./routers/notification";
 import { endpointRouter } from "./routers/endpoint";
+
 if (process.env.NODE_ENV === "development") {
   console.log("🧪 Dev mode: enabling cancellation scheduler...");
-  void import("scripts/scheduler");
+  void import("../../../scripts/scheduler");
 }
 
 /**

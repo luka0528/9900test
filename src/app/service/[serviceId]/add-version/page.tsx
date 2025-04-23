@@ -84,7 +84,7 @@ export default function AddServicePage() {
         {
           title: "",
           description: "",
-          endpoints: [],
+          endpoints: [{ path: "", description: "" }],
         },
       ],
       changelogPoints: [],
@@ -200,7 +200,10 @@ export default function AddServicePage() {
       endpoints: [],
     };
 
-    if (content.endpoints.length <= 1) return; // Keep at least one row
+    if (content.endpoints.length <= 1) {
+      toast.error("You must have at least one route in this table.");
+      return;
+    } // Keep at least one row
 
     const updatedContents = [...contents];
     updatedContents[contentIndex] = {
@@ -213,6 +216,10 @@ export default function AddServicePage() {
 
   // Remove a detail section
   const removeDetail = (index: number) => {
+    if (index === 0) {
+      toast.error("This section is required and cannot be removed.");
+      return;
+    }
     const contents = form.getValues("contents");
     form.setValue(
       "contents",
@@ -308,7 +315,6 @@ export default function AddServicePage() {
             />
 
             <Separator />
-
             {/* Details */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -390,56 +396,63 @@ export default function AddServicePage() {
                           </div>
                           <div className="p-4">
                             {content.endpoints.map(
-                              (endpoint, endpointIndex) => (
-                                <div
-                                  key={endpointIndex}
-                                  className="mb-4 grid grid-cols-[1fr_auto] gap-4"
-                                >
-                                  <div className="flex gap-4">
-                                    <FormField
-                                      control={form.control}
-                                      name={`contents.${contentIndex}.endpoints.${endpointIndex}.path`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormControl>
-                                            <Input
-                                              placeholder="Path"
-                                              {...field}
-                                            />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`contents.${contentIndex}.endpoints.${endpointIndex}.description`}
-                                      render={({ field }) => (
-                                        <FormItem className="flex-1">
-                                          <FormControl>
-                                            <Input
-                                              placeholder="Description"
-                                              {...field}
-                                            />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() =>
-                                      removeTableRow(
-                                        contentIndex,
-                                        endpointIndex,
-                                      )
-                                    }
+                              (endpoint, endpointIndex) => {
+                                // detect your “mandatory” row – e.g. the very first one:
+
+                                return (
+                                  <div
+                                    key={endpointIndex}
+                                    className="mb-4 grid grid-cols-[1fr_auto] gap-4"
                                   >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ),
+                                    <div className="flex gap-4">
+                                      <FormField
+                                        control={form.control}
+                                        name={`contents.${contentIndex}.endpoints.${endpointIndex}.path`}
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormControl>
+                                              <Input
+                                                placeholder="Path"
+                                                {...field}
+                                              />
+                                            </FormControl>
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={form.control}
+                                        name={`contents.${contentIndex}.endpoints.${endpointIndex}.description`}
+                                        render={({ field }) => (
+                                          <FormItem className="flex-1">
+                                            <FormControl>
+                                              <Input
+                                                placeholder="Description"
+                                                {...field}
+                                              />
+                                            </FormControl>
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+
+                                    {/* only show delete button on non‑mandatory rows */}
+
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() =>
+                                        removeTableRow(
+                                          contentIndex,
+                                          endpointIndex,
+                                        )
+                                      }
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                );
+                              },
                             )}
                             <Button
                               type="button"

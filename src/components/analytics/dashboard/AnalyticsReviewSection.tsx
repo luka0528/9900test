@@ -1,103 +1,41 @@
 "use client";
 
-import { Card } from "~/components/ui/card";
-import { Skeleton } from "~/components/ui/skeleton";
-import { ExternalLink } from "lucide-react";
+import { api } from "~/trpc/react";
+import { AnalyticsReviewCard } from "./AnalyticsReviewCard";
+import { Loading } from "~/components/ui/loading";
+import { useEffect, useState } from "react";
+
+import { useIsHalfScreen } from "~/hooks/use-half-window";
 
 export const AnalyticsReviewSection = () => {
+  const [displayCount, setDisplayCount] = useState(4);
+  const { data: reviews, isLoading: isReviewsLoading } =
+    api.analytics.getRecentCommentsByUser.useQuery({ n: displayCount });
+
+  const isHalfScreen = useIsHalfScreen();
+
+  useEffect(() => {
+    if (isHalfScreen) {
+      setDisplayCount(2);
+    } else {
+      setDisplayCount(4);
+    }
+  }, [isHalfScreen]);
+
   return (
-    <div className="flex w-2/3 space-x-4">
-      <div className="w-1/2 space-y-4 pt-0">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start space-x-4">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[180px]" />
-                <Skeleton className="h-3 w-[130px]" />
-              </div>
-            </div>
-            <div className="cursor-pointer text-gray-400 hover:text-gray-600">
-              <ExternalLink size={18} />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start space-x-4">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[180px]" />
-                <Skeleton className="h-3 w-[130px]" />
-              </div>
-            </div>
-            <div className="cursor-pointer text-gray-400 hover:text-gray-600">
-              <ExternalLink size={18} />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start space-x-4">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[180px]" />
-                <Skeleton className="h-3 w-[130px]" />
-              </div>
-            </div>
-            <div className="cursor-pointer text-gray-400 hover:text-gray-600">
-              <ExternalLink size={18} />
-            </div>
-          </div>
-        </Card>
-      </div>
-      <div className="w-1/2 space-y-4 pt-0">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start space-x-4">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[180px]" />
-                <Skeleton className="h-3 w-[130px]" />
-              </div>
-            </div>
-            <div className="cursor-pointer text-gray-400 hover:text-gray-600">
-              <ExternalLink size={18} />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start space-x-4">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[180px]" />
-                <Skeleton className="h-3 w-[130px]" />
-              </div>
-            </div>
-            <div className="cursor-pointer text-gray-400 hover:text-gray-600">
-              <ExternalLink size={18} />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start space-x-4">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[180px]" />
-                <Skeleton className="h-3 w-[130px]" />
-              </div>
-            </div>
-            <div className="cursor-pointer text-gray-400 hover:text-gray-600">
-              <ExternalLink size={18} />
-            </div>
-          </div>
-        </Card>
+    <div className="w-2/5 md:w-3/5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {isReviewsLoading ? (
+          <Loading />
+        ) : reviews?.length === 0 ? (
+          <div className="col-span-full">No reviews found</div>
+        ) : (
+          reviews
+            ?.slice(0, displayCount)
+            .map((review) => (
+              <AnalyticsReviewCard key={review.id} review={review} />
+            ))
+        )}
       </div>
     </div>
   );

@@ -103,6 +103,28 @@ export const getRevenueTotalForService = async (serviceId: string) => {
   return sum;
 };
 
+export const getRevenueMonthlyForUser = async (userId: string) => {
+  const serviceIds = await db.service.findMany({
+    where: {
+      owners: {
+        some: {
+          userId: userId,
+        },
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  const revenues = await Promise.all(
+    serviceIds.map((service) => getRevenueMonthlyForService(service.id)),
+  );
+
+  const sum = revenues.reduce((acc, rev) => acc + rev, 0);
+  return sum;
+};
+
 export const getRevenueMonthlyForService = async (serviceId: string) => {
   const today = new Date();
   const receipts = await db.billingReceipt.findMany({
@@ -195,4 +217,47 @@ export const getRevenueOverTimeByService = async (serviceId: string) => {
   });
 
   return receipts;
+};
+
+export const getRecentCommentsByUser = async (userId: string, n: number) => {
+  const comments = await db.serviceRating.findMany({
+    where: {
+      service: {
+        owners: {
+          some: {
+            userId: userId,
+          },
+        },
+      },
+    },
+    take: n,
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      id: true,
+      content: true,
+      starValue: true,
+      createdAt: true,
+      service: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      consumer: {
+        select: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return comments;
 };
