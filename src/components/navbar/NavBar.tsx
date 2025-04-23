@@ -56,7 +56,9 @@ export default function NavBar() {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger onPointerMove={(e) => e.preventDefault()}>
+                <NavigationMenuTrigger
+                  onPointerMove={(e) => e.preventDefault()}
+                >
                   Services
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>

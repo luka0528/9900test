@@ -43,15 +43,11 @@ export const AnalyticsTotalRevenueCard = () => {
             <Badge
               variant="outline_positive"
               className="mx-1 inline-flex gap-1 rounded-lg text-xs"
-            > 
+            >
               {isMonthlyRevenue ? (
-                <span className="text-sm">
-                  ${0.00}
-                </span>
+                <span className="text-sm">${0.0}</span>
               ) : (
-                <span className="text-sm">
-                  ${monthlyRevenue?.toFixed(2)}
-                </span>
+                <span className="text-sm">${monthlyRevenue?.toFixed(2)}</span>
               )}
             </Badge>
             {""}
