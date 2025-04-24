@@ -41,7 +41,7 @@ export function RequestBodySection({
           </div>
           {method === "GET" && (
             <div className="ml-2 flex items-center text-xs text-muted-foreground">
-              GET requests don't include a request body
+              GET requests don`&apos`t include a request body
             </div>
           )}
           {bodyEnabled && !method.includes("GET") && (
@@ -84,6 +84,7 @@ export function RequestBodySection({
                 setBody(formatted);
                 toast.success("JSON formatted");
               } catch (error) {
+                console.error("Invalid JSON", error);
                 toast.error("Invalid JSON");
               }
             }}

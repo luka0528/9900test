@@ -30,8 +30,8 @@ import { ApiReferenceToggle } from "~/components/api-tester/ApiReferenceToggle";
 import { EmptyResponseState } from "~/components/api-tester/EmptyResponseState";
 
 // Types
-import {
-  HTTP_METHODS,
+import { HTTP_METHODS } from "~/types/api-tester";
+import type {
   HttpMethod,
   ApiRoute,
   KeyValue,
@@ -41,14 +41,9 @@ import {
 export default function ApiTesterPage() {
   const params = useParams();
   const serviceId = params.serviceId as string;
-  const utils = api.useUtils();
 
-  // API query with improved refetch options
   const { data: serviceData, isLoading: isLoadingService } =
-    api.service.getServiceById.useQuery(serviceId, {
-      refetchOnWindowFocus: true,
-      refetchOnMount: true,
-    });
+    api.service.getServiceById.useQuery(serviceId);
 
   // State management
   const [path, setPath] = useState<string>("");
@@ -247,6 +242,7 @@ export default function ApiTesterPage() {
           };
           options.body = body;
         } catch (error) {
+          console.error("Invalid JSON body", error);
           options.body = body;
         }
       }
@@ -260,7 +256,7 @@ export default function ApiTesterPage() {
       // Process response
       const responseText = await response.text();
       const responseSize = new Blob([responseText]).size;
-      let responseData;
+      let responseData: unknown;
       try {
         responseData = JSON.parse(responseText);
       } catch {
@@ -365,7 +361,7 @@ export default function ApiTesterPage() {
                       setPath(e.target.value);
                       setUrl(
                         combineUrls(
-                          serviceData?.baseEndpoint || "",
+                          serviceData?.baseEndpoint ?? "",
                           e.target.value,
                         ),
                       );
@@ -397,7 +393,7 @@ export default function ApiTesterPage() {
                     Base Endpoint
                   </Badge>
                   <p className="font-mono text-sm">
-                    {serviceData?.baseEndpoint || "Loading..."}
+                    {serviceData?.baseEndpoint ?? "Loading..."}
                   </p>
                 </div>
 

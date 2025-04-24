@@ -11,7 +11,7 @@ import { Card } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "~/components/ui/alert";
 import { AlertTriangle, BookOpen, Loader2 } from "lucide-react";
-import { ApiRoute } from "~/types/api-tester";
+import type { ApiRoute } from "~/types/api-tester";
 
 interface ApiReferencePanelProps {
   showReferencePanel: boolean;

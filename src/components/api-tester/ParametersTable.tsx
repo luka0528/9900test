@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { Trash } from "lucide-react";
-import { KeyValue } from "~/types/api-tester";
+import type { KeyValue } from "~/types/api-tester";
 
 interface ParametersTableProps {
   params: KeyValue[];

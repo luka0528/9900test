@@ -12,7 +12,7 @@ import {
 } from "~/components/ui/table";
 import { Clock, FileJson, FileText } from "lucide-react";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { ApiResponse } from "~/types/api-tester";
+import type { ApiResponse } from "~/types/api-tester";
 
 interface ResponseSectionProps {
   response: ApiResponse;
@@ -37,6 +37,7 @@ export function ResponseSection({
     try {
       return JSON.stringify(json, null, 2);
     } catch (error) {
+      console.error("Error formatting JSON:", error);
       return String(json);
     }
   };
