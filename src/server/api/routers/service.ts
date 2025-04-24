@@ -514,6 +514,9 @@ export const serviceRouter = createTRPCRouter({
           id: true,
           name: true,
           baseEndpoint: true,
+          masterAPIKey: true,
+          createdAt: true,
+          updatedAt: true,
           subscriptionTiers: {
             include: {
               features: true,
