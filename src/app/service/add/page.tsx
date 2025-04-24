@@ -121,7 +121,14 @@ export default function AddServicePage() {
         router.push(`/service/${data.serviceId}/${data.versionId}`);
       },
       onError: (error) => {
-        toast.error(error.message);
+        const errorData = JSON.parse(error.message) as Array<{
+          message: string;
+          path: string[];
+        }>;
+
+        errorData.forEach((err: { message: string; path: string[] }) => {
+          toast.error(err.path[err.path.length - 1] + ": " + err.message);
+        });
       },
     });
 
@@ -550,8 +557,6 @@ export default function AddServicePage() {
                 ))}
               </div>
             </div>
-
-            {/* asssssssssssssssssssssssssssssssssssssssssssssssssssssssss */}
             <Separator />
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -577,17 +582,16 @@ export default function AddServicePage() {
                       </FormItem>
                     )}
                   />
-                  <FormDescription className="mb-16">
+                  <FormDescription className="mb-4 mt-2">
                     This is the master API key that will be used by us to access
                     the following routes.
                   </FormDescription>
-
-                  <FormLabel className={"italic"}>
-                    These following routes <u>MUST</u> be implemented by your
-                    service and available to be called.
+                  <FormLabel className="mt-8">
+                    These following routes <strong>MUST</strong> be implemented
+                    by your service and available to be called.
                   </FormLabel>
                   {/* Table content stays the same */}
-                  <div className="mt-2">
+                  <div className="mt-8">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -703,7 +707,6 @@ export default function AddServicePage() {
                 </CardContent>
               </Card>
             </div>
-            {/* assssssssssssssssssssssssssssssssssssssssssssssss */}
             <Separator />
             <FormField
               control={form.control}
