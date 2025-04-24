@@ -1380,4 +1380,60 @@ export const serviceRouter = createTRPCRouter({
             : "No related services found",
       };
     }),
+
+  deleteService: protectedProcedure
+    .input(z.object({ serviceId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      // Check that the user owns this service
+      const service = await ctx.db.service.findUnique({
+        where: {
+          id: input.serviceId,
+          owners: {
+            some: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+        include: {
+          subscriptionTiers: {
+            include: {
+              consumers: true,
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message:
+            "Service not found or you don't have permission to delete it",
+        });
+      }
+
+      // Notify all consumers about the service deletion
+      const consumers = service.subscriptionTiers.flatMap(
+        (tier) => tier.consumers,
+      );
+      await Promise.all(
+        consumers.map((consumer) =>
+          ctx.db.notification.create({
+            data: {
+              recipientId: consumer.userId,
+              senderId: ctx.session.user.id,
+              content: `The service "${service.name}" has been deleted. Your subscription has been cancelled.`,
+            },
+          }),
+        ),
+      );
+
+      // Delete the service (this will cascade delete all related records)
+      await ctx.db.service.delete({
+        where: {
+          id: input.serviceId,
+        },
+      });
+
+      return { success: true };
+    }),
 });

@@ -37,18 +37,17 @@ export const autoDocsRouter = createTRPCRouter({
         fileText: z.string(),
         serviceName: z.string(),
         version: z.string(),
+        baseEndpoint: z.string(),
         description: z.string(),
-        // Optional fields
-        tags: z.array(z.string()).optional(),
-        subscriptionTiers: z
-          .array(
-            z.object({
-              name: z.string(),
-              price: z.number(),
-              features: z.array(z.string()),
-            }),
-          )
-          .optional(),
+        tags: z.array(z.string()).default([]),
+        masterAPIKey: z.string(),
+        subscriptionTiers: z.array(
+          z.object({
+            name: z.string(),
+            price: z.number(),
+            features: z.array(z.string()),
+          }),
+        ),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -59,6 +58,8 @@ export const autoDocsRouter = createTRPCRouter({
         description,
         tags,
         subscriptionTiers,
+        masterAPIKey,
+        baseEndpoint,
       } = input;
 
       // Validate OpenAPI spec
@@ -76,7 +77,8 @@ export const autoDocsRouter = createTRPCRouter({
       return await ctx.db.service.create({
         data: {
           name: serviceName,
-          baseEndpoint: "",
+          baseEndpoint,
+          masterAPIKey,
           // Connect or create tags
           tags: tags
             ? {

@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "~/components/ui/dropdown-menu";
 import {
   Table,
@@ -30,10 +31,13 @@ import {
   HandPlatter,
   FileText,
   ChevronLeft,
+  Trash2,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
 import { toast } from "sonner";
+import { useState } from "react";
+import { DeleteServiceDialog } from "~/components/service/DeleteServiceDialog";
 
 export default function ServicePage() {
   const { data: session } = useSession();
@@ -86,6 +90,20 @@ export default function ServicePage() {
         void utils.version.getDocumentationByVersionId.invalidate({
           versionId,
         });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const { mutate: deleteService, isPending: isDeletingService } =
+    api.service.deleteService.useMutation({
+      onSuccess: () => {
+        toast.success("Service deleted successfully");
+        router.push("/service/owned");
+        void utils.service.getAllByUserId.invalidate();
       },
       onError: (error) => {
         toast.error(error.message);
@@ -202,6 +220,14 @@ export default function ServicePage() {
                             Mark as deprecated
                           </>
                         )}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Service
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -374,6 +400,14 @@ export default function ServicePage() {
           )}
         </div>
       </div>
+
+      <DeleteServiceDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={() => deleteService({ serviceId })}
+        isDeleting={isDeletingService}
+        serviceName={service.name}
+      />
     </div>
   );
 }
