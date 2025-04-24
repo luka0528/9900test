@@ -510,7 +510,13 @@ export const serviceRouter = createTRPCRouter({
         where: {
           id: input,
         },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          baseEndpoint: true,
+          masterAPIKey: true,
+          createdAt: true,
+          updatedAt: true,
           subscriptionTiers: {
             include: {
               features: true,
@@ -521,7 +527,11 @@ export const serviceRouter = createTRPCRouter({
             include: {
               contents: {
                 include: {
-                  endpoints: true,
+                  endpoints: {
+                    include: {
+                      operations: true,
+                    },
+                  },
                   schemas: true,
                 },
               },
