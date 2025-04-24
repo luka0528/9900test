@@ -71,7 +71,7 @@ export function EditReviewModal({
   return (
     <Dialog open={isModalOpen} onOpenChange={setModalOpen}>
       <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader onClick={() => setModalOpen(false)}>
+        <DialogHeader>
           <DialogTitle>Edit {inputType}</DialogTitle>
           <DialogDescription>
             Make changes to your {inputType} here. Click save when you&apos;re
