@@ -56,7 +56,6 @@ interface ApiResponse {
   size: number;
 }
 
-// KeyValue interface for headers and params
 interface KeyValue {
   key: string;
   value: string;
@@ -64,7 +63,6 @@ interface KeyValue {
   id: string;
 }
 
-// Route interface to match the new backend structure
 interface ApiRoute {
   method: HttpMethod;
   route: string;
@@ -79,6 +77,7 @@ export default function ApiTesterPage() {
   const { data: serviceData, isLoading: isLoadingService } =
     api.service.getServiceById.useQuery(serviceId);
 
+  const [path, setPath] = useState<string>("");
   const [url, setUrl] = useState<string>("");
   const [method, setMethod] = useState<HttpMethod>("GET");
   const [headers, setHeaders] = useState<KeyValue[]>([
@@ -98,7 +97,6 @@ export default function ApiTesterPage() {
     [],
   );
   const [bodyEnabled, setBodyEnabled] = useState<boolean>(true);
-
   const [serviceRoutes, setServiceRoutes] = useState<ApiRoute[]>([]);
 
   useEffect(() => {
@@ -307,21 +305,25 @@ export default function ApiTesterPage() {
     }
   };
 
-  const handleSelectRoute = (route: ApiRoute) => {
-    setUrl(route.route);
-    setMethod(route.method);
+  const combineUrls = (base: string, path: string): string => {
+    if (!base) return path;
+    const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${cleanBase}${cleanPath}`;
+  };
 
+  const handleSelectRoute = (route: ApiRoute) => {
+    setPath(route.route);
+    setUrl(combineUrls(serviceData!.baseEndpoint, route.route));
+    setMethod(route.method);
     setQueryParams([
       { key: "", value: "", enabled: true, id: crypto.randomUUID() },
     ]);
-
     setHeaders([
       { key: "", value: "", enabled: true, id: crypto.randomUUID() },
     ]);
-
     setBody("");
     setBodyEnabled(!["GET"].includes(route.method));
-
     if (route.method === "GET") {
       setActiveTab("params");
     } else {
@@ -387,8 +389,16 @@ export default function ApiTesterPage() {
                     </Select>
                   </div>
                   <Input
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
+                    value={path}
+                    onChange={(e) => {
+                      setPath(e.target.value);
+                      setUrl(
+                        combineUrls(
+                          serviceData?.baseEndpoint || "",
+                          e.target.value,
+                        ),
+                      );
+                    }}
                     placeholder={
                       hasApiReference
                         ? "Select an endpoint from API Reference →"
@@ -408,6 +418,14 @@ export default function ApiTesterPage() {
                       <ArrowRightCircle className="ml-2 h-4 w-4" />
                     )}
                   </Button>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline" className="text-sm">
+                    Base Endpoint
+                  </Badge>
+                  <p className="font-mono text-sm">
+                    {serviceData?.baseEndpoint || "Loading..."}
+                  </p>
                 </div>
 
                 {/* Request Config Tabs */}

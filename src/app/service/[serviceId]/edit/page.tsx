@@ -86,6 +86,7 @@ export default function AddServicePage() {
     api.service.updateServiceMetadata.useMutation({
       onSuccess: () => {
         toast.success("Service updated successfully");
+        void utils.service.getServiceById.invalidate(serviceId);
         void utils.service.getServiceMetadataById.invalidate({ serviceId });
         router.push(`/service/${serviceId}`);
       },
