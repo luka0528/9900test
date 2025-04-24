@@ -1,3 +1,4 @@
+// app/service/[serviceId]/test/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,69 +15,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
 import { Badge } from "~/components/ui/badge";
-import { Textarea } from "~/components/ui/textarea";
-import {
-  ArrowRightCircle,
-  BookOpen,
-  ChevronRight,
-  Clock,
-  FileJson,
-  FileText,
-  Info,
-  Loader2,
-  Plus,
-  Trash,
-  AlertTriangle,
-} from "lucide-react";
-import { ScrollArea } from "~/components/ui/scroll-area";
+import { ArrowRightCircle, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
 
-// HTTP method types
-const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"] as const;
-type HttpMethod = (typeof HTTP_METHODS)[number];
+// Component imports
+import { ParametersTable } from "~/components/api-tester/ParametersTable";
+import { HeadersTable } from "~/components/api-tester/HeadersTable";
+import { RequestBodySection } from "~/components/api-tester/RequestBodySection";
+import { ResponseSection } from "~/components/api-tester/ResponseSection";
+import { ApiReferencePanel } from "~/components/api-tester/ApiReferencePanel";
+import { ApiReferenceToggle } from "~/components/api-tester/ApiReferenceToggle";
+import { EmptyResponseState } from "~/components/api-tester/EmptyResponseState";
 
-// Response interface
-interface ApiResponse {
-  status: number;
-  statusText: string;
-  headers: Record<string, string>;
-  data: unknown;
-  time: number;
-  size: number;
-}
-
-interface KeyValue {
-  key: string;
-  value: string;
-  enabled: boolean;
-  id: string;
-}
-
-interface ApiRoute {
-  method: HttpMethod;
-  route: string;
-  description?: string;
-  version: string;
-}
+// Types
+import {
+  HTTP_METHODS,
+  HttpMethod,
+  ApiRoute,
+  KeyValue,
+  ApiResponse,
+} from "~/types/api-tester";
 
 export default function ApiTesterPage() {
   const params = useParams();
   const serviceId = params.serviceId as string;
+  const utils = api.useUtils();
 
+  // API query with improved refetch options
   const { data: serviceData, isLoading: isLoadingService } =
-    api.service.getServiceById.useQuery(serviceId);
+    api.service.getServiceById.useQuery(serviceId, {
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+    });
 
+  // State management
   const [path, setPath] = useState<string>("");
   const [url, setUrl] = useState<string>("");
   const [method, setMethod] = useState<HttpMethod>("GET");
@@ -99,10 +73,17 @@ export default function ApiTesterPage() {
   const [bodyEnabled, setBodyEnabled] = useState<boolean>(true);
   const [serviceRoutes, setServiceRoutes] = useState<ApiRoute[]>([]);
 
+  // Update URL when base endpoint changes
+  useEffect(() => {
+    if (serviceData?.baseEndpoint && path) {
+      setUrl(combineUrls(serviceData.baseEndpoint, path));
+    }
+  }, [serviceData?.baseEndpoint, path]);
+
+  // Load API routes
   useEffect(() => {
     if (serviceData?.versions && serviceData.versions.length > 0) {
       const routes: ApiRoute[] = [];
-
       const uniqueVersions = serviceData.versions.map((version) => ({
         id: version.id,
         version: version.version,
@@ -114,6 +95,7 @@ export default function ApiTesterPage() {
         setSelectedVersion(uniqueVersions[0]!.version);
       }
 
+      // Extract routes from versions
       serviceData.versions.forEach((version) => {
         version.contents?.forEach((content) => {
           content.endpoints?.forEach((endpoint) => {
@@ -128,18 +110,17 @@ export default function ApiTesterPage() {
       });
 
       setServiceRoutes(routes);
-
       if (routes.length > 0) {
         setShowReferencePanel(true);
       }
     }
   }, [serviceData, selectedVersion]);
 
+  // Handle method changes
   useEffect(() => {
     if (method === "GET") {
       setBody("");
       setBodyEnabled(false);
-
       if (activeTab === "body") {
         setActiveTab("params");
       }
@@ -148,6 +129,7 @@ export default function ApiTesterPage() {
     }
   }, [method, bodyEnabled, activeTab]);
 
+  // Helper functions
   const addHeader = () => {
     setHeaders([
       ...headers,
@@ -192,21 +174,30 @@ export default function ApiTesterPage() {
     );
   };
 
-  const formatJSON = (json: unknown): string => {
-    try {
-      return JSON.stringify(json, null, 2);
-    } catch (error) {
-      console.error("Error formatting JSON:", error);
-      return String(json);
-    }
+  const combineUrls = (base: string, path: string): string => {
+    if (!base) return path;
+    const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${cleanBase}${cleanPath}`;
   };
 
-  const getStatusColor = (status: number): string => {
-    if (status >= 200 && status < 300) return "bg-green-500";
-    if (status >= 300 && status < 400) return "bg-blue-500";
-    if (status >= 400 && status < 500) return "bg-yellow-500";
-    if (status >= 500) return "bg-red-500";
-    return "bg-gray-500";
+  const handleSelectRoute = (route: ApiRoute) => {
+    setPath(route.route);
+    setUrl(combineUrls(serviceData!.baseEndpoint, route.route));
+    setMethod(route.method);
+    setQueryParams([
+      { key: "", value: "", enabled: true, id: crypto.randomUUID() },
+    ]);
+    setHeaders([
+      { key: "", value: "", enabled: true, id: crypto.randomUUID() },
+    ]);
+    setBody("");
+    setBodyEnabled(!["GET"].includes(route.method));
+    if (route.method === "GET") {
+      setActiveTab("params");
+    } else {
+      setActiveTab("body");
+    }
   };
 
   const handleSendRequest = async () => {
@@ -219,6 +210,7 @@ export default function ApiTesterPage() {
     setResponse(null);
 
     try {
+      // Build request URL with query params
       let requestUrl = url;
       const enabledParams = queryParams.filter((p) => p.enabled && p.key);
       if (enabledParams.length > 0) {
@@ -231,6 +223,7 @@ export default function ApiTesterPage() {
         requestUrl = `${requestUrl}${requestUrl.includes("?") ? "&" : "?"}${queryString}`;
       }
 
+      // Build headers
       const requestHeaders: Record<string, string> = {};
       headers
         .filter((h) => h.enabled && h.key)
@@ -238,11 +231,13 @@ export default function ApiTesterPage() {
           requestHeaders[h.key] = h.value;
         });
 
+      // Prepare request options
       const options: RequestInit = {
         method,
         headers: requestHeaders,
       };
 
+      // Add body for methods that support it
       if (["POST", "PUT", "PATCH"].includes(method) && bodyEnabled && body) {
         try {
           JSON.parse(body);
@@ -252,31 +247,33 @@ export default function ApiTesterPage() {
           };
           options.body = body;
         } catch (error) {
-          console.warn("Invalid JSON body, sending as text:", error);
           options.body = body;
         }
       }
 
+      // Send request and measure time
       const startTime = performance.now();
       const response = await fetch(requestUrl, options);
       const endTime = performance.now();
       const responseTime = endTime - startTime;
 
-      let responseData: unknown;
+      // Process response
       const responseText = await response.text();
       const responseSize = new Blob([responseText]).size;
-
+      let responseData;
       try {
         responseData = JSON.parse(responseText);
       } catch {
         responseData = responseText;
       }
 
+      // Get response headers
       const responseHeaders: Record<string, string> = {};
       response.headers.forEach((value, key) => {
         responseHeaders[key] = value;
       });
 
+      // Set the response
       setResponse({
         status: response.status,
         statusText: response.statusText,
@@ -302,32 +299,6 @@ export default function ApiTesterPage() {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const combineUrls = (base: string, path: string): string => {
-    if (!base) return path;
-    const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
-    const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${cleanBase}${cleanPath}`;
-  };
-
-  const handleSelectRoute = (route: ApiRoute) => {
-    setPath(route.route);
-    setUrl(combineUrls(serviceData!.baseEndpoint, route.route));
-    setMethod(route.method);
-    setQueryParams([
-      { key: "", value: "", enabled: true, id: crypto.randomUUID() },
-    ]);
-    setHeaders([
-      { key: "", value: "", enabled: true, id: crypto.randomUUID() },
-    ]);
-    setBody("");
-    setBodyEnabled(!["GET"].includes(route.method));
-    if (route.method === "GET") {
-      setActiveTab("params");
-    } else {
-      setActiveTab("body");
     }
   };
 
@@ -402,13 +373,13 @@ export default function ApiTesterPage() {
                     placeholder={
                       hasApiReference
                         ? "Select an endpoint from API Reference →"
-                        : "Enter URL"
+                        : "Enter path"
                     }
                     className="flex-1"
                   />
                   <Button
                     onClick={handleSendRequest}
-                    disabled={isLoading || !url.trim()}
+                    disabled={isLoading || !path.trim()}
                     className="w-24"
                   >
                     Test
@@ -419,6 +390,8 @@ export default function ApiTesterPage() {
                     )}
                   </Button>
                 </div>
+
+                {/* Base endpoint info */}
                 <div className="flex items-center space-x-2">
                   <Badge variant="outline" className="text-sm">
                     Base Endpoint
@@ -427,6 +400,18 @@ export default function ApiTesterPage() {
                     {serviceData?.baseEndpoint || "Loading..."}
                   </p>
                 </div>
+
+                {/* Full URL display (optional) */}
+                {url && (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="text-sm">
+                      Full URL
+                    </Badge>
+                    <p className="font-mono text-sm text-muted-foreground">
+                      {url}
+                    </p>
+                  </div>
+                )}
 
                 {/* Request Config Tabs */}
                 <Tabs
@@ -444,76 +429,11 @@ export default function ApiTesterPage() {
 
                   {/* Query Parameters Tab */}
                   <TabsContent value="params" className="pt-4">
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead style={{ width: "4rem" }}></TableHead>
-                            <TableHead>Key</TableHead>
-                            <TableHead>Value</TableHead>
-                            <TableHead style={{ width: "4rem" }}></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {queryParams.map((param) => (
-                            <TableRow key={param.id}>
-                              <TableCell>
-                                <input
-                                  type="checkbox"
-                                  checked={param.enabled}
-                                  onChange={(e) =>
-                                    updateParam(
-                                      param.id,
-                                      param.key,
-                                      param.value,
-                                      e.target.checked,
-                                    )
-                                  }
-                                  className="h-4 w-4 rounded border-gray-300"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  value={param.key}
-                                  onChange={(e) =>
-                                    updateParam(
-                                      param.id,
-                                      e.target.value,
-                                      param.value,
-                                      param.enabled,
-                                    )
-                                  }
-                                  placeholder="Key"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  value={param.value}
-                                  onChange={(e) =>
-                                    updateParam(
-                                      param.id,
-                                      param.key,
-                                      e.target.value,
-                                      param.enabled,
-                                    )
-                                  }
-                                  placeholder="Value"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeParam(param.id)}
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                    <ParametersTable
+                      params={queryParams}
+                      updateParam={updateParam}
+                      removeParam={removeParam}
+                    />
                     <Button
                       variant="outline"
                       size="sm"
@@ -527,76 +447,11 @@ export default function ApiTesterPage() {
 
                   {/* Headers Tab */}
                   <TabsContent value="headers" className="pt-4">
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead style={{ width: "4rem" }}></TableHead>
-                            <TableHead>Key</TableHead>
-                            <TableHead>Value</TableHead>
-                            <TableHead style={{ width: "4rem" }}></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {headers.map((header) => (
-                            <TableRow key={header.id}>
-                              <TableCell>
-                                <input
-                                  type="checkbox"
-                                  checked={header.enabled}
-                                  onChange={(e) =>
-                                    updateHeader(
-                                      header.id,
-                                      header.key,
-                                      header.value,
-                                      e.target.checked,
-                                    )
-                                  }
-                                  className="h-4 w-4 rounded border-gray-300"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  value={header.key}
-                                  onChange={(e) =>
-                                    updateHeader(
-                                      header.id,
-                                      e.target.value,
-                                      header.value,
-                                      header.enabled,
-                                    )
-                                  }
-                                  placeholder="Key"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  value={header.value}
-                                  onChange={(e) =>
-                                    updateHeader(
-                                      header.id,
-                                      header.key,
-                                      e.target.value,
-                                      header.enabled,
-                                    )
-                                  }
-                                  placeholder="Value"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeHeader(header.id)}
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                    <HeadersTable
+                      headers={headers}
+                      updateHeader={updateHeader}
+                      removeHeader={removeHeader}
+                    />
                     <Button
                       variant="outline"
                       size="sm"
@@ -610,72 +465,13 @@ export default function ApiTesterPage() {
 
                   {/* Body Tab */}
                   <TabsContent value="body" className="pt-4">
-                    <div className="mb-2 rounded-md border">
-                      <div className="flex items-center bg-muted/50 p-2">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="body-enabled"
-                            checked={bodyEnabled}
-                            onChange={(e) => setBodyEnabled(e.target.checked)}
-                            className="h-4 w-4 rounded border-gray-300"
-                          />
-                          <label htmlFor="body-enabled" className="font-medium">
-                            Request Body
-                          </label>
-                        </div>
-                        {bodyEnabled && (
-                          <div className="ml-auto">
-                            <Badge variant="outline" className="text-xs">
-                              Content-Type: application/json
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-
-                      <Textarea
-                        placeholder={`{
-  "name": "value",
-  "example": true
-}`}
-                        value={body}
-                        onChange={(e) => setBody(e.target.value)}
-                        className="h-60 resize-none rounded-none border-0 font-mono focus-visible:ring-0 focus-visible:ring-offset-0"
-                        disabled={!bodyEnabled}
-                      />
-                    </div>
-
-                    {/* Additional help text */}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>
-                        {bodyEnabled
-                          ? "Enter JSON data for your request body."
-                          : "Enable the checkbox to add a request body."}
-                      </span>
-                      {bodyEnabled && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            try {
-                              const formatted = JSON.stringify(
-                                JSON.parse(body),
-                                null,
-                                2,
-                              );
-                              setBody(formatted);
-                              toast.success("JSON formatted");
-                            } catch (error) {
-                              console.error("Invalid JSON:", error);
-                              toast.error("Invalid JSON");
-                            }
-                          }}
-                          className="h-6 text-xs"
-                        >
-                          Format JSON
-                        </Button>
-                      )}
-                    </div>
+                    <RequestBodySection
+                      body={body}
+                      setBody={setBody}
+                      bodyEnabled={bodyEnabled}
+                      setBodyEnabled={setBodyEnabled}
+                      method={method}
+                    />
                   </TabsContent>
                 </Tabs>
               </div>
@@ -683,224 +479,41 @@ export default function ApiTesterPage() {
           </Card>
 
           {/* Response Section */}
-          {response && (
-            <Card className="w-full shadow">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-medium">
-                    Response
-                  </CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getStatusColor(response.status)}>
-                      {response.status} {response.statusText}
-                    </Badge>
-                    <Badge variant="outline" className="flex items-center">
-                      <Clock className="mr-1 h-3 w-3" /> {response.time}ms
-                    </Badge>
-                    <Badge variant="outline">
-                      {response.size > 1024
-                        ? `${(response.size / 1024).toFixed(1)}KB`
-                        : `${response.size}B`}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Tabs
-                  defaultValue="body"
-                  value={responseTab}
-                  onValueChange={setResponseTab}
-                >
-                  <TabsList>
-                    <TabsTrigger value="body">Body</TabsTrigger>
-                    <TabsTrigger value="headers">Headers</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="body" className="pt-4">
-                    <div className="relative">
-                      <div className="absolute right-2 top-2 flex gap-2">
-                        <Badge variant="outline" className="flex items-center">
-                          {typeof response.data === "object" ? (
-                            <FileJson className="mr-1 h-3 w-3" />
-                          ) : (
-                            <FileText className="mr-1 h-3 w-3" />
-                          )}
-                          {typeof response.data === "object" ? "JSON" : "Text"}
-                        </Badge>
-                      </div>
-                      <ScrollArea className="h-[400px] rounded-md border bg-muted/50 p-4">
-                        <pre className="font-mono text-sm">
-                          {formatJSON(response.data)}
-                        </pre>
-                      </ScrollArea>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="headers" className="pt-4">
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Header</TableHead>
-                            <TableHead>Value</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {Object.entries(response.headers).map(
-                            ([key, value]) => (
-                              <TableRow key={key}>
-                                <TableCell className="font-medium">
-                                  {key}
-                                </TableCell>
-                                <TableCell className="font-mono text-sm">
-                                  {value}
-                                </TableCell>
-                              </TableRow>
-                            ),
-                          )}
-                          {Object.keys(response.headers).length === 0 && (
-                            <TableRow>
-                              <TableCell
-                                colSpan={2}
-                                className="py-4 text-center text-muted-foreground"
-                              >
-                                No headers returned
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          )}
-
-          {!response && !isLoading && (
-            <Card className="w-full bg-muted/30 shadow">
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                <Info className="mb-4 h-12 w-12" />
-                <h3 className="mb-2 text-lg font-medium">API Tester Ready</h3>
-                <p className="max-w-md">
-                  Enter a URL and click Send to make API requests. You can set
-                  query parameters, headers, and a request body as needed.
-                </p>
-              </CardContent>
-            </Card>
+          {response ? (
+            <ResponseSection
+              response={response}
+              responseTab={responseTab}
+              setResponseTab={setResponseTab}
+            />
+          ) : (
+            !isLoading && <EmptyResponseState />
           )}
         </div>
       </div>
 
-      {/* Toggle button for API reference */}
-      <div className="fixed bottom-6 right-6 z-50 md:block">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowReferencePanel(!showReferencePanel)}
-          className="rounded-full shadow-md"
-        >
-          {showReferencePanel ? (
-            <ChevronRight className="h-5 w-5" />
-          ) : (
-            <div className="flex items-center">
-              <BookOpen className="mr-2 h-4 w-4" />
-              {hasApiReference ? "API Reference" : "No API Reference"}
-            </div>
-          )}
-        </Button>
-      </div>
+      {/* API Reference Toggle */}
+      <ApiReferenceToggle
+        showReferencePanel={showReferencePanel}
+        setShowReferencePanel={setShowReferencePanel}
+        hasApiReference={hasApiReference}
+      />
 
-      {/* Right sidebar for API reference - conditionally rendered */}
+      {/* API Reference Panel */}
       <div
         className={`border-l transition-all duration-300 ${
           showReferencePanel ? "w-80 min-w-80" : "w-0 min-w-0 opacity-0"
         } flex-shrink-0 overflow-hidden md:block`}
       >
         {showReferencePanel && (
-          <div className="h-full overflow-y-auto p-4">
-            <div className="mb-4 space-y-3">
-              <h3 className="flex items-center text-lg font-medium">
-                <BookOpen className="mr-2 h-4 w-4" />
-                API Reference
-              </h3>
-
-              {versions.length > 0 && (
-                <Select
-                  value={selectedVersion}
-                  onValueChange={setSelectedVersion}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select version" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {versions.map((ver) => (
-                      <SelectItem key={ver.id} value={ver.version}>
-                        Version {ver.version}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            {isLoadingService ? (
-              <div className="flex justify-center p-4">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : serviceRoutes.length > 0 ? (
-              <ScrollArea className="h-[calc(100vh-200px)]">
-                <div className="space-y-4">
-                  {serviceRoutes
-                    .filter(
-                      (route) =>
-                        !selectedVersion || route.version === selectedVersion,
-                    )
-                    .map((route, index) => (
-                      <Card
-                        key={index}
-                        className="cursor-pointer p-2 hover:bg-muted/50"
-                        onClick={() => handleSelectRoute(route)}
-                      >
-                        <div className="justify-flex-start flex items-center space-x-2">
-                          <Badge
-                            className={(() => {
-                              switch (route.method) {
-                                case "GET":
-                                  return "bg-blue-500";
-                                case "POST":
-                                  return "bg-green-500";
-                                case "PUT":
-                                  return "bg-orange-500";
-                                case "DELETE":
-                                  return "bg-red-500";
-                                case "PATCH":
-                                  return "bg-purple-500";
-                                default:
-                                  return "bg-gray-500";
-                              }
-                            })()}
-                          >
-                            {route.method}
-                          </Badge>
-                          <p className="break-all font-mono text-sm">
-                            {route.route}
-                          </p>
-                        </div>
-                      </Card>
-                    ))}
-                </div>
-              </ScrollArea>
-            ) : (
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>No API routes found</AlertTitle>
-                <AlertDescription>
-                  {selectedVersion
-                    ? `No API routes found for version ${selectedVersion}`
-                    : "This service doesn't have any documented API routes."}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
+          <ApiReferencePanel
+            showReferencePanel={showReferencePanel}
+            selectedVersion={selectedVersion}
+            setSelectedVersion={setSelectedVersion}
+            versions={versions}
+            isLoadingService={isLoadingService}
+            serviceRoutes={serviceRoutes}
+            handleSelectRoute={handleSelectRoute}
+          />
         )}
       </div>
     </div>
