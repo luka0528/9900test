@@ -240,20 +240,23 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     <>
       {/* Main Manage Subscription Dialog */}
       <AlertDialog open={isOpen} onOpenChange={onClose}>
-        <AlertDialogContent className="min-h-[40vh] max-w-2xl space-y-6 p-6">
+        <AlertDialogContent className="min-h-[40vh] max-w-2xl space-y-4 p-6">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-bold">
               Manage Subscription
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-gray-500">
-              <p>
+              <span>
                 {"Subscription tier: "}
                 <strong>{serviceConsumer.subscriptionTier.name}</strong>
-              </p>
-              <p>
+                {"\n"}
+              </span>
+            </AlertDialogDescription>
+            <AlertDialogDescription>
+              <span>
                 {` Next billing date: `}
                 <strong> {`${nextBillingDate}`} </strong>
-              </p>
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
 
