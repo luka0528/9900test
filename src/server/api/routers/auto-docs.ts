@@ -41,14 +41,13 @@ export const autoDocsRouter = createTRPCRouter({
         description: z.string(),
         tags: z.array(z.string()).default([]),
         masterAPIKey: z.string(),
-        subscriptionTiers: z
-          .array(
-            z.object({
-              name: z.string(),
-              price: z.number(),
-              features: z.array(z.string()),
-            }),
-          )
+        subscriptionTiers: z.array(
+          z.object({
+            name: z.string(),
+            price: z.number(),
+            features: z.array(z.string()),
+          }),
+        ),
       }),
     )
     .mutation(async ({ ctx, input }) => {

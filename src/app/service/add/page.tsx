@@ -135,17 +135,19 @@ export default function AddServicePage() {
       },
     });
 
-  const { mutate: createServiceFromOpenApi, isPending: isCreatingServiceFromOpenApi } =
-    api.autoDocs.createServiceFromOpenApi.useMutation({
-      onSuccess: (data) => {
-        toast.success("Service generated from OpenAPI successfully");
-        const firstVersion = data.versions[0];
-        router.push(`/service/${data.id}/${firstVersion?.id}`);
-      },
-      onError: () => {
-        toast.error("Failed to create service from OpenAPI");
-      },
-    });
+  const {
+    mutate: createServiceFromOpenApi,
+    isPending: isCreatingServiceFromOpenApi,
+  } = api.autoDocs.createServiceFromOpenApi.useMutation({
+    onSuccess: (data) => {
+      toast.success("Service generated from OpenAPI successfully");
+      const firstVersion = data.versions[0];
+      router.push(`/service/${data.id}/${firstVersion?.id}`);
+    },
+    onError: () => {
+      toast.error("Failed to create service from OpenAPI");
+    },
+  });
 
   // Add a tag
   const addTag = () => {
