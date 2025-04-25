@@ -738,7 +738,7 @@ export const subscriptionRouter = createTRPCRouter({
     return receipts;
   }),
 
-  isUserSubscribedToService: protectedProcedure
+  isUserSubscribedToService: publicProcedure
     .input(
       z.object({
         serviceId: z.string(),
@@ -746,6 +746,10 @@ export const subscriptionRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const { serviceId } = input;
+
+      if (!ctx.session) {
+        return null;
+      }
 
       // 1) Find the user and their subscriptions, filtered by the requested serviceId
       const user = await ctx.db.user.findUnique({

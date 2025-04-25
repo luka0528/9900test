@@ -43,11 +43,11 @@ export default function ReviewsPage() {
     error: serviceError,
   } = api.service.getServiceMetadataById.useQuery({ serviceId });
 
-  const {
-    data: subscription,
-    isLoading: subscriptionLoading,
-    error: subscriptionError,
-  } = api.subscription.isUserSubscribedToService.useQuery({ serviceId });
+  const { data: subscription, isLoading: subscriptionLoading } =
+    api.subscription.isUserSubscribedToService.useQuery({ serviceId });
+
+  // Haven't reviewed = add, reviewed = edit, owner = owned (disabled), not subscribed = null (disabled)
+  const [topButton, setTopButton] = useState<topButtonType>(null);
 
   const [reviews, setReviews] = useState<ReviewContent[]>([]);
   const [newCardData, setNewCardData] = useState<NewCard>({
@@ -144,9 +144,6 @@ export default function ReviewsPage() {
       });
     }
   }, [updatedReview, deleteReview, editReview]);
-
-  // Haven't reviewed = add, reviewed = edit, owner = owned (disabled), not subscribed = null (disabled)
-  const [topButton, setTopButton] = useState<topButtonType>(null);
 
   const { mutate: createReview } = api.service.createReview.useMutation({
     onSuccess: (data) => {
@@ -267,7 +264,7 @@ export default function ReviewsPage() {
   }
 
   // Show error state
-  if (serviceError || !service || subscriptionError) {
+  if (serviceError || !service) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <div className="text-center">
