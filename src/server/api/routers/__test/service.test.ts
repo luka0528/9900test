@@ -4,7 +4,6 @@ import type { PrismaClient } from "@prisma/client";
 import { mockDeep } from "vitest-mock-extended";
 import { TRPCError } from "@trpc/server";
 import { SubscriptionStatus } from "@prisma/client";
-import { b } from "vitest/dist/chunks/suite.d.FvehnV49.js";
 
 describe("Service Router Tests", () => {
   const prismaMock = mockDeep<PrismaClient>();

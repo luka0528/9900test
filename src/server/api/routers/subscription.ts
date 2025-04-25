@@ -10,6 +10,7 @@ import Stripe from "stripe";
 import { appRouter } from "../root";
 import { sendBillingEmail } from "~/lib/email";
 import { notifyServiceConsumer } from "~/lib/notifications";
+import { generateApiKeyRequest } from "~/lib/httpRequests";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -389,10 +390,8 @@ export const subscriptionRouter = createTRPCRouter({
               "Already subscribed to this tier. To switch tiers, please visit the subscription management page.",
           };
         }
-
         // 10) GENERATE API KEY:
         const newKey = await caller.subscription.generateAPIKey({
-          userId: ctx.session.user.id,
           subscriptionTierId: tierId,
         });
 
@@ -593,7 +592,6 @@ export const subscriptionRouter = createTRPCRouter({
 
         // 7) Invoke a API key for the new tier
         const newKey = await caller.subscription.generateAPIKey({
-          userId: ctx.session.user.id,
           subscriptionTierId: serviceConsumer.subscriptionTierId,
         });
 
@@ -999,7 +997,7 @@ export const subscriptionRouter = createTRPCRouter({
       // 2a) TODO: Notify the user about the cancellation
 
       // 2b) Revoke the API key
-      const revokeKey = await caller.subscription.revokeAPIKey({
+      await caller.subscription.revokeAPIKey({
         userId: consumer.userId,
         subscriptionTierId: consumer.subscriptionTierId,
       });
@@ -1100,11 +1098,10 @@ export const subscriptionRouter = createTRPCRouter({
       });
 
       if (paymentResponse.status !== "SUCCESS") {
-        // Revoke the API key
-        // await revokeApiKey = await deleteRequest({
-        // url: `${service.url}/api/delete`,
-        // params: {masterKey: service.masterKey, oldAPIKey: subcription.apiKey, userEmail: ctx.session.user.email}
-        // });
+        await caller.subscription.revokeAPIKey({
+          subscriptionTierId: subscription.subscriptionTierId,
+          userId: subscription.userId,
+        });
 
         // Mark as pending cancellation
         // Notify the user about the pending cancellation
@@ -1156,41 +1153,54 @@ export const subscriptionRouter = createTRPCRouter({
       }): Promise<{ success: boolean; message: string }> => {
         const { userId, subscriptionTierId } = input;
 
-        // const serviceConsumer = await ctx.db.serviceConsumer.findFirst({
-        //   where: { userId, subscriptionTierId },
-        //   include: {
-        //     subscriptionTier: {
-        //       include: { service: { select: { masterAPIKey: true } } },
-        //     },
-        //     user: { select: { email: true } },
-        //   },
-        // });
-        // if (!serviceConsumer) {
-        //   return {
-        //     success: false,
-        //     message: "Subscription could not be found.",
-        //   };
-        // }
+        const serviceConsumer = await ctx.db.serviceConsumer.findFirst({
+          where: { userId, subscriptionTierId },
+          include: {
+            subscriptionTier: {
+              include: {
+                service: { select: { masterAPIKey: true, baseEndpoint: true } },
+              },
+            },
+            user: { select: { email: true } },
+          },
+        });
+        if (!serviceConsumer) {
+          return {
+            success: false,
+            message: "Subscription could not be found.",
+          };
+        }
 
-        // const oldAPIKey = serviceConsumer.apiKey;
-        // const userEmail = serviceConsumer.user.email;
-        // const masterKey = serviceConsumer.subscriptionTier.service.masterAPIKey;
-        // const serviceUrl = serviceConsumer.subscriptionTier.service.url
+        const oldAPIKey = serviceConsumer.apiKey ?? "";
+        const masterKey =
+          serviceConsumer.subscriptionTier.service.masterAPIKey ?? "";
+        const serviceUrl =
+          serviceConsumer.subscriptionTier.service.baseEndpoint;
 
-        // revokeApiKey = await deleteRequest({
-        //   url: `${serviceUrl}/api/delete`,
-        //   params: {masterKey, oldAPIKey, userEmail}
-        // });
+        const url = new URL(`${serviceUrl}/api/key`);
+        url.searchParams.append("key", oldAPIKey);
+        await fetch(url, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${masterKey}`,
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => response.json())
+          .catch(() => {
+            return {
+              success: false,
+              message: `Error revoking key`,
+            };
+          });
 
-        // return { success: revokeApiKey.success, message: revokeApiKey.success ? "Key successfully revoked" : "Error revoking key." }
-        return { success: true, message: "Key successfully revoked" };
+        return { success: true, message: "Key successfully revoked." };
       },
     ),
 
   generateAPIKey: publicProcedure
     .input(
       z.object({
-        userId: z.string().min(1),
         subscriptionTierId: z.string().min(1),
       }),
     )
@@ -1203,48 +1213,36 @@ export const subscriptionRouter = createTRPCRouter({
         message: string;
         data: string | null;
       }> => {
-        const { userId, subscriptionTierId } = input;
+        const { subscriptionTierId } = input;
+        const subscriptionTier = await ctx.db.subscriptionTier.findUnique({
+          where: { id: subscriptionTierId },
+          include: {
+            service: true,
+          },
+        });
+        if (!subscriptionTier) {
+          return {
+            success: false,
+            message: "Subscription tier not found.",
+            data: null,
+          };
+        }
 
-        // const serviceConsumer = await ctx.db.serviceConsumer.findFirst({
-        //   where: { userId, subscriptionTierId },
-        //   include: {
-        //     subscriptionTier: {
-        //       include: { service: { select: { masterAPIKey: true } } },
-        //     },
-        //     user: { select: { email: true } },
-        //   },
-        // });
-        // if (!serviceConsumer) {
-        //   return {
-        //     success: false,
-        //     message: "Subscription could not be found.",
-        //   };
-        // }
+        const masterKey = subscriptionTier.service.masterAPIKey ?? "";
+        const serviceUrl = subscriptionTier.service.baseEndpoint;
 
-        // const userEmail = serviceConsumer.user.email;
-        // const subscriptionTier = serviceConsumer.subscriptionTier.name;
-        // const masterKey = serviceConsumer.subscriptionTier.service.masterAPIKey;
-        // const serviceUrl = serviceConsumer.subscriptionTier.service.url
+        const res = await generateApiKeyRequest(
+          subscriptionTier.name,
+          masterKey,
+          serviceUrl,
+        );
 
-        // generateApiKey = await getRequest({
-        //   url: `${serviceUrl}/api/key`,
-        //   params: {masterKey, subscriptionTier, userEmail}
-        // });
-
-        // return {
-        //   success: generateApiKey.success,
-        //   message: generateApiKey.success
-        //     ? "Key successfully revoked"
-        //     : "Error revoking key.",
-        //   data: generateApiKey.success ? generateApiKey.key : null,
-        // };
-        const randomString = Array.from({ length: 32 }, () =>
-          Math.random().toString(36).charAt(2),
-        ).join("");
         return {
-          success: true,
-          message: "Key successfully generated",
-          data: randomString,
+          success: res.success,
+          message: res.success
+            ? "Key successfully generated"
+            : "Error generating key.",
+          data: res.data ?? "",
         };
       },
     ),
@@ -1287,19 +1285,8 @@ export const subscriptionRouter = createTRPCRouter({
 
         await caller.subscription.revokeAPIKey({ userId, subscriptionTierId });
         const newKey = await caller.subscription.generateAPIKey({
-          userId,
           subscriptionTierId,
         });
-
-        console.log(
-          `~~~~~~~~~~~~~~~~~~~~~~~~New Key: ${newKey.data}~~~~~~~~~~~~~~~~~~~~~~~~`,
-        );
-        console.log(
-          `~~~~~~~~~~~~~~~~~~~~~~~~serviceConsumerId: ${serviceConsumer.id}~~~~~~~~~~~~~~~~~~~~~~~~`,
-        );
-        console.log(
-          `~~~~~~~~~~~~~~~~~~~~~~~~changing to: ${newKey.success ? newKey.data : null}~~~~~~~~~~~~~~~~~~~~~~~~`,
-        );
 
         await ctx.db.serviceConsumer.update({
           where: { id: serviceConsumer.id },
