@@ -1,10 +1,17 @@
 import { vi } from "vitest";
+import "@testing-library/jest-dom";
 
 // Mock next/server
 vi.mock("next/server", () => ({
   NextResponse: {
     json: vi.fn(),
   },
+}));
+
+// Mock the next/navigation hooks
+vi.mock("next/navigation", () => ({
+  useRouter: vi.fn(),
+  useSearchParams: vi.fn(),
 }));
 
 // Mock next-auth

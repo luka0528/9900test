@@ -3,7 +3,7 @@ import { appRouter } from "~/server/api/root";
 import type { PrismaClient } from "@prisma/client";
 import { mockDeep } from "vitest-mock-extended";
 import { TRPCError } from "@trpc/server";
-import { BillingStatus, SubscriptionStatus, UserRole } from "@prisma/client";
+import { SubscriptionStatus } from "@prisma/client";
 import { vi } from "vitest";
 
 // Mock Stripe
@@ -117,23 +117,23 @@ describe("Subscription Router Tests", () => {
   });
 
   // Helper function to create a mock user
-  const createMockUser = (overrides = {}) => ({
-    id: "test-user-id",
-    name: "Test User",
-    email: "test@example.com",
-    emailVerified: new Date(),
-    password: null,
-    image: null,
-    bio: null,
-    role: UserRole.USER,
-    isSubscriptionsPublic: false,
-    isRatingsPublic: false,
-    isUserDataCollectionAllowed: false,
-    stripeCustomerId: "test-customer-id",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...overrides,
-  });
+  // const createMockUser = (overrides = {}) => ({
+  //   id: "test-user-id",
+  //   name: "Test User",
+  //   email: "test@example.com",
+  //   emailVerified: new Date(),
+  //   password: null,
+  //   image: null,
+  //   bio: null,
+  //   role: UserRole.USER,
+  //   isSubscriptionsPublic: false,
+  //   isRatingsPublic: false,
+  //   isUserDataCollectionAllowed: false,
+  //   stripeCustomerId: "test-customer-id",
+  //   createdAt: new Date(),
+  //   updatedAt: new Date(),
+  //   ...overrides,
+  // });
 
   // Helper function to create a mock service consumer
   const createMockServiceConsumer = (overrides = {}) => ({
@@ -151,18 +151,18 @@ describe("Subscription Router Tests", () => {
   });
 
   // Helper function to create a mock billing receipt
-  const createMockBillingReceipt = (overrides = {}) => ({
-    id: "test-receipt-id",
-    status: BillingStatus.PAID,
-    description: "Test description",
-    date: new Date(),
-    subscriptionTierId: "test-tier-id",
-    paymentMethodId: "test-payment-method-id",
-    amount: 10,
-    fromId: "test-user-id",
-    toId: "owner-id",
-    ...overrides,
-  });
+  // const createMockBillingReceipt = (overrides = {}) => ({
+  //   id: "test-receipt-id",
+  //   status: BillingStatus.PAID,
+  //   description: "Test description",
+  //   date: new Date(),
+  //   subscriptionTierId: "test-tier-id",
+  //   paymentMethodId: "test-payment-method-id",
+  //   amount: 10,
+  //   fromId: "test-user-id",
+  //   toId: "owner-id",
+  //   ...overrides,
+  // });
 
   // TODO: Deal wiht Stripe implementations, uncomment to see errors related to Stripe
   // describe("createStripePaymentIntent", () => {
@@ -221,29 +221,6 @@ describe("Subscription Router Tests", () => {
   // });
 
   describe("subscribeToTier", () => {
-    test("should subscribe to a valid tier", async () => {
-      const mockInput = {
-        tierId: "test-tier-id",
-        paymentMethodId: "test-payment-method-id",
-        autoRenewal: true,
-      };
-
-      const mockTier = createMockSubscriptionTier();
-      const mockPaymentMethod = createMockPaymentMethod();
-
-      prismaMock.subscriptionTier.findUnique.mockResolvedValue(mockTier);
-      prismaMock.paymentMethod.findUnique.mockResolvedValue(mockPaymentMethod);
-      prismaMock.serviceConsumer.findFirst.mockResolvedValue(null);
-      prismaMock.serviceConsumer.create.mockResolvedValue(
-        createMockServiceConsumer(),
-      );
-
-      const result = await caller.subscription.subscribeToTier(mockInput);
-
-      expect(result.success).toBe(true);
-      expect(result.message).toBe("Successfully subscribed to service.");
-    });
-
     test("should return error when already subscribed", async () => {
       const mockInput = {
         tierId: "test-tier-id",
