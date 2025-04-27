@@ -433,9 +433,6 @@ export const subscriptionRouter = createTRPCRouter({
       },
     ),
 
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   unsubscribeToTier: protectedProcedure
     .input(
       z.object({
@@ -485,9 +482,6 @@ export const subscriptionRouter = createTRPCRouter({
       return { success: true, message: "Subscription cancelled." };
     }),
 
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   deleteSubscription: protectedProcedure
     .input(z.object({ subscriptionTierId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
@@ -530,9 +524,6 @@ export const subscriptionRouter = createTRPCRouter({
       return { success: true, message: "Subscription deleted" };
     }),
 
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
   switchSubscriptionTier: protectedProcedure
     .input(
       z.object({
@@ -594,13 +585,6 @@ export const subscriptionRouter = createTRPCRouter({
         const newKey = await caller.subscription.generateAPIKey({
           subscriptionTierId: serviceConsumer.subscriptionTierId,
         });
-
-        if (!newKey.success) {
-          return {
-            success: false,
-            message: "New key could not be generated",
-          };
-        }
 
         // 8) Update the subscription with the new tier
         await ctx.db.serviceConsumer.update({
@@ -1237,13 +1221,19 @@ export const subscriptionRouter = createTRPCRouter({
           serviceUrl,
         );
 
-        return {
-          success: res.success,
-          message: res.success
-            ? "Key successfully generated"
-            : "Error generating key.",
-          data: res.data ?? "",
-        };
+        if (res.success) {
+          return {
+            success: true,
+            message: "Key successfully generated",
+            data: res.data,
+          };
+        } else {
+          return {
+            success: false,
+            message: "Error generating key.",
+            data: null,
+          };
+        }
       },
     ),
 
@@ -1296,7 +1286,7 @@ export const subscriptionRouter = createTRPCRouter({
         if (!newKey.success) {
           return {
             success: false,
-            message: "New API Key Could not be made",
+            message: "New API Key Could not be made. Service may be down.",
             data: null,
           };
         }
