@@ -86,62 +86,6 @@ const UserProfilePage = () => {
             </div>
           </div>
 
-          {/* I don't know if we need this??
-
-          <Separator />
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Privacy Settings</h3>
-
-            <div className="rounded-md border p-4">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`h-4 w-4 rounded-sm border ${userData?.user?.isSubscriptionsPublic ? "bg-primary" : "bg-transparent"}`}
-                ></div>
-                <div>
-                  <p className="font-medium">Subscriptions</p>
-                  <p className="text-xs">
-                    {userData?.user?.isSubscriptionsPublic
-                      ? "Subscriptions are public"
-                      : "Subscriptions are private"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-md border p-4">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`h-4 w-4 rounded-sm border ${userData?.user?.isRatingsPublic ? "bg-primary" : "bg-transparent"}`}
-                ></div>
-                <div>
-                  <p className="font-medium">Ratings & Reviews</p>
-                  <p className="text-xs">
-                    {userData?.user?.isRatingsPublic
-                      ? "Ratings and reviews are public"
-                      : "Ratings and reviews are private"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-md border p-4">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`h-4 w-4 rounded-sm border ${userData?.user?.isUserDataCollectionAllowed ? "bg-primary" : "bg-transparent"}`}
-                ></div>
-                <div>
-                  <p className="font-medium">Data Collection</p>
-                  <p className="text-xs">
-                    {userData?.user?.isUserDataCollectionAllowed
-                      ? "Analytics and data collection is allowed"
-                      : "Analytics and data collection is disabled"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div> */}
-
           {isOwnProfile && (
             <Button
               onClick={() => router.push(`/settings/profile`)}
