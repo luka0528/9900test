@@ -257,12 +257,10 @@ model ServiceConsumer {
   paymentMethodId       String?
   subscriptionTierId    String
   apiKey                String?             @unique
-  
   createdAt             DateTime            @default(now())
   renewingSubscription  Boolean             @default(false)
   lastRenewed           DateTime            @default(now())
   subscriptionStatus    SubscriptionStatus  @default(ACTIVE)
-
   ratings               ServiceRating[]
   events                ConsumerEvent[]
   
@@ -402,7 +400,6 @@ enum BillingStatus {
   PENDING
   PROCESSING
   FAILED
-  RECEIVED
 }
 
 model PaymentMethod {
