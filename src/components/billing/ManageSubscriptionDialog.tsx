@@ -194,6 +194,8 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
         refetchSubscriptions();
         setApiKey(regenerateAPIKey?.data ?? "");
         toast.success("API key regenerated successfully.");
+      } else {
+        toast.error(`Error: ${regenerateAPIKey.message}`);
       }
     } catch (err) {
       console.error(err);
@@ -201,7 +203,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     }
   };
 
-  const handleCopyApiKey = async () => {
+  const handleCopyAPIKey = async () => {
     void navigator.clipboard.writeText(apiKey);
     toast.success("API key copied to clipboard.");
   };
@@ -284,7 +286,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
                   )}
                 </Button>
               </div>
-              <Button variant="outline" size="icon" onClick={handleCopyApiKey}>
+              <Button variant="outline" size="icon" onClick={handleCopyAPIKey}>
                 <Copy className="h-4 w-4" />
               </Button>
               <Button
