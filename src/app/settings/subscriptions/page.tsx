@@ -18,14 +18,23 @@ import {
 } from "~/components/ui/table";
 import { Button } from "~/components/ui/button";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
-import type { SubscriptionTier } from "@prisma/client";
+import {
+  type ServiceConsumer,
+  SubscriptionStatus,
+  type SubscriptionTier,
+} from "@prisma/client";
+import ConfirmModal from "~/components/billing/ConfirmDialog";
+import { toast } from "sonner";
 
 const SubscriptionsManagementPage: React.FC = () => {
   const { status } = useSession();
   const router = useRouter();
-  const [selectedSubscription, setSelectedSubscription] =
-    useState<SubscriptionTier | null>(null);
+  const [selectedSubscription, setSelectedSubscription] = useState<
+    (ServiceConsumer & { subscriptionTier: SubscriptionTier }) | null
+  >(null);
   const [showManageDialog, setShowManageDialog] = useState(false);
+  const [showRenewConfirmModal, setShowRenewConfirmModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -38,14 +47,147 @@ const SubscriptionsManagementPage: React.FC = () => {
     data: subscriptionsData,
     isLoading,
     error,
-    refetch,
-  } = api.user.getUserSubscriptions.useQuery();
+    refetch: refetchSubscriptionData,
+  } = api.subscription.getUserSubscriptions.useQuery(undefined, {
+    refetchOnMount: "always",
+  });
+
+  const deleteSubscriptionMutation =
+    api.subscription.deleteSubscription.useMutation();
+
+  const resumeServiceMutation =
+    api.subscription.resumeSubscription.useMutation();
+
+  const subscriptionStatusMap = (status: SubscriptionStatus) => {
+    return status
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  const serviceAction = (
+    subscription: ServiceConsumer & { subscriptionTier: SubscriptionTier },
+  ) => {
+    if (subscription.subscriptionStatus === SubscriptionStatus.ACTIVE) {
+      return (
+        <Button
+          variant="default"
+          size="sm"
+          className="w-3/4 max-w-[70px]"
+          onClick={() => {
+            setSelectedSubscription(subscription);
+            setShowManageDialog(true);
+          }}
+        >
+          Manage
+        </Button>
+      );
+    } else if (
+      subscription.subscriptionStatus === SubscriptionStatus.CANCELLED ||
+      subscription.subscriptionStatus === SubscriptionStatus.PAYMENT_FAILED
+    ) {
+      return (
+        <>
+          <Button
+            variant="default"
+            size="sm"
+            className="mr-2 w-3/4 max-w-[70px]"
+            onClick={() => {
+              router.push(
+                `/service/${subscription.subscriptionTier.serviceId}/purchase`,
+              );
+            }}
+          >
+            {subscription.subscriptionStatus === "PAYMENT_FAILED"
+              ? "Retry Payment"
+              : "Renew"}
+          </Button>
+          {subscription.subscriptionStatus === SubscriptionStatus.CANCELLED && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="mt-2 w-3/4 max-w-[70px]"
+              onClick={() => {
+                setSelectedSubscription(subscription);
+                setShowDeleteConfirmModal(true);
+              }}
+            >
+              {"Delete"}
+            </Button>
+          )}
+        </>
+      );
+    } else if (
+      subscription.subscriptionStatus ===
+      SubscriptionStatus.PENDING_CANCELLATION
+    ) {
+      return (
+        <Button
+          variant="default"
+          size="sm"
+          className="w-3/4 max-w-[70px]"
+          onClick={() => {
+            setSelectedSubscription(subscription);
+            setShowRenewConfirmModal(true);
+          }}
+        >
+          Resume
+        </Button>
+      );
+    }
+  };
+
+  const handleServiceResume = async () => {
+    if (!selectedSubscription) return;
+    try {
+      const res = await resumeServiceMutation.mutateAsync({
+        subscriptionTierId: selectedSubscription.subscriptionTierId,
+      });
+      if (!res.success) {
+        toast.error(`Failed to resume subscription: ${res.message}`);
+        return;
+      }
+      void refetchSubscriptionData();
+      toast.success("Subscription resumed successfully.");
+    } catch (error) {
+      console.error("Error resuming service:", error);
+      toast.error("Failed to resume subscription.");
+    }
+  };
+
+  const getNextBillingDate = (
+    subscription: ServiceConsumer & { subscriptionTier: SubscriptionTier },
+  ) => {
+    if (subscription.renewingSubscription) {
+      const res = new Date(
+        new Date(subscription.lastRenewed).setMonth(
+          new Date(subscription.lastRenewed).getMonth() + 1,
+        ),
+      ).toLocaleDateString(undefined, {
+        year: "2-digit",
+        month: "2-digit",
+        day: "2-digit",
+      });
+
+      if (
+        subscription.subscriptionStatus ===
+        SubscriptionStatus.PENDING_CANCELLATION
+      ) {
+        return `${res} (End)`;
+      } else {
+        return res;
+      }
+    }
+    return "-";
+  };
 
   if (isLoading) {
     return (
-      <div className="flex items-center space-x-2 p-4">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Loading subscriptions...</span>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-10 w-10 animate-spin text-white" />
+          <span className="mt-4 text-white">Loading subscriptions...</span>
+        </div>
       </div>
     );
   }
@@ -67,54 +209,63 @@ const SubscriptionsManagementPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>Service</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Payment Method</TableHead>
-                <TableHead>Next Billing Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead className="whitespace-nowrap">Service</TableHead>
+                <TableHead className="w-[100px] whitespace-nowrap">
+                  Tier
+                </TableHead>
+                <TableHead className="w-[80px] whitespace-nowrap">
+                  Price
+                </TableHead>
+                <TableHead className="w-[150px] whitespace-nowrap">
+                  Payment Method
+                </TableHead>
+                <TableHead className="w-[130px]">Next Billing Date</TableHead>
+                <TableHead>Auto Renewal</TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
+                <TableHead className="whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {subscriptionsData.subscriptions.map((subscription) => (
-                <TableRow key={subscription.subscriptionTier.id}>
-                  <TableCell>
-                    {subscription.subscriptionTier.service.name || "N/A"}
-                  </TableCell>
-                  <TableCell>{subscription.subscriptionTier.name}</TableCell>
-                  <TableCell>
-                    ${subscription.subscriptionTier.price.toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    {subscription.paymentMethod
-                      ? subscription.paymentMethod.cardBrand
-                        ? `**** **** **** ${subscription.paymentMethod.last4}`
-                        : subscription.paymentMethod.stripePaymentId
-                      : "N/A"}
-                  </TableCell>
-                  <TableCell>{"TBA"}</TableCell>
-                  <TableCell>
-                    {/* For simplicity, assume active if a subscription exists */}
-                    Active
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedSubscription(subscription.subscriptionTier);
-                        setShowManageDialog(true);
-                      }}
-                    >
-                      Manage
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {subscriptionsData.subscriptions
+                .sort((a, b) => a.id.localeCompare(b.id))
+                .map((subscription) => (
+                  <TableRow key={subscription.subscriptionTier.id}>
+                    <TableCell className="text-[13.5px]">
+                      {subscription.subscriptionTier.service.name || "N/A"}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {subscription.subscriptionTier.name}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {subscription.subscriptionTier.price !== 0
+                        ? `$${subscription.subscriptionTier.price.toFixed(2)}`
+                        : `Free`}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {subscription.paymentMethod
+                        ? subscription.paymentMethod.cardBrand
+                          ? `**** **** **** ${subscription.paymentMethod.last4}`
+                          : subscription.paymentMethod.stripePaymentId
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {getNextBillingDate(subscription)}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {subscription.renewingSubscription ? "Yes" : "No"}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {subscriptionStatusMap(subscription.subscriptionStatus) ||
+                        "Unknown"}
+                    </TableCell>
+                    <TableCell className="text-[13.5px]">
+                      {serviceAction(subscription)}
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </CardContent>
@@ -124,10 +275,39 @@ const SubscriptionsManagementPage: React.FC = () => {
         <ManageSubscriptionDialog
           isOpen={showManageDialog}
           onClose={() => setShowManageDialog(false)}
-          subscriptionTier={selectedSubscription}
-          refetchSubscriptions={refetch}
+          serviceConsumer={selectedSubscription}
+          refetchSubscriptions={refetchSubscriptionData}
         />
       )}
+
+      <ConfirmModal
+        open={showRenewConfirmModal}
+        title="Resume Subscription"
+        description="Are you sure you want to resume this subscription?"
+        onConfirm={() => {
+          void handleServiceResume();
+          setShowRenewConfirmModal(false);
+        }}
+        onCancel={() => {
+          setShowRenewConfirmModal(false);
+        }}
+      />
+
+      <ConfirmModal
+        open={showDeleteConfirmModal}
+        title="Delete Subscription"
+        description="You are already cancelled. Would you also like to delete this service from your list?"
+        onConfirm={async () => {
+          await deleteSubscriptionMutation.mutateAsync({
+            subscriptionTierId: selectedSubscription?.subscriptionTierId ?? "",
+          });
+          void refetchSubscriptionData();
+          setShowDeleteConfirmModal(false);
+        }}
+        onCancel={() => {
+          setShowDeleteConfirmModal(false);
+        }}
+      />
     </div>
   );
 };

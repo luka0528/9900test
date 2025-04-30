@@ -12,6 +12,13 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "~/components/ui/tooltip";
 
 // Helper to map billing status to a badge variant
 function getStatusVariant(
@@ -32,7 +39,12 @@ function getStatusVariant(
 }
 
 const BillingHistory: React.FC = () => {
-  const { data, isLoading, error } = api.user.getBillingHistory.useQuery();
+  const { status } = useSession();
+
+  const { data, isLoading, error } =
+    api.subscription.getBillingHistory.useQuery(undefined, {
+      enabled: status == "authenticated",
+    });
 
   // 1) Sort state: field can be "date" or "to"; order can be "asc" or "desc"
   const [sortField, setSortField] = useState<"date" | "to">("date");
@@ -108,7 +120,9 @@ const BillingHistory: React.FC = () => {
             {sortField === "to" && (sortOrder === "asc" ? " ↑" : " ↓")}
           </TableHead>
           <TableHead>Amount</TableHead>
-          <TableHead>Description</TableHead>
+          <TableHead className="w-[220px]">
+            Description (Service | Tier)
+          </TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Auto Renewal</TableHead>
           <TableHead>Renewal Date</TableHead>
@@ -123,14 +137,30 @@ const BillingHistory: React.FC = () => {
             <TableCell>{`$${receipt.amount}`}</TableCell>
             <TableCell>{receipt.description}</TableCell>
             <TableCell>
-              <Badge variant={getStatusVariant(receipt.status)}>
-                {receipt.status}
-              </Badge>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href={`/settings/subscriptions`}>
+                    <Badge
+                      variant={getStatusVariant(receipt.status)}
+                      className="mx-auto block w-16 text-center"
+                    >
+                      {receipt.status}
+                    </Badge>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center">
+                  {receipt.status === "FAILED"
+                    ? "Click to retry payment."
+                    : "Click to view subscription details."}
+                </TooltipContent>
+              </Tooltip>
             </TableCell>
             <TableCell>{`Yes`}</TableCell>
             <TableCell>
               {new Date(
-                Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000,
+                new Date(receipt.date).setMonth(
+                  new Date(receipt.date).getMonth() + 1,
+                ),
               ).toLocaleDateString()}
             </TableCell>
           </TableRow>

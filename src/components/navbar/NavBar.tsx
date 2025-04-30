@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "~/lib/utils";
 import { ThemeToggle } from "~/components/theme/theme-toggle";
+import { NotificationDropdown } from "~/components/NotificationDropdown";
 
 const serviceNavigationItems = [
   {
@@ -48,87 +49,98 @@ export default function NavBar() {
   const router = useRouter();
 
   return (
-    <div className="flex h-20 w-full items-center justify-between border-b-2 border-border bg-background px-8">
-      <div className="flex items-center justify-start gap-4">
-        <h1 className="text-2xl font-bold">LOGO</h1>
-        <NavigationMenu>
-          <NavigationMenuList>
-            <NavigationMenuItem>
-              <NavigationMenuTrigger>Services</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                  {serviceNavigationItems.map((item) => (
-                    <ListItem
-                      key={item.title}
-                      title={item.title}
-                      href={item.href}
-                    >
-                      {item.description}
-                    </ListItem>
-                  ))}
-                </ul>
-              </NavigationMenuContent>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <Link href="/marketplace" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                  Marketplace
-                </NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
+    <nav className="border-b">
+      <div className="flex h-16 items-center px-4">
+        <div className="flex items-center justify-start gap-4">
+          <h1 className="text-2xl font-bold">LOGO</h1>
+          <NavigationMenu>
+            <NavigationMenuList>
+              <NavigationMenuItem>
+                <NavigationMenuTrigger
+                  onPointerMove={(e) => e.preventDefault()}
+                >
+                  Services
+                </NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                    {serviceNavigationItems.map((item) => (
+                      <ListItem
+                        key={item.title}
+                        title={item.title}
+                        href={item.href}
+                      >
+                        {item.description}
+                      </ListItem>
+                    ))}
+                  </ul>
+                </NavigationMenuContent>
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <Link href="/marketplace" legacyBehavior passHref>
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    Marketplace
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
 
-            <NavigationMenuItem>
-              <Link href="/analytics" legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                  Analytics
-                </NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
-          </NavigationMenuList>
-        </NavigationMenu>
-      </div>
-      <div className="flex items-center justify-end gap-5">
-        <ThemeToggle />
-        {session ? (
-          <>
-            <p className="text-lg font-medium">{session?.user?.name}</p>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Avatar className="transition-transform duration-300 hover:scale-110 hover:cursor-pointer">
-                  <AvatarImage src={session?.user?.image ?? undefined} />
-                  <AvatarFallback>
-                    {session?.user?.name?.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={40} className="w-72">
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={() => router.push(`/settings/profile`)}
+              <NavigationMenuItem>
+                <Link href="/analytics" legacyBehavior passHref>
+                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    Analytics
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
+        </div>
+        <div className="ml-auto flex items-center space-x-4">
+          <ThemeToggle />
+          <NotificationDropdown />
+          {session ? (
+            <>
+              <p className="text-lg font-medium">{session?.user?.name}</p>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="transition-transform duration-300 hover:scale-110 hover:cursor-pointer">
+                    <AvatarImage src={session?.user?.image ?? undefined} />
+                    <AvatarFallback>
+                      {session?.user?.name?.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={40}
+                  className="w-72"
                 >
-                  <User className="h-4 w-4" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={async () => {
-                    await signOut({ redirect: false });
-                    router.push(`/marketplace`);
-                  }}
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        ) : (
-          <Button variant="ghost" onClick={() => signIn()}>
-            Login
-          </Button>
-        )}
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/settings/profile`)}
+                  >
+                    <User className="h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={async () => {
+                      await signOut({ redirect: false });
+                      router.push(`/marketplace`);
+                    }}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Button variant="ghost" onClick={() => signIn()}>
+              Login
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
+    </nav>
   );
 }
 

@@ -1,14 +1,17 @@
 import { TRPCError } from "@trpc/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { RestMethod } from "@prisma/client";
-
 import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
-import { BillingStatus } from "@prisma/client";
+import {
+  getRatingForService,
+  getRevenueTotalForService,
+  getRevenueMonthlyForService,
+} from "~/lib/analytics";
+import { notifyAllServiceConsumers } from "~/lib/notifications";
 
 // make a max float string
 const MAX_FLOAT = "3.4028235e+38";
@@ -18,8 +21,10 @@ export const serviceRouter = createTRPCRouter({
       z.object({
         name: z.string().min(1),
         version: z.string().min(1),
+        baseEndpoint: z.string().min(1),
         description: z.string().min(1),
         tags: z.array(z.string()).default([]),
+        masterAPIKey: z.string().min(1),
         subscriptionTiers: z.array(
           z.object({
             name: z.string().min(1),
@@ -31,14 +36,11 @@ export const serviceRouter = createTRPCRouter({
           z.object({
             title: z.string().min(1),
             description: z.string().min(1),
-            rows: z.array(
-              z
-                .object({
-                  routeName: z.string().min(1),
-                  description: z.string().min(1),
-                  method: z.nativeEnum(RestMethod),
-                })
-                .strict(),
+            endpoints: z.array(
+              z.object({
+                path: z.string().min(1),
+                description: z.string().min(1),
+              }),
             ),
           }),
         ),
@@ -51,10 +53,14 @@ export const serviceRouter = createTRPCRouter({
           message: "You must be logged in to create a service",
         });
       }
-
+      console.log(
+        `API KEY: ------------------------------------${input.masterAPIKey}------------------------------------`,
+      );
       const service = await ctx.db.service.create({
         data: {
           name: input.name,
+          masterAPIKey: input.masterAPIKey,
+          baseEndpoint: input.baseEndpoint,
           tags: {
             connectOrCreate: input.tags.map((tag) => ({
               where: { name: tag },
@@ -89,11 +95,10 @@ export const serviceRouter = createTRPCRouter({
                 create: input.contents.map((content) => ({
                   title: content.title,
                   description: content.description,
-                  rows: {
-                    create: content.rows.map((row) => ({
-                      method: row.method,
-                      routeName: row.routeName,
-                      description: row.description,
+                  endpoints: {
+                    create: content.endpoints.map((endpoint) => ({
+                      path: endpoint.path,
+                      description: endpoint.description,
                     })),
                   },
                 })),
@@ -156,6 +161,12 @@ export const serviceRouter = createTRPCRouter({
       });
 
       // TODO for future ticket: finally, notify all subscribers that this service is scheduled to be deleted
+      await notifyAllServiceConsumers(
+        ctx.db,
+        ctx.session.user.id,
+        service.id,
+        `Service ${service.name} has now been deleted, please adjust your subscriptions accordingly.`,
+      );
 
       return { success: true };
     }),
@@ -165,6 +176,7 @@ export const serviceRouter = createTRPCRouter({
       z.object({
         serviceId: z.string().min(1),
         newName: z.string().min(1),
+        baseEndpoint: z.string().min(1),
         subscriptionTiers: z.array(
           z.object({
             id: z.string().min(1),
@@ -205,6 +217,7 @@ export const serviceRouter = createTRPCRouter({
           where: { id: input.serviceId },
           data: {
             name: input.newName,
+            baseEndpoint: input.baseEndpoint,
             subscriptionTiers: {
               deleteMany: {
                 id: {
@@ -272,7 +285,7 @@ export const serviceRouter = createTRPCRouter({
   }),
 
   getAllByUserId: protectedProcedure.query(async ({ ctx }) => {
-    const services = await ctx.db.service.findMany({
+    const serviceData = await ctx.db.service.findMany({
       where: {
         owners: {
           some: {
@@ -281,24 +294,80 @@ export const serviceRouter = createTRPCRouter({
         },
       },
       include: {
-        tags: true,
+        owners: {
+          select: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        tags: {
+          select: {
+            name: true,
+          },
+        },
         versions: {
           orderBy: {
             version: "desc",
+          },
+          take: 1,
+          select: {
+            version: true,
+            id: true,
+          },
+        },
+        subscriptionTiers: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            consumers: true,
+            billingReceipts: {
+              where: {
+                status: "PAID",
+              },
+              select: {
+                amount: true,
+              },
+            },
           },
         },
       },
     });
 
-    const res = services.map((service) => ({
-      id: service.id,
-      name: service.name,
-      owner: ctx.session.user.name,
-      tags: service.tags.map((tag) => tag.name),
-      latestVersion: service.versions[0]!,
-    }));
+    const allServiceData = await Promise.all(
+      serviceData.map(async (service) => ({
+        id: service.id,
+        name: service.name,
+        createdAt: service.createdAt,
+        updatedAt: service.updatedAt,
+        owners: service.owners.map((owner) => owner.user.name ?? ""),
+        tags: service.tags.map((tag) => tag.name),
+        latestVersion: {
+          id: service.versions[0]?.id ?? "",
+          version: service.versions[0]?.version ?? "",
+        },
+        rating: await getRatingForService(service.id),
+        revenue: {
+          total: await getRevenueTotalForService(service.id),
+          monthly: await getRevenueMonthlyForService(service.id),
+        },
+        tiers: service.subscriptionTiers.map((tier) => ({
+          id: tier.id,
+          name: tier.name,
+          price: tier.price,
+          numCustomers: tier.consumers.length,
+          revenue: tier.billingReceipts.reduce(
+            (acc, receipt) => acc + receipt.amount,
+            0,
+          ),
+        })),
+      })),
+    );
 
-    return res;
+    return allServiceData;
   }),
 
   editName: protectedProcedure
@@ -346,6 +415,7 @@ export const serviceRouter = createTRPCRouter({
         select: {
           name: true,
           tags: true,
+          baseEndpoint: true,
           versions: {
             select: {
               version: true,
@@ -362,6 +432,7 @@ export const serviceRouter = createTRPCRouter({
               consumers: {
                 select: {
                   userId: true,
+                  subscriptionStatus: true,
                 },
               },
               name: true,
@@ -439,7 +510,13 @@ export const serviceRouter = createTRPCRouter({
         where: {
           id: input,
         },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          baseEndpoint: true,
+          masterAPIKey: true,
+          createdAt: true,
+          updatedAt: true,
           subscriptionTiers: {
             include: {
               features: true,
@@ -450,7 +527,12 @@ export const serviceRouter = createTRPCRouter({
             include: {
               contents: {
                 include: {
-                  rows: true,
+                  endpoints: {
+                    include: {
+                      operations: true,
+                    },
+                  },
+                  schemas: true,
                 },
               },
             },
@@ -777,6 +859,11 @@ export const serviceRouter = createTRPCRouter({
               id: true,
               name: true,
               price: true,
+              consumers: {
+                where: {
+                  subscriptionStatus: "ACTIVE",
+                },
+              },
             },
           },
           versions: {
@@ -835,254 +922,6 @@ export const serviceRouter = createTRPCRouter({
       }
 
       return { services, nextCursor };
-    }),
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  subscribeToTier: protectedProcedure
-    .input(
-      z.object({
-        serviceId: z.string(),
-        tierId: z.string(),
-        paymentMethodId: z.string(),
-        autoRenewal: z.boolean().default(false),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { serviceId, tierId, paymentMethodId, autoRenewal } = input;
-
-      // 1. Validate the service
-      const service = await ctx.db.service.findUnique({
-        where: { id: serviceId },
-        include: {
-          subscriptionTiers: true,
-          owners: true,
-        },
-      });
-      if (!service) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Service not found",
-        });
-      }
-
-      // 2. Validate the tier
-      const newTier = service.subscriptionTiers.find(
-        (tier) => tier.id === tierId,
-      );
-      if (!newTier) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Tier not found",
-        });
-      }
-
-      // 3. Handle subscription logic
-      const existingSubscription = await ctx.db.serviceConsumer.findFirst({
-        where: {
-          userId: ctx.session.user.id,
-          subscriptionTier: {
-            serviceId: service.id,
-          },
-        },
-      });
-
-      if (existingSubscription) {
-        if (existingSubscription.id === newTier.id) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Cannot subscribe to the same tier",
-          });
-        }
-        await ctx.db.serviceConsumer.update({
-          where: { id: existingSubscription.id },
-          data: {
-            subscriptionTierId: newTier.id,
-            paymentMethodId: paymentMethodId,
-            lastRenewed: new Date(),
-            autoRenewal: autoRenewal,
-            subscriptionStartDate: new Date(),
-          },
-        });
-      } else {
-        await ctx.db.serviceConsumer.create({
-          data: {
-            userId: ctx.session.user.id,
-            subscriptionTierId: newTier.id,
-            paymentMethodId: newTier.price ? paymentMethodId : undefined,
-            autoRenewal: autoRenewal,
-            subscriptionStartDate: new Date(),
-          },
-        });
-      }
-
-      // 5. Hhandle payment logic
-      // a) Verify the payment method belongs to the user
-      const paymentMethod = await ctx.db.paymentMethod.findUnique({
-        where: { id: paymentMethodId },
-      });
-      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Payment method not found or doesn't belong to user",
-        });
-      }
-
-      // b) TODO: Call Stripe
-
-      // c) Create a billing receipt
-      await ctx.db.billingReceipt.create({
-        data: {
-          amount: newTier.price,
-          description: `Subscription to ${newTier.name}`,
-          fromId: service.owners[0]?.userId ?? "",
-          toId: ctx.session.user.id ?? "",
-          status: BillingStatus.PAID,
-          paymentMethodId: paymentMethod.id,
-          subscriptionTierId: newTier.id,
-        },
-      });
-
-      return { success: true };
-    }),
-
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  updateSubscriptionPaymentMethod: protectedProcedure
-    .input(
-      z.object({
-        subscriptionTierId: z.string(), // which tier the user is subscribed to
-        paymentMethodId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { subscriptionTierId, paymentMethodId } = input;
-
-      // 1) Find the user's subscription
-      const subscription = await ctx.db.serviceConsumer.findFirst({
-        where: {
-          userId: ctx.session.user.id,
-          subscriptionTierId: subscriptionTierId,
-        },
-      });
-      if (!subscription) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Subscription not found for the given tier",
-        });
-      }
-
-      // 2) Validate payment method
-      if (paymentMethodId == subscription.paymentMethodId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Payment method is the same as the current one",
-        });
-      }
-
-      const paymentMethod = await ctx.db.paymentMethod.findUnique({
-        where: { id: paymentMethodId },
-      });
-      if (!paymentMethod || paymentMethod.userId !== ctx.session.user.id) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Payment method not found or doesn't belong to user",
-        });
-      }
-
-      // 3) (Optional) Handle additional logic (e.g. update auto-renew, create a billing receipt, etc.)
-
-      // 4) Update the subscription with the new payment method
-      // NOTE: This requires that your ServiceConsumer model has a field for paymentMethodId.
-      // If not, you'll need to add it in your Prisma schema.
-      await ctx.db.serviceConsumer.update({
-        where: { id: subscription.id, subscriptionTierId: subscriptionTierId },
-        data: { paymentMethodId: paymentMethod.id },
-      });
-
-      return { success: true };
-    }),
-
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  /* ~~~~~~~~~ TODO: COMPLETE FUNCTIONALITY ~~~~~~~~~ */
-  unsubscribeToTier: protectedProcedure
-    .input(
-      z.object({
-        subscriptionTierId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { subscriptionTierId } = input;
-
-      // 1) Find the subscription
-      const subscription = await ctx.db.serviceConsumer.findFirst({
-        where: {
-          userId: ctx.session.user.id,
-          subscriptionTierId,
-        },
-      });
-      if (!subscription) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Subscription not found",
-        });
-      }
-
-      // 2) Delete the subscription record
-      await ctx.db.serviceConsumer.delete({
-        where: { id: subscription.id },
-      });
-
-      // 3) (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
-
-      return { success: true };
-    }),
-
-  switchTier: protectedProcedure
-    .input(
-      z.object({
-        oldTierId: z.string(),
-        newTierId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { oldTierId, newTierId } = input;
-
-      // 1) Find the user's subscription
-      const subscription = await ctx.db.serviceConsumer.findFirst({
-        where: {
-          userId: ctx.session.user.id,
-          subscriptionTierId: oldTierId,
-        },
-      });
-      if (!subscription) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Subscription not found for the given tier",
-        });
-      }
-
-      // 2) Validate the new tier
-      const newTier = await ctx.db.subscriptionTier.findUnique({
-        where: { id: newTierId },
-      });
-      if (!newTier) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "New tier not found",
-        });
-      }
-
-      // 3) Update the subscription with the new tier
-      await ctx.db.serviceConsumer.update({
-        where: { id: subscription.id },
-        data: { subscriptionTierId: newTier.id },
-      });
-      // (Optional) If you want to record a final BillingReceipt or mark something in your logs, do so here.
-
-      return { success: true };
     }),
 
   getAllVersionChangelogs: publicProcedure
@@ -1540,5 +1379,61 @@ export const serviceRouter = createTRPCRouter({
             ? "Found related services"
             : "No related services found",
       };
+    }),
+
+  deleteService: protectedProcedure
+    .input(z.object({ serviceId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      // Check that the user owns this service
+      const service = await ctx.db.service.findUnique({
+        where: {
+          id: input.serviceId,
+          owners: {
+            some: {
+              userId: ctx.session.user.id,
+            },
+          },
+        },
+        include: {
+          subscriptionTiers: {
+            include: {
+              consumers: true,
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message:
+            "Service not found or you don't have permission to delete it",
+        });
+      }
+
+      // Notify all consumers about the service deletion
+      const consumers = service.subscriptionTiers.flatMap(
+        (tier) => tier.consumers,
+      );
+      await Promise.all(
+        consumers.map((consumer) =>
+          ctx.db.notification.create({
+            data: {
+              recipientId: consumer.userId,
+              senderId: ctx.session.user.id,
+              content: `The service "${service.name}" has been deleted. Your subscription has been cancelled.`,
+            },
+          }),
+        ),
+      );
+
+      // Delete the service (this will cascade delete all related records)
+      await ctx.db.service.delete({
+        where: {
+          id: input.serviceId,
+        },
+      });
+
+      return { success: true };
     }),
 });

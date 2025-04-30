@@ -54,4 +54,24 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = "Button";
 
-export { Button, buttonVariants };
+const GlowingButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button";
+    return (
+      <div className="group relative inline-flex">
+        <div className="animated-background animate-tilt absolute -inset-px bg-gradient-to-r from-[#44BCFF] via-[#FF44EC] to-[#FF675E] opacity-70 blur-md transition-all duration-1000 group-hover:-inset-1 group-hover:opacity-100"></div>
+        <Comp
+          className={cn(
+            buttonVariants({ variant, size, className }),
+            "relative",
+          )}
+          ref={ref}
+          {...props}
+        />
+      </div>
+    );
+  },
+);
+GlowingButton.displayName = "GlowingButton";
+
+export { Button, GlowingButton, buttonVariants };

@@ -30,7 +30,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 
 export const AnalyticsChart = () => {
   const { data: serviceRevenueData = [] } =
-    api.analytics.getRevenueOverTimeByService.useQuery();
+    api.analytics.getRevenueGraphByUser.useQuery();
 
   // Sets-up the chart configuration
   const chartConfig = React.useMemo(() => {
@@ -38,8 +38,8 @@ export const AnalyticsChart = () => {
       "hsl(var(--chart-1))",
       "hsl(var(--chart-2))",
       "hsl(var(--chart-3))",
-      "hsl(var(--chart-2))",
-      "hsl(var(--chart-1))",
+      "hsl(var(--chart-4))",
+      "hsl(var(--chart-5))",
     ];
 
     if (!serviceRevenueData || serviceRevenueData.length === 0) {
@@ -47,20 +47,22 @@ export const AnalyticsChart = () => {
     }
 
     // Remove the 'date' key from the legend.
-    const serviceTypes = Object.keys(serviceRevenueData[0]!).filter(
-      (key) => key !== "date",
-    );
+    const serviceTypes = Object.keys(serviceRevenueData[0]!)
+      .filter((key) => key !== "date")
+      .sort();
 
     type ChartConfigPoint = { label: string; color: string };
     const config: Record<string, ChartConfigPoint> = {};
     for (let i = 0; i < serviceTypes.length; i++) {
-      const service = serviceTypes[i]!;
+      const service = serviceTypes[i] ?? "";
+
       config[service] = {
         label: service,
-        color: colors[i % colors.length]!,
+        color: colors[i % colors.length] ?? "#ccc",
       };
     }
 
+    console.log("🤩 config", config);
     return config as ChartConfig;
   }, [serviceRevenueData]);
 
@@ -133,7 +135,7 @@ export const AnalyticsChart = () => {
               {Object.entries(chartConfig).map(([key, config]) => (
                 <linearGradient
                   key={key}
-                  id={`fill${key}`}
+                  id={`fill-${key.replace(/\s+/g, "-")}`}
                   x1="0"
                   y1="0"
                   x2="0"
@@ -176,6 +178,7 @@ export const AnalyticsChart = () => {
               cursor={false}
               content={
                 <ChartTooltipContent
+                  className="w-[150px]"
                   labelFormatter={(value: string | number | Date) => {
                     return new Date(value).toLocaleDateString("en-US", {
                       month: "short",
@@ -191,9 +194,8 @@ export const AnalyticsChart = () => {
                 key={key}
                 dataKey={key}
                 type={timeRange === "30d" ? "monotone" : "step"}
-                fill={`url(#fill${key})`}
+                fill={`url(#fill-${key.replace(/\s+/g, "-")})`}
                 stroke={config.color}
-                stackId="a"
               />
             ))}
           </AreaChart>

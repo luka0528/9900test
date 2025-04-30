@@ -12,26 +12,50 @@ import {
   AlertDialogAction,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
-import { CreditCard, Edit, Trash } from "lucide-react";
+import {
+  Copy,
+  CreditCard,
+  Edit,
+  Eye,
+  EyeOff,
+  Loader2,
+  RefreshCw,
+  Trash,
+} from "lucide-react";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import PaymentMethodDialog from "./PaymentMethodDialog";
 import TiersGrid from "./TiersGrid";
-import type { SubscriptionTier, PaymentMethod } from "@prisma/client";
+import type {
+  SubscriptionTier,
+  PaymentMethod,
+  ServiceConsumer,
+} from "@prisma/client";
+import { useMakePayment } from "~/lib/hooks/useMakePayment";
+import { Input } from "../ui/input";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import ConfirmModal from "./ConfirmDialog";
 
 interface ManageSubscriptionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  subscriptionTier: SubscriptionTier; // The currently subscribed tier
+  serviceConsumer: ServiceConsumer & { subscriptionTier: SubscriptionTier };
   refetchSubscriptions: () => void;
 }
 
 const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   isOpen,
   onClose,
-  subscriptionTier,
+  serviceConsumer,
   refetchSubscriptions,
 }) => {
+  const session = useSession();
+  const router = useRouter();
+  if (!session.status || !session.data?.user.id) {
+    router.push("/login");
+  }
+
   // Local states
   const [showPaymentDialog, setShowPaymentDialog] = useState<boolean>(false);
   const [showTierDialog, setShowTierDialog] = useState<boolean>(false);
@@ -41,20 +65,25 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     string | null
   >(null);
   const [selectedNewTier, setSelectedNewTier] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string>("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
 
-  // Query service details for this subscription
-  const { data: serviceConsumer, refetch: refetchServiceConsumer } =
-    api.service.getServiceConsumerByTierId.useQuery({
-      subscriptionTierId: subscriptionTier.id,
-    });
-
+  // Query service details; only run when the consumer is available
   const { data: service } = api.service.getServiceById.useQuery(
-    subscriptionTier.serviceId,
+    serviceConsumer.subscriptionTier.serviceId,
   );
 
   // Query saved payment methods
   const { data: paymentMethodsData, status: getPaymentMethodsStatus } =
-    api.user.getPaymentMethods.useQuery();
+    api.subscription.getPaymentMethods.useQuery();
+
+  const { data: priceData } = api.subscription.isNewTierLower.useQuery({
+    oldTierId: serviceConsumer.subscriptionTier.id,
+    newTierId: selectedNewTier ?? "",
+  });
+
+  const { makePayment, isLoading: paymentLoading } = useMakePayment();
 
   useEffect(() => {
     if (getPaymentMethodsStatus === "success" && paymentMethodsData) {
@@ -64,23 +93,25 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
 
   useEffect(() => {
     if (serviceConsumer) {
-      setSelectedNewTier(subscriptionTier.id);
-    }
-  }, [serviceConsumer, subscriptionTier]);
-
-  useEffect(() => {
-    if (serviceConsumer && serviceConsumer.paymentMethodId) {
-      setSelectedPaymentMethod(serviceConsumer.paymentMethodId);
+      setApiKey(serviceConsumer.apiKey ?? "");
+      setSelectedNewTier(serviceConsumer.subscriptionTier.id);
+      setAutoRenew(serviceConsumer.renewingSubscription);
+      if (serviceConsumer.paymentMethodId) {
+        setSelectedPaymentMethod(serviceConsumer.paymentMethodId);
+      }
     }
   }, [serviceConsumer]);
 
   // Mutation for updating payment method
   const updatePaymentMethodMutation =
-    api.user.updateSubscriptionPaymentMethod.useMutation();
+    api.subscription.updateSubscriptionPaymentMethod.useMutation();
   // Mutation for switching tiers
-  const switchTierMutation = api.service.switchTier.useMutation();
+  const switchSubscriptionTierMutation =
+    api.subscription.switchSubscriptionTier.useMutation();
   // Mutation for unsubscribing
-  const unsubscribeMutation = api.service.unsubscribeToTier.useMutation();
+  const unsubscribeMutation = api.subscription.unsubscribeToTier.useMutation();
+  const regenerateApiKeyMutation =
+    api.subscription.regenerateAPIKey.useMutation();
 
   // Handler for updating the payment method
   const handlePaymentMethodUpdate = async () => {
@@ -90,28 +121,40 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     }
     try {
       await updatePaymentMethodMutation.mutateAsync({
-        subscriptionTierId: subscriptionTier.id,
+        subscriptionTierId: serviceConsumer.subscriptionTier.id,
         paymentMethodId: selectedPaymentMethod,
+        autoRenewal: autoRenew,
         // autoRenewal: autoRenew, // Uncomment if your mutation accepts autoRenewal
       });
       toast.success("Payment method updated successfully.");
       refetchSubscriptions();
-      await refetchServiceConsumer();
       setShowPaymentDialog(false);
+      onClose();
     } catch {
       toast.error("Failed to update payment method.");
     }
   };
 
   // Handler for switching tiers
-  const handleSwitchTier = async () => {
+  const handleSwitchSubscriptionTier = async () => {
     if (!selectedNewTier) {
       toast.error("Please select a new tier.");
       return;
     }
     try {
-      await switchTierMutation.mutateAsync({
-        oldTierId: subscriptionTier.id,
+      if (!priceData?.isLower) {
+        const res = await makePayment(
+          selectedNewTier,
+          selectedPaymentMethod ?? "",
+        );
+        if (!res) {
+          toast.error("Payment failed. Please try again.");
+          return;
+        }
+      }
+
+      await switchSubscriptionTierMutation.mutateAsync({
+        oldTierId: serviceConsumer.subscriptionTier.id,
         newTierId: selectedNewTier,
       });
       toast.success("Subscription tier updated successfully.");
@@ -127,7 +170,7 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
   const handleCancelSubscription = async () => {
     try {
       await unsubscribeMutation.mutateAsync({
-        subscriptionTierId: subscriptionTier.id,
+        subscriptionTierId: serviceConsumer.subscriptionTier.id,
       });
       toast.success("Subscription cancelled successfully.");
       refetchSubscriptions();
@@ -138,20 +181,128 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
     }
   };
 
+  const handleRegenerateApiKey = async () => {
+    try {
+      if (!session.data?.user.id) {
+        return;
+      }
+      const regenerateAPIKey = await regenerateApiKeyMutation.mutateAsync({
+        userId: session.data?.user.id,
+        subscriptionTierId: serviceConsumer.subscriptionTierId,
+      });
+      if (regenerateAPIKey.success) {
+        refetchSubscriptions();
+        setApiKey(regenerateAPIKey?.data ?? "");
+        toast.success("API key regenerated successfully.");
+      } else {
+        toast.error(`Error: ${regenerateAPIKey.message}`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to regenerate API key.");
+    }
+  };
+
+  const handleCopyAPIKey = async () => {
+    void navigator.clipboard.writeText(apiKey);
+    toast.success("API key copied to clipboard.");
+  };
+
+  const nextBillingDate = serviceConsumer.renewingSubscription
+    ? new Date(
+        new Date(serviceConsumer.lastRenewed).setDate(
+          new Date(serviceConsumer.lastRenewed).getDate() + 30,
+        ),
+      ).toLocaleDateString("en-GB")
+    : "Not a recurring subscription";
+
+  if (paymentLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-10 w-10 animate-spin text-white" />
+          <span className="mt-4 text-white">Processing payment...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (paymentLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-10 w-10 animate-spin text-white" />
+          <span className="mt-4 text-white">Processing payment...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Main Manage Subscription Dialog */}
       <AlertDialog open={isOpen} onOpenChange={onClose}>
-        <AlertDialogContent className="min-h-[40vh] max-w-2xl space-y-6 p-6">
+        <AlertDialogContent className="min-h-[40vh] max-w-2xl space-y-4 p-6">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-bold">
               Manage Subscription
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm text-gray-500">
-              Subscription for <strong>{subscriptionTier.name}</strong> at $
-              {subscriptionTier.price.toFixed(2)}. Next billing date: TBA.
+              <span>
+                {"Subscription tier: "}
+                <strong>{serviceConsumer.subscriptionTier.name}</strong>
+                {"\n"}
+              </span>
+            </AlertDialogDescription>
+            <AlertDialogDescription>
+              <span>
+                {` Next billing date: `}
+                <strong> {`${nextBillingDate}`} </strong>
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {/* API Key Section */}
+          <div className="rounded-lg border p-4">
+            <h3 className="mb-2 font-medium">API Key</h3>
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1">
+                <Input
+                  type={showApiKey ? "text" : "password"}
+                  value={apiKey}
+                  readOnly
+                  className="pr-10"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <Button variant="outline" size="icon" onClick={handleCopyAPIKey}>
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleRegenerateApiKey}
+                disabled={regenerateApiKeyMutation.isPending}
+              >
+                {regenerateApiKeyMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Regenerate
+              </Button>
+            </div>
+          </div>
 
           <div className="flex flex-col space-y-4">
             {/* Update Payment Method */}
@@ -170,7 +321,10 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
             </Button>
 
             {/* Cancel Subscription */}
-            <Button variant="destructive" onClick={handleCancelSubscription}>
+            <Button
+              variant="destructive"
+              onClick={() => setShowCancelConfirmModal(true)}
+            >
               <Trash className="mr-2 h-4 w-4" />
               Cancel Subscription
             </Button>
@@ -187,7 +341,10 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
       {showPaymentDialog && serviceConsumer && (
         <PaymentMethodDialog
           isOpen={showPaymentDialog}
-          onClose={() => setShowPaymentDialog(false)}
+          onClose={() => {
+            setShowPaymentDialog(false);
+            setAutoRenew(true);
+          }}
           isSubscribed={true}
           subscriptionTier={serviceConsumer.subscriptionTier}
           paymentMethods={paymentMethods}
@@ -228,13 +385,23 @@ const ManageSubscriptionDialog: React.FC<ManageSubscriptionDialogProps> = ({
               <AlertDialogCancel onClick={() => setShowTierDialog(false)}>
                 Cancel
               </AlertDialogCancel>
-              <AlertDialogAction onClick={handleSwitchTier}>
+              <AlertDialogAction onClick={handleSwitchSubscriptionTier}>
                 Switch Tier
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      <ConfirmModal
+        open={showCancelConfirmModal}
+        title="Cancel Subscription"
+        description={`Are you sure you want to cancel? ${serviceConsumer.subscriptionTier.price !== 0 ? "Your subscription will remain active until the end of the billing period." : "You will lose access to your subscription immediately."}`}
+        onConfirm={() => handleCancelSubscription()}
+        onCancel={() => {
+          setShowCancelConfirmModal(false);
+        }}
+      />
     </>
   );
 };

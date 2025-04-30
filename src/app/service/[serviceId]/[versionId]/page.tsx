@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "~/components/ui/dropdown-menu";
 import {
   Table,
@@ -30,10 +31,13 @@ import {
   HandPlatter,
   FileText,
   ChevronLeft,
+  Trash2,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ServiceSidebar } from "~/components/service/ServiceSidebar";
 import { toast } from "sonner";
+import { useState } from "react";
+import { DeleteServiceDialog } from "~/components/service/DeleteServiceDialog";
 
 export default function ServicePage() {
   const { data: session } = useSession();
@@ -86,6 +90,20 @@ export default function ServicePage() {
         void utils.version.getDocumentationByVersionId.invalidate({
           versionId,
         });
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const { mutate: deleteService, isPending: isDeletingService } =
+    api.service.deleteService.useMutation({
+      onSuccess: () => {
+        toast.success("Service deleted successfully");
+        router.push("/service/owned");
+        void utils.service.getAllByUserId.invalidate();
       },
       onError: (error) => {
         toast.error(error.message);
@@ -203,6 +221,14 @@ export default function ServicePage() {
                           </>
                         )}
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Service
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -271,6 +297,17 @@ export default function ServicePage() {
 
           <Separator className="my-8" />
 
+          <div className="mb-8">
+            <h2 className="mb-2 text-xl font-semibold">Base Endpoint</h2>
+            {service.baseEndpoint ? (
+              <p className="font-mono">{service.baseEndpoint}</p>
+            ) : (
+              <p className="text-muted-foreground">
+                No base endpoint available
+              </p>
+            )}
+          </div>
+
           {versionLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -289,24 +326,29 @@ export default function ServicePage() {
                     {content.title}
                   </h2>
                   <p className="mb-6">{content.description}</p>
-                  {content.rows && content.rows.length > 0 && (
+                  {content.endpoints && content.endpoints.length > 0 && (
                     <div className="rounded-md border">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-36">Method</TableHead>
-                            <TableHead>Route</TableHead>
+                            <TableHead className="w-96">Route</TableHead>
                             <TableHead>Description</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {content.rows.map((row) => (
-                            <TableRow key={row.id}>
-                              <TableCell>{row.method}</TableCell>
-                              <TableCell className="font-mono">
-                                {row.routeName}
+                          {content.endpoints.map((endpoint) => (
+                            <TableRow key={endpoint.id}>
+                              <TableCell
+                                className="font-mono hover:cursor-pointer"
+                                onClick={() => {
+                                  router.push(
+                                    `/service/${serviceId}/${versionId}/${endpoint.id}`,
+                                  );
+                                }}
+                              >
+                                {endpoint.path}
                               </TableCell>
-                              <TableCell>{row.description}</TableCell>
+                              <TableCell>{endpoint.description}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -358,6 +400,14 @@ export default function ServicePage() {
           )}
         </div>
       </div>
+
+      <DeleteServiceDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={() => deleteService({ serviceId })}
+        isDeleting={isDeletingService}
+        serviceName={service.name}
+      />
     </div>
   );
 }

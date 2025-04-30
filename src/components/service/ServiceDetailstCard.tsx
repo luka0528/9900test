@@ -12,27 +12,25 @@ import { Package, Settings, ChevronRight } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useRouter } from "next/navigation";
 import ManageSubscriptionDialog from "~/components/billing/ManageSubscriptionDialog";
-import type { SubscriptionTier } from "@prisma/client";
+import type { ServiceConsumer, SubscriptionTier } from "@prisma/client";
 import React, { useState } from "react";
 
-interface ServiceManagementCardProps {
+interface ServiceDetailsCardProps {
   service: {
     id: string;
     name: string;
     tierName: string;
     tags: string[];
-    subscriptionTier: SubscriptionTier;
+    serviceConsumer: ServiceConsumer & { subscriptionTier: SubscriptionTier };
     refetch: () => void;
   };
 }
 
-export const ServiceManagementCard = ({
-  service,
-}: ServiceManagementCardProps) => {
+export const ServiceDetailsCard = ({ service }: ServiceDetailsCardProps) => {
   const router = useRouter();
-  const { id, name, tierName, tags, subscriptionTier, refetch } = service;
+  const { id, name, tierName, tags, serviceConsumer, refetch } = service;
 
-  const [showManageDialog, setShowManageDialog] = useState(false);
+  const [showSettingsDialogue, setShowSettingsDialogue] = useState(false);
 
   const navigateToService = () => {
     router.push(`/service/${id}`);
@@ -41,7 +39,7 @@ export const ServiceManagementCard = ({
   const openServiceSettings = (e: React.MouseEvent<HTMLButtonElement>) => {
     // Stop the click from bubbling to the card
     e.stopPropagation();
-    setShowManageDialog(true);
+    setShowSettingsDialogue(true);
   };
 
   return (
@@ -87,7 +85,7 @@ export const ServiceManagementCard = ({
             onClick={openServiceSettings}
           >
             <Settings className="h-4 w-4" />
-            Manage Subscription
+            Settings
           </Button>
           <Button variant="ghost" size="sm" className="gap-1">
             View details
@@ -96,11 +94,11 @@ export const ServiceManagementCard = ({
         </CardFooter>
       </Card>
 
-      {showManageDialog && (
+      {showSettingsDialogue && (
         <ManageSubscriptionDialog
-          isOpen={showManageDialog}
-          onClose={() => setShowManageDialog(false)}
-          subscriptionTier={subscriptionTier}
+          isOpen={showSettingsDialogue}
+          onClose={() => setShowSettingsDialogue(false)}
+          serviceConsumer={serviceConsumer}
           refetchSubscriptions={refetch}
         />
       )}

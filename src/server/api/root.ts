@@ -3,6 +3,15 @@ import { userRouter } from "~/server/api/routers/user";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 import { versionRouter } from "./routers/version";
 import { analyticsRouter } from "./routers/analytics";
+import { autoDocsRouter } from "./routers/auto-docs";
+import { subscriptionRouter } from "./routers/subscription";
+import { notificationRouter } from "./routers/notification";
+import { endpointRouter } from "./routers/endpoint";
+
+if (process.env.NODE_ENV === "development") {
+  console.log("🧪 Dev mode: enabling cancellation scheduler...");
+  void import("../../../scripts/scheduler");
+}
 
 /**
  * This is the primary router for your server.
@@ -14,6 +23,10 @@ export const appRouter = createTRPCRouter({
   user: userRouter,
   version: versionRouter,
   analytics: analyticsRouter,
+  autoDocs: autoDocsRouter,
+  subscription: subscriptionRouter,
+  endpoint: endpointRouter,
+  notification: notificationRouter,
 });
 
 // export type definition of API
