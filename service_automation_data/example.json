@@ -1,0 +1,497 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+      "title": "Sample API",
+      "description": "A simple API to demonstrate OpenAPI specification",
+      "version": "1.0.0",
+      "contact": {
+        "name": "API Support",
+        "email": "support@example.com",
+        "url": "https://example.com/support"
+      },
+      "license": {
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT"
+      }
+    },
+    "servers": [
+      {
+        "url": "https://api.example.com/v1",
+        "description": "Production server"
+      },
+      {
+        "url": "https://staging-api.example.com/v1",
+        "description": "Staging server"
+      }
+    ],
+    "tags": [
+      {
+        "name": "users",
+        "description": "Operations about users"
+      },
+      {
+        "name": "products",
+        "description": "Operations about products"
+      }
+    ],
+    "paths": {
+      "/users": {
+        "get": {
+          "tags": ["users"],
+          "summary": "Get a list of users",
+          "description": "Returns a list of users",
+          "operationId": "getUsers",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "description": "Maximum number of results to return",
+              "required": false,
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              }
+            },
+            {
+              "name": "offset",
+              "in": "query",
+              "description": "Number of results to skip",
+              "required": false,
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "minimum": 0,
+                "default": 0
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful operation",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid parameters",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "tags": ["users"],
+          "summary": "Create a new user",
+          "description": "Creates a new user in the system",
+          "operationId": "createUser",
+          "requestBody": {
+            "description": "User object that needs to be added",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewUser"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "User created successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid input",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/users/{userId}": {
+        "get": {
+          "tags": ["users"],
+          "summary": "Get user by ID",
+          "description": "Returns a single user by ID",
+          "operationId": "getUserById",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "description": "ID of user to return",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful operation",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "User not found",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "put": {
+          "tags": ["users"],
+          "summary": "Update user",
+          "description": "Updates an existing user",
+          "operationId": "updateUser",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "description": "ID of user to update",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "description": "User object with updated information",
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUser"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "User updated successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid input",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "User not found",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "tags": ["users"],
+          "summary": "Delete user",
+          "description": "Deletes a user",
+          "operationId": "deleteUser",
+          "parameters": [
+            {
+              "name": "userId",
+              "in": "path",
+              "description": "ID of user to delete",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "User deleted successfully"
+            },
+            "404": {
+              "description": "User not found",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/products": {
+        "get": {
+          "tags": ["products"],
+          "summary": "Get a list of products",
+          "description": "Returns a list of products",
+          "operationId": "getProducts",
+          "parameters": [
+            {
+              "name": "limit",
+              "in": "query",
+              "description": "Maximum number of results to return",
+              "required": false,
+              "schema": {
+                "type": "integer",
+                "format": "int32",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              }
+            },
+            {
+              "name": "category",
+              "in": "query",
+              "description": "Filter by product category",
+              "required": false,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Successful operation",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Product"
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid parameters",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "User": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Unique identifier for the user"
+            },
+            "username": {
+              "type": "string",
+              "description": "Username of the user"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "Email address of the user"
+            },
+            "firstName": {
+              "type": "string",
+              "description": "First name of the user"
+            },
+            "lastName": {
+              "type": "string",
+              "description": "Last name of the user"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "User creation timestamp"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "User last update timestamp"
+            }
+          },
+          "required": ["id", "username", "email", "createdAt", "updatedAt"]
+        },
+        "NewUser": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "description": "Username of the user"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "Email address of the user"
+            },
+            "password": {
+              "type": "string",
+              "format": "password",
+              "description": "Password of the user"
+            },
+            "firstName": {
+              "type": "string",
+              "description": "First name of the user"
+            },
+            "lastName": {
+              "type": "string",
+              "description": "Last name of the user"
+            }
+          },
+          "required": ["username", "email", "password"]
+        },
+        "UpdateUser": {
+          "type": "object",
+          "properties": {
+            "username": {
+              "type": "string",
+              "description": "Username of the user"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "Email address of the user"
+            },
+            "firstName": {
+              "type": "string",
+              "description": "First name of the user"
+            },
+            "lastName": {
+              "type": "string",
+              "description": "Last name of the user"
+            }
+          }
+        },
+        "Product": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Unique identifier for the product"
+            },
+            "name": {
+              "type": "string",
+              "description": "Name of the product"
+            },
+            "description": {
+              "type": "string",
+              "description": "Description of the product"
+            },
+            "price": {
+              "type": "number",
+              "format": "float",
+              "description": "Price of the product"
+            },
+            "category": {
+              "type": "string",
+              "description": "Category of the product"
+            },
+            "inStock": {
+              "type": "boolean",
+              "description": "Whether the product is in stock"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Product creation timestamp"
+            }
+          },
+          "required": ["id", "name", "price", "category", "inStock", "createdAt"]
+        },
+        "Error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "integer",
+              "format": "int32",
+              "description": "Error code"
+            },
+            "message": {
+              "type": "string",
+              "description": "Error message"
+            }
+          },
+          "required": ["code", "message"]
+        }
+      },
+      "securitySchemes": {
+        "bearerAuth": {
+          "type": "http",
+          "scheme": "bearer",
+          "bearerFormat": "JWT",
+          "description": "JWT Authorization header using the Bearer scheme."
+        },
+        "apiKeyAuth": {
+          "type": "apiKey",
+          "in": "header",
+          "name": "X-API-Key",
+          "description": "API key for authorization"
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "apiKeyAuth": []
+      }
+    ]
+  }
