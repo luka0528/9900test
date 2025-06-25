@@ -174,6 +174,7 @@ export default function SignIn() {
                       <FormMessage />
                       <Link href="/forgot-password">
                         <Button
+                          type="button"
                           variant="link"
                           className="h-auto p-0 text-xs text-indigo-600"
                         >
