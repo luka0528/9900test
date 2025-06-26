@@ -1,0 +1,189 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Full Feature API",
+    "version": "1.0.0",
+    "description": "A full-featured API for platform validation."
+  },
+  "servers": [
+    {
+      "url": "https://api.full-feature.example.com/v1"
+    }
+  ],
+  "paths": {
+    "/users": {
+      "get": {
+        "summary": "List all users",
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "summary": "Get user by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found"
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "summary": "List orders",
+        "responses": {
+          "200": {
+            "description": "Orders returned"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an order",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "productId": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "productId",
+                  "quantity"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order created"
+          }
+        }
+      }
+    },
+    "/analytics/events": {
+      "get": {
+        "summary": "Retrieve analytics events",
+        "responses": {
+          "200": {
+            "description": "Events returned"
+          }
+        }
+      }
+    },
+    "/analytics/stats": {
+      "get": {
+        "summary": "Get usage statistics",
+        "responses": {
+          "200": {
+            "description": "Stats delivered"
+          }
+        }
+      }
+    },
+    "/subscription": {
+      "post": {
+        "summary": "Subscribe to a service tier",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tier": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tier"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Subscription confirmed"
+          }
+        }
+      }
+    },
+    "/reviews": {
+      "post": {
+        "summary": "Post a review",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rating": {
+                    "type": "integer"
+                  },
+                  "comment": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "rating"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Review posted"
+          }
+        }
+      },
+      "get": {
+        "summary": "List all reviews",
+        "responses": {
+          "200": {
+            "description": "Reviews listed"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "User"
+    },
+    {
+      "name": "Order"
+    },
+    {
+      "name": "Analytics"
+    },
+    {
+      "name": "Subscription"
+    },
+    {
+      "name": "Review"
+    }
+  ]
+}

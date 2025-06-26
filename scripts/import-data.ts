@@ -1,95 +1,147 @@
-import { PrismaClient } from '@prisma/client';
+// scripts/import-data.ts
+import { PrismaClient, RestMethod, ParameterLocation } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const prisma = new PrismaClient();
-const dataDir = path.join(__dirname, '../service_automation_data');
-
-type ServiceJson = {
-  name: string;
-  description: string;
-  version: string;
-  operations: {
-    method: string;
-    path: string;
-  }[];
-};
+const dataDir = './service_automation_data';
 
 async function main() {
-  const files = fs.readdirSync(dataDir).filter(file => file.startsWith('converted-') && file.endsWith('.json'));
-
-  let successCount = 0;
-  let skipCount = 0;
-  let failCount = 0;
+  const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
 
   for (const file of files) {
-    const filePath = path.join(dataDir, file);
+    const raw = fs.readFileSync(path.join(dataDir, file), 'utf-8');
+    let parsed: any;
     try {
-      const rawData = fs.readFileSync(filePath, 'utf-8');
-      const data = JSON.parse(rawData) as ServiceJson;
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      console.error(`❌ Invalid JSON in ${file}`);
+      continue;
+    }
 
-      if (
-        typeof data.name !== 'string' ||
-        typeof data.description !== 'string' ||
-        typeof data.version !== 'string'
-      ) {
-        throw new Error(`文件格式无效："name" / "description" / "version" 字段缺失或不是字符串 (${file})`);
-      }
+    const name = parsed.info?.title || 'Unnamed API';
+    const description = parsed.info?.description || 'No description';
+    const baseEndpoint = parsed.servers?.[0]?.url || '';
 
-      // 如果服务已存在，跳过导入
-      const existing = await prisma.service.findFirst({
-        where: { name: data.name },
-      });
+    const existing = await prisma.service.findFirst({ where: { name } });
+    if (existing) {
+      console.log(`⚠️ Skipped: ${name} already exists.`);
+      continue;
+    }
 
-      if (existing) {
-        console.log(`⚠️ 已存在，跳过服务：${data.name}`);
-        skipCount++;
-        continue;
-      }
-
+    try {
       const service = await prisma.service.create({
-        data: {
-          name: data.name,
-          description: data.description,
-        },
+        data: { name, description, baseEndpoint }
       });
 
-      const serviceVersion = await prisma.serviceVersion.create({
+      await prisma.subscriptionTier.createMany({
+        data: [
+          { name: 'Free', description: 'Basic access tier', price: 0, serviceId: service.id },
+          { name: 'Pro', description: 'Premium tier with extended access', price: 9.99, serviceId: service.id }
+        ]
+      });
+
+      const version = await prisma.serviceVersion.create({
         data: {
-          version: data.version,
           serviceId: service.id,
-        },
+          version: parsed.info?.version || '1.0.0',
+          description: 'Auto-imported version'
+        }
       });
 
-      for (const op of data.operations) {
-        await prisma.operation.create({
+      const contentRecord = await prisma.serviceContent.create({
+        data: {
+          title: parsed.info?.version || 'v1',
+          description: 'Imported from OpenAPI JSON',
+          versionId: version.id
+        }
+      });
+
+      for (const [pathStr, methods] of Object.entries(parsed.paths || {})) {
+        const endpoint = await prisma.endPoint.create({
           data: {
-            method: op.method,
-            path: op.path,
-            serviceVersionId: serviceVersion.id,
-          },
+            path: pathStr,
+            description: Object.values(methods)[0]?.summary || '',
+            contentId: contentRecord.id
+          }
+        });
+
+        for (const [method, op] of Object.entries(methods)) {
+          const operation = await prisma.operation.create({
+            data: {
+              endPointId: endpoint.id,
+              method: method.toUpperCase() as RestMethod,
+              description: op.summary || '',
+              deprecated: op.deprecated || false
+            }
+          });
+
+          // Parameters
+          for (const param of op.parameters || []) {
+            await prisma.parameter.create({
+              data: {
+                operationId: operation.id,
+                name: param.name,
+                description: param.description || '',
+                required: param.required || false,
+                deprecated: param.deprecated || false,
+                parameterLocation: param.in?.toUpperCase() as ParameterLocation,
+                schemaJson: JSON.stringify(param.schema || {})
+              }
+            });
+          }
+
+          // RequestBody
+          if (op.requestBody) {
+            await prisma.requestBody.create({
+              data: {
+                operationId: operation.id,
+                description: op.requestBody.description || '',
+                required: op.requestBody.required || false,
+                contentJson: JSON.stringify(op.requestBody.content || {})
+              }
+            });
+          }
+
+          // Responses
+          for (const [statusCode, resp] of Object.entries(op.responses || {})) {
+            await prisma.response.create({
+              data: {
+                operationId: operation.id,
+                statusCode: parseInt(statusCode),
+                description: resp.description || '',
+                contentJson: JSON.stringify(resp.content || {}),
+                headersJson: JSON.stringify(resp.headers || {})
+              }
+            });
+          }
+        }
+      }
+
+      // Tags
+      for (const tag of parsed.tags || []) {
+        const tagRecord = await prisma.tag.upsert({
+          where: { name: tag.name },
+          update: {},
+          create: { name: tag.name }
+        });
+
+        await prisma.service.update({
+          where: { id: service.id },
+          data: {
+            tags: { connect: { id: tagRecord.id } }
+          }
         });
       }
 
-      console.log(`✅ 成功导入服务：${data.name}`);
-      successCount++;
-    } catch (e: any) {
-      console.error(`❌ 导入文件 ${file} 出错：\n${e.message}`);
-      failCount++;
+      console.log(`✅ Imported ${file} as service: ${name}`);
+    } catch (error) {
+      console.error(`❌ Failed to import ${file}:`, error);
     }
   }
-
-  console.log(`\n📊 导入完成：成功 ${successCount} 个，跳过 ${skipCount} 个，失败 ${failCount} 个`);
 }
 
-main()
-  .then(() => prisma.$disconnect())
-  .catch(err => {
-    console.error('❗ 全局失败：', err);
-    prisma.$disconnect();
-    process.exit(1);
-  });
+main().then(() => prisma.$disconnect());
+
+
+
