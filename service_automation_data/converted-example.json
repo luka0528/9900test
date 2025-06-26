@@ -1,0 +1,31 @@
+{
+  "name": "Sample API",
+  "description": "A simple API to demonstrate OpenAPI specification",
+  "version": "1.0.0",
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/users"
+    },
+    {
+      "method": "POST",
+      "path": "/users"
+    },
+    {
+      "method": "GET",
+      "path": "/users/{userId}"
+    },
+    {
+      "method": "PUT",
+      "path": "/users/{userId}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/{userId}"
+    },
+    {
+      "method": "GET",
+      "path": "/products"
+    }
+  ]
+}
